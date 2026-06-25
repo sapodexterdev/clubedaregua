@@ -93,6 +93,14 @@ SUPABASE_ANON_KEY=sua-chave-anon-publica
 flutter run
 ```
 
+Ou rode informando as credenciais por `dart-define`:
+
+```bash
+flutter run \
+  --dart-define=SUPABASE_URL=https://seu-projeto.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=sua-chave-anon-publica
+```
+
 > Enquanto o Supabase nao estiver configurado, o app usa dados mockados para permitir navegar pelas telas.
 
 ## Deploy na Vercel

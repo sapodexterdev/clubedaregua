@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 
 import 'app.dart';
@@ -8,12 +7,6 @@ import 'providers/app_state.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  try {
-    await dotenv.load(fileName: '.env');
-  } catch (_) {
-    await dotenv.load(fileName: '.env.example');
-  }
 
   await SupabaseConfig.initialize();
 
