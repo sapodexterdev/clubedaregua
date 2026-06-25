@@ -1,0 +1,19 @@
+{
+  "name": "Clube da Regua",
+  "short_name": "Clube da Regua",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#F4F4F4",
+  "theme_color": "#FF6B2C",
+  "description": "Aplicativo premium de barbearia com agendamento, pagamentos e fidelidade.",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

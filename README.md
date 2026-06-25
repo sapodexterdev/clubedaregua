@@ -95,6 +95,31 @@ flutter run
 
 > Enquanto o Supabase nao estiver configurado, o app usa dados mockados para permitir navegar pelas telas.
 
+## Deploy na Vercel
+
+Este projeto tambem esta preparado para rodar como Flutter Web na Vercel. A Vercel executa `scripts/vercel-build.sh`, baixa o Flutter SDK, instala dependencias e publica `build/web`.
+
+1. Importe o repositorio `sapodexterdev/clubedaregua` na Vercel.
+2. Configure o projeto como `Other`.
+3. Confirme os campos:
+
+```text
+Build Command: bash scripts/vercel-build.sh
+Output Directory: build/web
+Install Command: vazio
+```
+
+4. Adicione as variaveis de ambiente:
+
+```text
+SUPABASE_URL=https://seu-projeto.supabase.co
+SUPABASE_ANON_KEY=sua-chave-anon-publica
+```
+
+5. Clique em Deploy.
+
+O arquivo `vercel.json` tambem configura rewrite para `index.html`, necessario para navegacao SPA.
+
 ## Supabase
 
 1. Crie um projeto no Supabase.
