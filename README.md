@@ -1,6 +1,16 @@
 # Clube da Régua
 
-Aplicativo mobile de barbearia feito em Flutter, Dart e Supabase. A proposta visual é inspirada em apps modernos de agendamento: fundo claro, fotos grandes, cards brancos arredondados, botões laranja e navegação inferior escura.
+SaaS para barbearias feito em Flutter, Dart e Supabase. A plataforma terá dois produtos conectados ao mesmo backend: um app rápido para clientes agendarem em poucos cliques e um app de gestão para barbeiros, donos e equipes administrarem agenda, serviços, clientes, caixa e operação.
+
+## Visão SaaS
+
+- Multiempresa desde o banco: cada barbearia é uma empresa isolada por `barber_shop_id`.
+- App Cliente focado em velocidade: buscar, escolher serviço, escolher horário e confirmar.
+- App Barbeiro/Dono focado em gestão: agenda, equipe, serviços, relatórios, caixa, cupons, estoque e assinatura.
+- Supabase Auth para identidade.
+- Supabase Database com RLS por barbearia.
+- Supabase Storage para fotos, logos e capas.
+- Planos e assinaturas preparados no schema.
 
 ## Stack
 
@@ -12,7 +22,7 @@ Aplicativo mobile de barbearia feito em Flutter, Dart e Supabase. A proposta vis
 - Provider para estado
 - Arquitetura organizada por camadas
 
-## Estrutura
+## Estrutura Atual
 
 ```text
 lib/
@@ -33,9 +43,31 @@ lib/
   widgets/
 supabase/
   schema.sql
+docs/
+  arquitetura-saas.md
 ```
 
-## Telas incluídas
+## Separação Dos Apps
+
+O repositório ainda está em um app Flutter único para acelerar o protótipo visual. A direção do produto é separar em:
+
+- `App Cliente`: experiência simples, rápida e mobile-first para agendamento.
+- `App Gestão`: experiência completa para barbeiro, dono e equipe.
+- `Shared`: modelos, tema, cliente Supabase e regras comuns.
+
+Estrutura recomendada para a próxima fase:
+
+```text
+apps/
+  cliente/
+  gestao/
+packages/
+  shared/
+supabase/
+  schema.sql
+```
+
+## Telas Incluídas
 
 - Splash
 - Onboarding
@@ -53,7 +85,7 @@ supabase/
 - Cadastro de Serviços
 - Cadastro de Barbeiros
 
-## Configuração local
+## Configuração Local
 
 1. Instale o Flutter SDK.
 2. Entre na pasta do projeto:
@@ -101,11 +133,11 @@ flutter run \
   --dart-define=SUPABASE_ANON_KEY=sua-chave-anon-pública
 ```
 
-> Enquanto o Supabase não estiver configurado, o app usa dados mockados para permitir navegar pelas telas.
+> Enquanto a conexão real com Supabase não estiver ativada no app, as telas usam dados mockados para permitir navegação e validação visual.
 
-## Deploy na Vercel
+## Deploy Na Vercel
 
-Este projeto também está preparado para rodar como Flutter Web na Vercel. A Vercel executa `scripts/vercel-build.sh`, baixa o Flutter SDK, instala dependências e publica `build/web`.
+Este projeto está preparado para rodar como Flutter Web na Vercel. A Vercel executa `scripts/vercel-build.sh`, baixa o Flutter SDK, instala dependências e publica `build/web`.
 
 1. Importe o repositório `sapodexterdev/clubedaregua` na Vercel.
 2. Configure o projeto como `Other`.
@@ -126,7 +158,7 @@ SUPABASE_ANON_KEY=sua-chave-anon-pública
 
 5. Clique em Deploy.
 
-O arquivo `vercel.json` também configura rewrite para `index.html`, necessário para navegação SPA.
+O arquivo `vercel.json` configura rewrite para `index.html`, necessário para navegação SPA.
 
 ## Supabase
 
@@ -138,60 +170,66 @@ O arquivo `vercel.json` também configura rewrite para `index.html`, necessário
 supabase/schema.sql
 ```
 
-O schema cria:
+O schema SaaS cria:
 
 - users
 - profiles
-- barbers
+- plans
+- subscriptions
 - barber_shops
+- shop_settings
+- shop_members
+- client_shop_relationships
+- barbers
 - services
 - service_categories
-- appointments
-- reviews
-- payments
-- loyalty_points
-- coupons
+- barber_services
 - schedules
 - blocked_times
+- appointments
+- payments
+- reviews
+- loyalty_points
+- coupons
 - notifications
 - stock_items
 - cash_movements
 
-Também cria policies iniciais de RLS, índices básicos e o bucket público `barbershop-media` para imagens.
+Também cria funções de autorização, policies de RLS por barbearia, índices básicos, planos iniciais e o bucket público `barbershop-media` para imagens.
 
-## Fluxos principais
+## Fluxos Principais
 
 ### Cliente
 
 - Onboarding com imagem grande e CTA.
 - Login/cadastro via Supabase Auth.
-- Home com saudação, busca, filtro, banner promocional, categorias, barbeiros e serviços.
-- Detalhe do barbeiro com foto grande, favorito, avaliação, abas, calendário, horários e resumo.
-- Agendamento com serviço, data, horário, PIX e status.
-- Histórico, cancelamento visual, avaliação e fidelidade com pontos.
-- Notificações internas no perfil.
+- Busca por barbearia, serviço ou barbeiro.
+- Agendamento em poucos cliques: serviço, profissional, data, horário e confirmação.
+- PIX, histórico, cancelamento, avaliação, fidelidade e notificações.
 
 ### Barbeiro
 
 - Login como barbeiro.
 - Painel com agenda do dia, atendimentos e comissão.
-- Agenda com bloqueio/liberação de horários.
-- Entradas iniciais para clientes, férias e indisponibilidade.
+- Confirmação de atendimentos.
+- Bloqueio de horários, férias e indisponibilidade.
+- Visualização de clientes e próximos retornos.
 
-### Administrador
+### Dono/Administrador
 
 - Painel administrativo.
 - Cadastro de barbeiros e serviços.
 - Controle de agenda.
-- Relatório simples de faturamento.
-- Ranking de barbeiros.
+- Relatórios de faturamento e ranking.
 - Serviços mais vendidos.
-- Caixa, cupons e estoque básico.
+- Caixa, cupons, estoque e configurações da barbearia.
+- Gestão do plano SaaS e assinatura.
 
-## Próximos passos sugeridos
+## Próximos Passos Sugeridos
 
-- Conectar formulários admin aos repositories.
-- Implementar upload real de fotos no Supabase Storage.
-- Criar policies de admin/owner mais granulares.
-- Adicionar testes de widgets para home, login e agendamento.
+- Separar o monorepo em `apps/cliente`, `apps/gestao` e `packages/shared`.
+- Ativar `supabase_flutter` e conectar Auth real.
+- Conectar listagem pública de barbearias, barbeiros, serviços e horários.
+- Implementar criação real de agendamento.
+- Conectar painel de gestão ao banco com RLS por barbearia.
 - Integrar provedor de PIX real.
