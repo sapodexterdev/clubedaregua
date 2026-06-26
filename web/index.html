@@ -13,6 +13,14 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <title>Clube da Regua</title>
+  <script>
+    window.addEventListener('unhandledrejection', function (event) {
+      console.error('CLUBE_DA_REGUA_UNHANDLED', event.reason && (event.reason.stack || event.reason));
+    });
+    window.addEventListener('error', function (event) {
+      console.error('CLUBE_DA_REGUA_ERROR', event.error && (event.error.stack || event.message));
+    });
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
