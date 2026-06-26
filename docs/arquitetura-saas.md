@@ -69,11 +69,24 @@ Regras principais:
 - Dono/gerente administra equipe, serviços, agenda, caixa e configurações.
 - Administrador da plataforma pode operar suporte e gestão global.
 
+## Organização Do Monorepo
+
+```text
+apps/
+  cliente/
+  gestao/
+packages/
+  shared/
+supabase/
+  schema.sql
+```
+
+`apps/cliente` mantém a experiência rápida de agendamento. `apps/gestao` concentra as telas administrativas. `packages/shared` será o ponto comum para modelos, tema, cliente Supabase e regras de negócio compartilhadas.
+
 ## Próxima Fase Técnica
 
-1. Separar apps em monorepo.
-2. Criar pacote compartilhado para modelos, tema e Supabase.
-3. Conectar Supabase Auth real.
-4. Implementar repositórios reais com fallback mockado apenas em desenvolvimento.
-5. Criar fluxo real de agendamento no App Cliente.
-6. Criar painel real de agenda e serviços no App Gestão.
+1. Mover modelos e tema comum para `packages/shared`.
+2. Conectar Supabase Auth real.
+3. Implementar repositórios reais com fallback mockado apenas em desenvolvimento.
+4. Criar fluxo real de agendamento no App Cliente.
+5. Criar painel real de agenda e serviços no App Gestão.

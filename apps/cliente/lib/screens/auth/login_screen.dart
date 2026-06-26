@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../screens/admin/admin_dashboard_screen.dart';
-import '../../screens/barber/barber_dashboard_screen.dart';
 import '../../screens/client/home_screen.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_colors.dart';
@@ -22,7 +20,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final passwordController = TextEditingController();
   final authService = AuthService();
   bool isLoading = false;
-  String role = 'client';
 
   @override
   void dispose() {
@@ -42,12 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
     setState(() => isLoading = false);
 
-    final route = switch (role) {
-      'barber' => BarberDashboardScreen.route,
-      'admin' => AdminDashboardScreen.route,
-      _ => HomeScreen.route,
-    };
-    if (mounted) Navigator.pushReplacementNamed(context, route);
+    if (mounted) Navigator.pushReplacementNamed(context, HomeScreen.route);
   }
 
   @override
@@ -78,16 +70,6 @@ class _LoginScreenState extends State<LoginScreen> {
               controller: passwordController,
               obscureText: true,
               decoration: const InputDecoration(hintText: 'Senha'),
-            ),
-            const SizedBox(height: 18),
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'client', label: Text('Cliente')),
-                ButtonSegment(value: 'barber', label: Text('Barbeiro')),
-                ButtonSegment(value: 'admin', label: Text('Administrador')),
-              ],
-              selected: {role},
-              onSelectionChanged: (value) => setState(() => role = value.first),
             ),
             const SizedBox(height: 24),
             PrimaryButton(

@@ -1,7 +1,7 @@
 {
   "version": 2,
   "buildCommand": "bash scripts/vercel-build.sh",
-  "outputDirectory": "build/web",
+  "outputDirectory": "apps/cliente/build/web",
   "rewrites": [
     {
       "source": "/(.*)",

@@ -1,131 +1,110 @@
 # Clube da Régua
 
-SaaS para barbearias feito em Flutter, Dart e Supabase. A plataforma terá dois produtos conectados ao mesmo backend: um app rápido para clientes agendarem em poucos cliques e um app de gestão para barbeiros, donos e equipes administrarem agenda, serviços, clientes, caixa e operação.
+SaaS para barbearias feito em Flutter, Dart e Supabase. A plataforma agora está organizada como monorepo com dois apps: um app rápido para clientes agendarem em poucos cliques e um app de gestão para barbeiros, donos e equipes administrarem agenda, serviços, clientes, caixa e operação.
+
+## Apps
+
+### App Cliente
+
+Local: `apps/cliente`
+
+Experiência mobile-first para o cliente:
+
+- Buscar barbearia, barbeiro ou serviço.
+- Escolher serviço, profissional, data e horário.
+- Confirmar agendamento em poucos cliques.
+- Acompanhar histórico, fidelidade, pagamentos e notificações.
+
+Este é o app publicado hoje na Vercel.
+
+### App Gestão
+
+Local: `apps/gestao`
+
+Experiência operacional para barbeiro, dono e equipe:
+
+- Agenda do dia.
+- Confirmação de atendimentos.
+- Serviços, barbeiros e clientes.
+- Bloqueio de horários, férias e indisponibilidade.
+- Caixa, estoque, cupons, relatórios e assinatura SaaS.
+
+### Pacote Compartilhado
+
+Local: `packages/shared`
+
+Código comum entre os apps:
+
+- Cores da marca.
+- Contexto da barbearia.
+- Futuramente: modelos, cliente Supabase, tema, validações e regras comuns.
+
+## Estrutura
+
+```text
+apps/
+  cliente/
+    lib/
+    web/
+    pubspec.yaml
+  gestao/
+    lib/
+    pubspec.yaml
+packages/
+  shared/
+    lib/
+    pubspec.yaml
+supabase/
+  schema.sql
+docs/
+  arquitetura-saas.md
+scripts/
+  vercel-build.sh
+```
 
 ## Visão SaaS
 
 - Multiempresa desde o banco: cada barbearia é uma empresa isolada por `barber_shop_id`.
-- App Cliente focado em velocidade: buscar, escolher serviço, escolher horário e confirmar.
-- App Barbeiro/Dono focado em gestão: agenda, equipe, serviços, relatórios, caixa, cupons, estoque e assinatura.
+- Mesmo Supabase para Cliente e Gestão.
 - Supabase Auth para identidade.
 - Supabase Database com RLS por barbearia.
 - Supabase Storage para fotos, logos e capas.
 - Planos e assinaturas preparados no schema.
 
-## Stack
+## Rodar Localmente
 
-- Flutter
-- Dart
-- Supabase Auth
-- Supabase Database
-- Supabase Storage
-- Provider para estado
-- Arquitetura organizada por camadas
-
-## Estrutura Atual
-
-```text
-lib/
-  app.dart
-  main.dart
-  config/
-  core/
-  models/
-  providers/
-  repositories/
-  screens/
-    admin/
-    auth/
-    barber/
-    client/
-  services/
-  theme/
-  widgets/
-supabase/
-  schema.sql
-docs/
-  arquitetura-saas.md
-```
-
-## Separação Dos Apps
-
-O repositório ainda está em um app Flutter único para acelerar o protótipo visual. A direção do produto é separar em:
-
-- `App Cliente`: experiência simples, rápida e mobile-first para agendamento.
-- `App Gestão`: experiência completa para barbeiro, dono e equipe.
-- `Shared`: modelos, tema, cliente Supabase e regras comuns.
-
-Estrutura recomendada para a próxima fase:
-
-```text
-apps/
-  cliente/
-  gestao/
-packages/
-  shared/
-supabase/
-  schema.sql
-```
-
-## Telas Incluídas
-
-- Splash
-- Onboarding
-- Login
-- Cadastro
-- Home Cliente
-- Detalhes do Barbeiro
-- Agendamento
-- Confirmação de Agendamento
-- Histórico
-- Perfil Cliente
-- Painel do Barbeiro
-- Agenda Barbeiro
-- Painel do Administrador
-- Cadastro de Serviços
-- Cadastro de Barbeiros
-
-## Configuração Local
-
-1. Instale o Flutter SDK.
-2. Entre na pasta do projeto:
+### Cliente
 
 ```bash
-cd clubedaregua
-```
-
-3. Gere as plataformas Flutter, caso ainda não existam:
-
-```bash
-flutter create .
-```
-
-4. Instale as dependências:
-
-```bash
+cd apps/cliente
 flutter pub get
+flutter run
 ```
 
-5. Copie o arquivo de ambiente:
+### Gestão
+
+```bash
+cd apps/gestao
+flutter pub get
+flutter run
+```
+
+## Ambiente
+
+Copie o exemplo de ambiente para o app que estiver rodando:
 
 ```bash
 cp .env.example .env
 ```
 
-6. Preencha as variáveis:
+Variáveis:
 
 ```text
 SUPABASE_URL=https://seu-projeto.supabase.co
 SUPABASE_ANON_KEY=sua-chave-anon-pública
 ```
 
-7. Rode o app:
-
-```bash
-flutter run
-```
-
-Ou rode informando as credenciais por `dart-define`:
+Também é possível rodar com `dart-define`:
 
 ```bash
 flutter run \
@@ -137,34 +116,19 @@ flutter run \
 
 ## Deploy Na Vercel
 
-Este projeto está preparado para rodar como Flutter Web na Vercel. A Vercel executa `scripts/vercel-build.sh`, baixa o Flutter SDK, instala dependências e publica `build/web`.
-
-1. Importe o repositório `sapodexterdev/clubedaregua` na Vercel.
-2. Configure o projeto como `Other`.
-3. Confirme os campos:
+A Vercel publica o App Cliente:
 
 ```text
 Build Command: bash scripts/vercel-build.sh
-Output Directory: build/web
+Output Directory: apps/cliente/build/web
 Install Command: vazio
 ```
 
-4. Adicione as variáveis de ambiente:
-
-```text
-SUPABASE_URL=https://seu-projeto.supabase.co
-SUPABASE_ANON_KEY=sua-chave-anon-pública
-```
-
-5. Clique em Deploy.
-
-O arquivo `vercel.json` configura rewrite para `index.html`, necessário para navegação SPA.
+O script `scripts/vercel-build.sh` entra em `apps/cliente`, baixa o Flutter SDK, instala dependências e executa o build web.
 
 ## Supabase
 
-1. Crie um projeto no Supabase.
-2. Abra o SQL Editor.
-3. Execute o arquivo:
+Execute no SQL Editor:
 
 ```text
 supabase/schema.sql
@@ -197,39 +161,11 @@ O schema SaaS cria:
 
 Também cria funções de autorização, policies de RLS por barbearia, índices básicos, planos iniciais e o bucket público `barbershop-media` para imagens.
 
-## Fluxos Principais
+## Próximos Passos
 
-### Cliente
-
-- Onboarding com imagem grande e CTA.
-- Login/cadastro via Supabase Auth.
-- Busca por barbearia, serviço ou barbeiro.
-- Agendamento em poucos cliques: serviço, profissional, data, horário e confirmação.
-- PIX, histórico, cancelamento, avaliação, fidelidade e notificações.
-
-### Barbeiro
-
-- Login como barbeiro.
-- Painel com agenda do dia, atendimentos e comissão.
-- Confirmação de atendimentos.
-- Bloqueio de horários, férias e indisponibilidade.
-- Visualização de clientes e próximos retornos.
-
-### Dono/Administrador
-
-- Painel administrativo.
-- Cadastro de barbeiros e serviços.
-- Controle de agenda.
-- Relatórios de faturamento e ranking.
-- Serviços mais vendidos.
-- Caixa, cupons, estoque e configurações da barbearia.
-- Gestão do plano SaaS e assinatura.
-
-## Próximos Passos Sugeridos
-
-- Separar o monorepo em `apps/cliente`, `apps/gestao` e `packages/shared`.
-- Ativar `supabase_flutter` e conectar Auth real.
-- Conectar listagem pública de barbearias, barbeiros, serviços e horários.
-- Implementar criação real de agendamento.
-- Conectar painel de gestão ao banco com RLS por barbearia.
-- Integrar provedor de PIX real.
+- Mover os modelos e o tema compartilhado do App Cliente para `packages/shared`.
+- Remover telas de gestão que ainda ficaram dentro do App Cliente durante a transição.
+- Conectar `supabase_flutter` no pacote compartilhado.
+- Implementar Auth real nos dois apps.
+- Conectar fluxo real de agendamento no App Cliente.
+- Conectar agenda, serviços e equipe no App Gestão.

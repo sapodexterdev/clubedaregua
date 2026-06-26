@@ -1,12 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'screens/admin/admin_dashboard_screen.dart';
-import 'screens/admin/barber_form_screen.dart';
-import 'screens/admin/service_form_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
-import 'screens/barber/barber_agenda_screen.dart';
-import 'screens/barber/barber_dashboard_screen.dart';
 import 'screens/client/appointment_confirmation_screen.dart';
 import 'screens/client/appointment_screen.dart';
 import 'screens/client/barber_details_screen.dart';
@@ -41,11 +36,6 @@ class ClubeDaReguaApp extends StatelessWidget {
             const AppointmentConfirmationScreen(),
         HistoryScreen.route: (_) => const HistoryScreen(),
         ProfileScreen.route: (_) => const ProfileScreen(),
-        BarberDashboardScreen.route: (_) => const BarberDashboardScreen(),
-        BarberAgendaScreen.route: (_) => const BarberAgendaScreen(),
-        AdminDashboardScreen.route: (_) => const AdminDashboardScreen(),
-        ServiceFormScreen.route: (_) => const ServiceFormScreen(),
-        BarberFormScreen.route: (_) => const BarberFormScreen(),
       },
     );
   }

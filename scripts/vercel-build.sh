@@ -10,6 +10,8 @@ fi
 
 export PATH="$FLUTTER_DIR/bin:$PATH"
 
+cd apps/cliente
+
 flutter config --enable-web
 flutter pub get
 
