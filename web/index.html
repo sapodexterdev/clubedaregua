@@ -23,6 +23,16 @@
   </script>
 </head>
 <body>
-  <script src="flutter_bootstrap.js" async></script>
+  <script>
+    {{flutter_js}}
+    {{flutter_build_config}}
+
+    _flutter.loader.load({
+      serviceWorkerSettings: null,
+      config: {
+        renderer: 'html'
+      }
+    });
+  </script>
 </body>
 </html>
