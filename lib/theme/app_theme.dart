@@ -1,21 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
 
 class AppTheme {
   static ThemeData get light {
-    final textTheme = GoogleFonts.interTextTheme();
-
     return ThemeData(
       useMaterial3: true,
+      fontFamily: 'Inter',
       scaffoldBackgroundColor: AppColors.background,
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.orange,
         primary: AppColors.orange,
         surface: AppColors.card,
       ),
-      textTheme: textTheme.apply(
+      textTheme: ThemeData.light().textTheme.apply(
         bodyColor: AppColors.text,
         displayColor: AppColors.text,
       ),
