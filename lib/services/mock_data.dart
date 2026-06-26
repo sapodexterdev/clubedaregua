@@ -21,8 +21,8 @@ class MockData {
   static const barbers = [
     Barber(
       id: '1',
-      name: 'David Marcomin',
-      shopName: 'Elite Barber Shop',
+      name: 'Davi Marcomin',
+      shopName: 'Barbearia Elite',
       imageUrl:
           'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?auto=format&fit=crop&w=900&q=80',
       rating: 4.9,
@@ -32,8 +32,8 @@ class MockData {
     ),
     Barber(
       id: '2',
-      name: 'Richard Anderson',
-      shopName: 'Pro Barber Shop',
+      name: 'Ricardo Anderson',
+      shopName: 'Barbearia Pro',
       imageUrl:
           'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&w=900&q=80',
       rating: 4.7,
@@ -68,13 +68,13 @@ class MockData {
     NotificationItem(
       id: '1',
       title: 'Agendamento confirmado',
-      message: 'Seu horario de hoje as 15:30 esta garantido.',
+      message: 'Seu horário de hoje às 15:30 está garantido.',
       isRead: false,
     ),
     NotificationItem(
       id: '2',
       title: 'Pontos adicionados',
-      message: 'Voce ganhou 85 pontos no Clube da Regua.',
+      message: 'Você ganhou 85 pontos no Clube da Régua.',
       isRead: true,
     ),
   ];

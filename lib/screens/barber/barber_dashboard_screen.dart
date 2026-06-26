@@ -13,7 +13,7 @@ class BarberDashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Dashboard Barbeiro')),
+      appBar: AppBar(title: const Text('Painel do Barbeiro')),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -34,7 +34,7 @@ class BarberDashboardScreen extends StatelessWidget {
               SizedBox(width: 12),
               Expanded(
                 child: MetricCard(
-                  title: 'Comissao',
+                  title: 'Comissão',
                   value: 'R\$ 312',
                   icon: Icons.payments_rounded,
                 ),
@@ -44,25 +44,25 @@ class BarberDashboardScreen extends StatelessWidget {
           const SizedBox(height: 18),
           _ActionTile(
             title: 'Confirmar atendimento',
-            subtitle: 'Marque servicos concluidos e gere pontos.',
+            subtitle: 'Marque serviços concluídos e gere pontos.',
             icon: Icons.check_circle_rounded,
             onTap: () {},
           ),
           _ActionTile(
-            title: 'Bloquear horarios',
+            title: 'Bloquear horários',
             subtitle: 'Reserve pausas, encaixes e compromissos.',
             icon: Icons.block_rounded,
             onTap: () => Navigator.pushNamed(context, BarberAgendaScreen.route),
           ),
           _ActionTile(
-            title: 'Ferias e indisponibilidade',
-            subtitle: 'Cadastre periodos sem atendimento.',
+            title: 'Férias e indisponibilidade',
+            subtitle: 'Cadastre períodos sem atendimento.',
             icon: Icons.beach_access_rounded,
             onTap: () {},
           ),
           _ActionTile(
             title: 'Clientes',
-            subtitle: 'Veja historico e proximos retornos.',
+            subtitle: 'Veja histórico e próximos retornos.',
             icon: Icons.people_alt_rounded,
             onTap: () {},
           ),

@@ -127,16 +127,16 @@ class BarberDetailsScreen extends StatelessWidget {
                         const SizedBox(height: 54),
                         Row(
                           children: const [
-                            _PillTab(label: 'Booking', selected: true),
+                            _PillTab(label: 'Agendar', selected: true),
                             SizedBox(width: 12),
-                            _PillTab(label: 'About'),
+                            _PillTab(label: 'Sobre'),
                             SizedBox(width: 12),
-                            _PillTab(label: 'Reviews'),
+                            _PillTab(label: 'Avaliações'),
                           ],
                         ),
                         const SizedBox(height: 34),
                         const Text(
-                          'August 2025',
+                          'Agosto 2025',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w900,
@@ -146,7 +146,7 @@ class BarberDetailsScreen extends StatelessWidget {
                         const _CalendarStrip(),
                         const SizedBox(height: 32),
                         const Text(
-                          'Time',
+                          'Horários',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w900,
@@ -171,7 +171,7 @@ class BarberDetailsScreen extends StatelessWidget {
                               SizedBox(width: 12),
                               Expanded(
                                 child: Text(
-                                  'Wednesday, August 25',
+                                  'Quarta-feira, 25 de agosto',
                                   style: TextStyle(fontWeight: FontWeight.w800),
                                 ),
                               ),
@@ -198,7 +198,7 @@ class BarberDetailsScreen extends StatelessWidget {
                               ),
                             ),
                             child: const Text(
-                              'Book Now',
+                              'Agendar agora',
                               style: TextStyle(
                                 fontSize: 19,
                                 fontWeight: FontWeight.w900,
@@ -280,13 +280,13 @@ class _CalendarStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const days = [
-      ('Sun', '12'),
-      ('Mon', '13'),
-      ('Tue', '14'),
-      ('Wed', '15'),
-      ('Thu', '16'),
-      ('Fri', '17'),
-      ('Sat', '18'),
+      ('Dom', '12'),
+      ('Seg', '13'),
+      ('Ter', '14'),
+      ('Qua', '15'),
+      ('Qui', '16'),
+      ('Sex', '17'),
+      ('Sáb', '18'),
     ];
 
     return SizedBox(
@@ -297,7 +297,7 @@ class _CalendarStrip extends StatelessWidget {
         separatorBuilder: (_, __) => const SizedBox(width: 10),
         itemBuilder: (context, index) {
           final day = days[index];
-          final selected = day.$1 == 'Wed';
+          final selected = day.$1 == 'Qua';
           return Container(
             width: 54,
             decoration: BoxDecoration(

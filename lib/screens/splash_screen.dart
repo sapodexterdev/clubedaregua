@@ -29,7 +29,7 @@ class _SplashScreenState extends State<SplashScreen> {
       backgroundColor: AppColors.dark,
       body: Center(
         child: Text(
-          'Clube da Regua',
+          'Clube da Régua',
           style: TextStyle(
             color: Colors.white,
             fontSize: 30,

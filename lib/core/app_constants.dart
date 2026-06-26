@@ -1,5 +1,5 @@
 class AppConstants {
-  static const appName = 'Clube da Regua';
+  static const appName = 'Clube da Régua';
   static const primaryColorHex = '#FF6B2C';
   static const defaultAvatar =
       'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80';

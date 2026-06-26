@@ -39,7 +39,7 @@ class AppointmentConfirmationScreen extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               const Text(
-                'Seu horario foi reservado. O pagamento PIX esta aguardando confirmacao.',
+                'Seu horário foi reservado. O pagamento PIX está aguardando confirmação.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: AppColors.muted, fontSize: 16),
               ),

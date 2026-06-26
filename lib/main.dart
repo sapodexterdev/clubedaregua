@@ -52,7 +52,7 @@ class StartupErrorApp extends StatelessWidget {
                 ),
                 const SizedBox(height: 18),
                 const Text(
-                  'Nao foi possivel iniciar o Clube da Regua',
+                  'Não foi possível iniciar o Clube da Régua',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
                 ),

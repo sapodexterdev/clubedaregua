@@ -71,7 +71,7 @@ class OnboardingScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
                       Text(
-                        'Discover the\nbeauty in you\ntoday',
+                        'Descubra sua\nmelhor versão\nhoje',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 43,
@@ -82,7 +82,7 @@ class OnboardingScreen extends StatelessWidget {
                       ),
                       SizedBox(height: 22),
                       Text(
-                        'Discover the beauty within you and shine with confidence,\nelegance, and a style that is uniquely yours.',
+                        'Realce seu estilo com confiança, elegância\ne um visual que combina com você.',
                         style: TextStyle(
                           color: Colors.white54,
                           fontSize: 14,
@@ -125,7 +125,7 @@ class OnboardingScreen extends StatelessWidget {
                           const SizedBox(width: 16),
                           const Expanded(
                             child: Text(
-                              'Get Started',
+                              'Começar',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,

@@ -24,7 +24,7 @@ class _BarberAgendaScreenState extends State<BarberAgendaScreen> {
         padding: const EdgeInsets.all(20),
         children: [
           const Text(
-            'Horarios disponiveis',
+            'Horários disponíveis',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 12),
@@ -55,7 +55,7 @@ class _BarberAgendaScreenState extends State<BarberAgendaScreen> {
                 children: [
                   const Icon(Icons.block_rounded, color: AppColors.orange),
                   const SizedBox(width: 12),
-                  Expanded(child: Text('Horario bloqueado: $time')),
+                  Expanded(child: Text('Horário bloqueado: $time')),
                   TextButton(
                     onPressed: () => setState(() => blocked.remove(time)),
                     child: const Text('Liberar'),

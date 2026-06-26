@@ -13,7 +13,7 @@ class HistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Historico')),
+      appBar: AppBar(title: const Text('Histórico')),
       bottomNavigationBar: PremiumBottomNav(
         currentIndex: 1,
         onTap: (index) {
@@ -49,7 +49,7 @@ class HistoryScreen extends StatelessWidget {
                           ),
                         ),
                         Chip(
-                          label: Text(appointment.status),
+                          label: Text(_statusLabel(appointment.status)),
                           backgroundColor: AppColors.background,
                           side: BorderSide.none,
                         ),
@@ -57,7 +57,7 @@ class HistoryScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '${appointment.barberName} • ${appointment.dateLabel} as ${appointment.time}',
+                      '${appointment.barberName} • ${appointment.dateLabel} às ${appointment.time}',
                       style: const TextStyle(color: AppColors.muted),
                     ),
                     const SizedBox(height: 14),
@@ -83,5 +83,14 @@ class HistoryScreen extends StatelessWidget {
         },
       ),
     );
+  }
+
+  String _statusLabel(String status) {
+    return switch (status) {
+      'confirmed' => 'Confirmado',
+      'pending' => 'Pendente',
+      'cancelled' => 'Cancelado',
+      _ => status,
+    };
   }
 }

@@ -26,7 +26,7 @@ class AppointmentScreen extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             children: [
               const Text(
-                'Selecione o servico',
+                'Selecione o serviço',
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 14),
@@ -56,12 +56,12 @@ class AppointmentScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     _SummaryRow(label: 'Barbeiro', value: barber?.name ?? '-'),
-                    _SummaryRow(label: 'Servico', value: service?.name ?? '-'),
+                    _SummaryRow(label: 'Serviço', value: service?.name ?? '-'),
                     _SummaryRow(
                       label: 'Data',
                       value: DateFormat('dd/MM').format(state.selectedDate),
                     ),
-                    _SummaryRow(label: 'Horario', value: state.selectedTime),
+                    _SummaryRow(label: 'Horário', value: state.selectedTime),
                     const Divider(height: 28),
                     _SummaryRow(
                       label: 'Total',
@@ -83,7 +83,7 @@ class AppointmentScreen extends StatelessWidget {
                           SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'Pagamento via PIX: aguardando confirmacao',
+                              'Pagamento via PIX: aguardando confirmação',
                               style: TextStyle(fontWeight: FontWeight.w700),
                             ),
                           ),

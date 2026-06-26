@@ -45,7 +45,7 @@ class HomeScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Good Morning!',
+                            'Bom dia!',
                             style: TextStyle(
                               color: AppColors.muted,
                               fontSize: 13,
@@ -54,7 +54,7 @@ class HomeScreen extends StatelessWidget {
                           ),
                           SizedBox(height: 3),
                           Text(
-                            'Jacob Thomas',
+                            'Rafael Sapão',
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.w900,
@@ -81,7 +81,7 @@ class HomeScreen extends StatelessWidget {
                       child: TextField(
                         decoration: InputDecoration(
                           prefixIcon: Icon(Icons.search_rounded),
-                          hintText: 'Search Salon, Specialist',
+                          hintText: 'Buscar salão, barbeiro ou serviço',
                         ),
                       ),
                     ),
@@ -133,7 +133,7 @@ class HomeScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'Get 20% Off Your\nNext Haircut!',
+                              'Ganhe 20% OFF\nno próximo corte!',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 28,
@@ -155,7 +155,7 @@ class HomeScreen extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(28),
                                 ),
                               ),
-                              child: const Text('Book Now'),
+                              child: const Text('Agendar'),
                             ),
                           ],
                         ),
@@ -165,7 +165,7 @@ class HomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 const Text(
-                  'Category',
+                  'Categorias',
                   style: TextStyle(fontSize: 23, fontWeight: FontWeight.w900),
                 ),
                 const SizedBox(height: 14),
@@ -186,7 +186,7 @@ class HomeScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(27),
                         ),
                         child: Text(
-                          index == 0 ? 'Hairdressing' : category.name,
+                          index == 0 ? 'Corte' : category.name,
                           style: TextStyle(
                             color: selected ? Colors.white : AppColors.muted,
                             fontWeight: FontWeight.w800,
@@ -197,7 +197,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 22),
-                const SectionHeader(title: 'Hairdressing', actionLabel: 'See All'),
+                const SectionHeader(title: 'Cortes em destaque', actionLabel: 'Ver todos'),
                 const SizedBox(height: 12),
                 SizedBox(
                   height: 250,

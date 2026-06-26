@@ -24,7 +24,7 @@ class ClubeDaReguaApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Clube da Regua',
+      title: 'Clube da Régua',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       builder: (context, child) => _ResponsivePhoneFrame(child: child),

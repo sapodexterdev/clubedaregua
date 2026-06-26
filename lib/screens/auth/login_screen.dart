@@ -38,7 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
         await authService.signIn(emailController.text, passwordController.text);
       }
     } catch (_) {
-      // Mantem o app navegavel com dados mockados durante o desenvolvimento.
+      // Mantém o app navegável com dados mockados durante o desenvolvimento.
     }
     setState(() => isLoading = false);
 
@@ -84,7 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
               segments: const [
                 ButtonSegment(value: 'client', label: Text('Cliente')),
                 ButtonSegment(value: 'barber', label: Text('Barbeiro')),
-                ButtonSegment(value: 'admin', label: Text('Admin')),
+                ButtonSegment(value: 'admin', label: Text('Administrador')),
               ],
               selected: {role},
               onSelectionChanged: (value) => setState(() => role = value.first),

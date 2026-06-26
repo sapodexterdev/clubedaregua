@@ -1,6 +1,6 @@
-# Clube da Regua
+# Clube da Régua
 
-Aplicativo mobile de barbearia feito em Flutter, Dart e Supabase. A proposta visual e inspirada em apps modernos de agendamento: fundo claro, fotos grandes, cards brancos arredondados, botoes laranja e navegacao inferior escura.
+Aplicativo mobile de barbearia feito em Flutter, Dart e Supabase. A proposta visual é inspirada em apps modernos de agendamento: fundo claro, fotos grandes, cards brancos arredondados, botões laranja e navegação inferior escura.
 
 ## Stack
 
@@ -35,7 +35,7 @@ supabase/
   schema.sql
 ```
 
-## Telas incluidas
+## Telas incluídas
 
 - Splash
 - Onboarding
@@ -44,16 +44,16 @@ supabase/
 - Home Cliente
 - Detalhes do Barbeiro
 - Agendamento
-- Confirmacao de Agendamento
-- Historico
+- Confirmação de Agendamento
+- Histórico
 - Perfil Cliente
-- Dashboard Barbeiro
+- Painel do Barbeiro
 - Agenda Barbeiro
-- Dashboard Admin
-- Cadastro de Servicos
+- Painel do Administrador
+- Cadastro de Serviços
 - Cadastro de Barbeiros
 
-## Configuracao local
+## Configuração local
 
 1. Instale o Flutter SDK.
 2. Entre na pasta do projeto:
@@ -62,13 +62,13 @@ supabase/
 cd clubedaregua
 ```
 
-3. Gere as plataformas Flutter, caso ainda nao existam:
+3. Gere as plataformas Flutter, caso ainda não existam:
 
 ```bash
 flutter create .
 ```
 
-4. Instale as dependencias:
+4. Instale as dependências:
 
 ```bash
 flutter pub get
@@ -80,11 +80,11 @@ flutter pub get
 cp .env.example .env
 ```
 
-6. Preencha as variaveis:
+6. Preencha as variáveis:
 
 ```text
 SUPABASE_URL=https://seu-projeto.supabase.co
-SUPABASE_ANON_KEY=sua-chave-anon-publica
+SUPABASE_ANON_KEY=sua-chave-anon-pública
 ```
 
 7. Rode o app:
@@ -98,16 +98,16 @@ Ou rode informando as credenciais por `dart-define`:
 ```bash
 flutter run \
   --dart-define=SUPABASE_URL=https://seu-projeto.supabase.co \
-  --dart-define=SUPABASE_ANON_KEY=sua-chave-anon-publica
+  --dart-define=SUPABASE_ANON_KEY=sua-chave-anon-pública
 ```
 
-> Enquanto o Supabase nao estiver configurado, o app usa dados mockados para permitir navegar pelas telas.
+> Enquanto o Supabase não estiver configurado, o app usa dados mockados para permitir navegar pelas telas.
 
 ## Deploy na Vercel
 
-Este projeto tambem esta preparado para rodar como Flutter Web na Vercel. A Vercel executa `scripts/vercel-build.sh`, baixa o Flutter SDK, instala dependencias e publica `build/web`.
+Este projeto também está preparado para rodar como Flutter Web na Vercel. A Vercel executa `scripts/vercel-build.sh`, baixa o Flutter SDK, instala dependências e publica `build/web`.
 
-1. Importe o repositorio `sapodexterdev/clubedaregua` na Vercel.
+1. Importe o repositório `sapodexterdev/clubedaregua` na Vercel.
 2. Configure o projeto como `Other`.
 3. Confirme os campos:
 
@@ -117,16 +117,16 @@ Output Directory: build/web
 Install Command: vazio
 ```
 
-4. Adicione as variaveis de ambiente:
+4. Adicione as variáveis de ambiente:
 
 ```text
 SUPABASE_URL=https://seu-projeto.supabase.co
-SUPABASE_ANON_KEY=sua-chave-anon-publica
+SUPABASE_ANON_KEY=sua-chave-anon-pública
 ```
 
 5. Clique em Deploy.
 
-O arquivo `vercel.json` tambem configura rewrite para `index.html`, necessario para navegacao SPA.
+O arquivo `vercel.json` também configura rewrite para `index.html`, necessário para navegação SPA.
 
 ## Supabase
 
@@ -157,7 +157,7 @@ O schema cria:
 - stock_items
 - cash_movements
 
-Tambem cria policies iniciais de RLS, indices basicos e o bucket publico `barbershop-media` para imagens.
+Também cria policies iniciais de RLS, índices básicos e o bucket público `barbershop-media` para imagens.
 
 ## Fluxos principais
 
@@ -165,32 +165,32 @@ Tambem cria policies iniciais de RLS, indices basicos e o bucket publico `barber
 
 - Onboarding com imagem grande e CTA.
 - Login/cadastro via Supabase Auth.
-- Home com saudacao, busca, filtro, banner promocional, categorias, barbeiros e servicos.
-- Detalhe do barbeiro com foto grande, favorito, avaliacao, abas, calendario, horarios e resumo.
-- Agendamento com servico, data, horario, PIX e status.
-- Historico, cancelamento visual, avaliacao e fidelidade com pontos.
-- Notificacoes internas no perfil.
+- Home com saudação, busca, filtro, banner promocional, categorias, barbeiros e serviços.
+- Detalhe do barbeiro com foto grande, favorito, avaliação, abas, calendário, horários e resumo.
+- Agendamento com serviço, data, horário, PIX e status.
+- Histórico, cancelamento visual, avaliação e fidelidade com pontos.
+- Notificações internas no perfil.
 
 ### Barbeiro
 
 - Login como barbeiro.
-- Dashboard com agenda do dia, atendimentos e comissao.
-- Agenda com bloqueio/liberacao de horarios.
-- Entradas iniciais para clientes, ferias e indisponibilidade.
+- Painel com agenda do dia, atendimentos e comissão.
+- Agenda com bloqueio/liberação de horários.
+- Entradas iniciais para clientes, férias e indisponibilidade.
 
-### Admin
+### Administrador
 
-- Dashboard administrativo.
-- Cadastro de barbeiros e servicos.
+- Painel administrativo.
+- Cadastro de barbeiros e serviços.
 - Controle de agenda.
-- Relatorio simples de faturamento.
+- Relatório simples de faturamento.
 - Ranking de barbeiros.
-- Servicos mais vendidos.
-- Caixa, cupons e estoque basico.
+- Serviços mais vendidos.
+- Caixa, cupons e estoque básico.
 
-## Proximos passos sugeridos
+## Próximos passos sugeridos
 
-- Conectar formularios admin aos repositories.
+- Conectar formulários admin aos repositories.
 - Implementar upload real de fotos no Supabase Storage.
 - Criar policies de admin/owner mais granulares.
 - Adicionar testes de widgets para home, login e agendamento.

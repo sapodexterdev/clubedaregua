@@ -13,12 +13,12 @@ class AdminDashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Dashboard Admin')),
+      appBar: AppBar(title: const Text('Painel do Administrador')),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
           const Text(
-            'Operacao Clube da Regua',
+            'Operação Clube da Régua',
             style: TextStyle(fontSize: 27, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 16),
@@ -68,7 +68,7 @@ class AdminDashboardScreen extends StatelessWidget {
             onTap: () => Navigator.pushNamed(context, BarberFormScreen.route),
           ),
           _AdminTile(
-            title: 'Cadastrar servicos',
+            title: 'Cadastrar serviços',
             icon: Icons.add_business_rounded,
             onTap: () => Navigator.pushNamed(context, ServiceFormScreen.route),
           ),
@@ -83,7 +83,7 @@ class AdminDashboardScreen extends StatelessWidget {
             onTap: () {},
           ),
           _AdminTile(
-            title: 'Estoque basico',
+            title: 'Estoque básico',
             icon: Icons.inventory_2_rounded,
             onTap: () {},
           ),

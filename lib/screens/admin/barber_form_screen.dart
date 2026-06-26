@@ -18,7 +18,7 @@ class BarberFormScreen extends StatelessWidget {
           const SizedBox(height: 12),
           const TextField(decoration: InputDecoration(hintText: 'Email')),
           const SizedBox(height: 12),
-          const TextField(decoration: InputDecoration(hintText: 'Comissao (%)')),
+          const TextField(decoration: InputDecoration(hintText: 'Comissão (%)')),
           const SizedBox(height: 12),
           const TextField(decoration: InputDecoration(hintText: 'URL da foto')),
           const SizedBox(height: 20),

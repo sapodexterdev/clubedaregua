@@ -20,7 +20,7 @@ class PremiumBottomNav extends StatelessWidget {
       Icons.favorite_border_rounded,
       Icons.person_rounded,
     ];
-    const labels = ['Home', 'Search', 'Favorite', 'Profile'];
+    const labels = ['Início', 'Buscar', 'Favoritos', 'Perfil'];
 
     return SafeArea(
       top: false,

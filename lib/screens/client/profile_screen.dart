@@ -42,7 +42,7 @@ class ProfileScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Rafael Sapao',
+                        'Rafael Sapão',
                         style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
                       ),
                       Text(
@@ -77,7 +77,7 @@ class ProfileScreen extends StatelessWidget {
           ),
           const SizedBox(height: 22),
           const Text(
-            'Notificacoes',
+            'Notificações',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 12),
