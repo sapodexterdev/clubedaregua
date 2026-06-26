@@ -16,6 +16,7 @@ import 'screens/client/profile_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/splash_screen.dart';
 import 'theme/app_theme.dart';
+import 'theme/app_colors.dart';
 
 class ClubeDaReguaApp extends StatelessWidget {
   const ClubeDaReguaApp({super.key});
@@ -26,6 +27,7 @@ class ClubeDaReguaApp extends StatelessWidget {
       title: 'Clube da Regua',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
+      builder: (context, child) => _ResponsivePhoneFrame(child: child),
       initialRoute: SplashScreen.route,
       routes: {
         SplashScreen.route: (_) => const SplashScreen(),
@@ -44,6 +46,48 @@ class ClubeDaReguaApp extends StatelessWidget {
         AdminDashboardScreen.route: (_) => const AdminDashboardScreen(),
         ServiceFormScreen.route: (_) => const ServiceFormScreen(),
         BarberFormScreen.route: (_) => const BarberFormScreen(),
+      },
+    );
+  }
+}
+
+class _ResponsivePhoneFrame extends StatelessWidget {
+  const _ResponsivePhoneFrame({required this.child});
+
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth <= 520 || child == null) {
+          return child ?? const SizedBox.shrink();
+        }
+
+        final height = (constraints.maxHeight - 36).clamp(640.0, 900.0).toDouble();
+
+        return ColoredBox(
+          color: AppColors.softBackground,
+          child: Center(
+            child: Container(
+              width: 430,
+              height: height,
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(44),
+                border: Border.all(color: Colors.white, width: 2),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: MediaQuery(
+                data: MediaQuery.of(context).copyWith(
+                  size: Size(430, height),
+                  padding: EdgeInsets.zero,
+                ),
+                child: child!,
+              ),
+            ),
+          ),
+        );
       },
     );
   }
