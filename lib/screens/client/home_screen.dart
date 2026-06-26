@@ -7,7 +7,6 @@ import '../../theme/app_colors.dart';
 import '../../widgets/barber_card.dart';
 import '../../widgets/premium_bottom_nav.dart';
 import '../../widgets/section_header.dart';
-import '../../widgets/service_card.dart';
 import 'barber_details_screen.dart';
 import 'history_screen.dart';
 import 'profile_screen.dart';
@@ -20,6 +19,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       bottomNavigationBar: PremiumBottomNav(
         currentIndex: 0,
         onTap: (index) {
@@ -31,29 +31,34 @@ class HomeScreen extends StatelessWidget {
         child: Consumer<AppState>(
           builder: (context, state, _) {
             return ListView(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
+              padding: const EdgeInsets.fromLTRB(22, 18, 22, 28),
               children: [
                 Row(
                   children: [
                     const CircleAvatar(
-                      radius: 24,
+                      radius: 28,
                       backgroundImage: NetworkImage(AppConstants.defaultAvatar),
                     ),
-                    const SizedBox(width: 14),
+                    const SizedBox(width: 16),
                     const Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Bom dia, Rafael',
+                            'Good Morning!',
                             style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
+                              color: AppColors.muted,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
+                          SizedBox(height: 3),
                           Text(
-                            'Pronto para renovar o visual?',
-                            style: TextStyle(color: AppColors.muted),
+                            'Jacob Thomas',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                            ),
                           ),
                         ],
                       ),
@@ -62,20 +67,21 @@ class HomeScreen extends StatelessWidget {
                       onPressed: () {},
                       style: IconButton.styleFrom(
                         backgroundColor: Colors.white,
-                        foregroundColor: AppColors.text,
+                        foregroundColor: AppColors.muted,
+                        fixedSize: const Size(58, 58),
                       ),
-                      icon: const Icon(Icons.notifications_none_rounded),
+                      icon: const Icon(Icons.notifications_none_rounded, size: 28),
                     ),
                   ],
                 ),
-                const SizedBox(height: 22),
+                const SizedBox(height: 26),
                 Row(
                   children: [
                     const Expanded(
                       child: TextField(
                         decoration: InputDecoration(
                           prefixIcon: Icon(Icons.search_rounded),
-                          hintText: 'Buscar servico, salao ou barbeiro',
+                          hintText: 'Search Salon, Specialist',
                         ),
                       ),
                     ),
@@ -83,81 +89,118 @@ class HomeScreen extends StatelessWidget {
                     IconButton.filled(
                       onPressed: () {},
                       style: IconButton.styleFrom(
-                        backgroundColor: AppColors.orange,
-                        foregroundColor: Colors.white,
-                        fixedSize: const Size(56, 56),
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppColors.muted,
+                        fixedSize: const Size(58, 58),
                       ),
                       icon: const Icon(Icons.tune_rounded),
                     ),
                   ],
                 ),
-                const SizedBox(height: 22),
+                const SizedBox(height: 26),
                 Container(
-                  padding: const EdgeInsets.all(20),
+                  height: 210,
+                  padding: const EdgeInsets.all(22),
                   decoration: BoxDecoration(
                     color: AppColors.dark,
-                    borderRadius: BorderRadius.circular(28),
+                    borderRadius: BorderRadius.circular(26),
+                    image: const DecorationImage(
+                      image: NetworkImage(AppConstants.promoBarber),
+                      fit: BoxFit.cover,
+                      alignment: Alignment.centerRight,
+                      opacity: .58,
+                    ),
                   ),
-                  child: Row(
+                  child: Stack(
                     children: [
-                      const Expanded(
+                      const Positioned.fill(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Colors.black87, Colors.transparent],
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: 2,
+                        top: 8,
+                        bottom: 8,
+                        width: 220,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              '20% OFF no proximo corte',
+                            const Text(
+                              'Get 20% Off Your\nNext Haircut!',
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 22,
+                                fontSize: 28,
+                                height: 1.08,
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
-                            SizedBox(height: 8),
-                            Text(
-                              'Use o cupom REGUA20 hoje.',
-                              style: TextStyle(color: Colors.white70),
+                            const Spacer(),
+                            FilledButton(
+                              onPressed: () => Navigator.pushNamed(
+                                context,
+                                BarberDetailsScreen.route,
+                              ),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: AppColors.orange,
+                                foregroundColor: Colors.white,
+                                minimumSize: const Size(138, 52),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(28),
+                                ),
+                              ),
+                              child: const Text('Book Now'),
                             ),
                           ],
                         ),
-                      ),
-                      FilledButton(
-                        onPressed: () => Navigator.pushNamed(
-                          context,
-                          BarberDetailsScreen.route,
-                        ),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.orange,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('Agendar agora'),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 24),
+                const Text(
+                  'Category',
+                  style: TextStyle(fontSize: 23, fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 14),
                 SizedBox(
-                  height: 42,
+                  height: 54,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: state.categories.length,
                     separatorBuilder: (_, __) => const SizedBox(width: 10),
                     itemBuilder: (context, index) {
                       final category = state.categories[index];
-                      return Chip(
-                        avatar: const Icon(Icons.content_cut, size: 18),
-                        label: Text(category.name),
-                        backgroundColor: Colors.white,
-                        side: BorderSide.none,
-                        labelStyle: const TextStyle(fontWeight: FontWeight.w800),
+                      final selected = index == 0;
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: selected ? AppColors.orange : Colors.white,
+                          borderRadius: BorderRadius.circular(27),
+                        ),
+                        child: Text(
+                          index == 0 ? 'Hairdressing' : category.name,
+                          style: TextStyle(
+                            color: selected ? Colors.white : AppColors.muted,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
                       );
                     },
                   ),
                 ),
-                const SizedBox(height: 24),
-                const SectionHeader(title: 'Barbeiros em destaque'),
+                const SizedBox(height: 22),
+                const SectionHeader(title: 'Hairdressing', actionLabel: 'See All'),
                 const SizedBox(height: 12),
                 SizedBox(
-                  height: 300,
+                  height: 250,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     itemCount: state.barbers.length,
@@ -171,19 +214,6 @@ class HomeScreen extends StatelessWidget {
                         },
                       );
                     },
-                  ),
-                ),
-                const SizedBox(height: 24),
-                const SectionHeader(title: 'Servicos populares'),
-                const SizedBox(height: 12),
-                ...state.services.map(
-                  (service) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: ServiceCard(
-                      service: service,
-                      isSelected: state.selectedService?.id == service.id,
-                      onTap: () => state.selectService(service),
-                    ),
                   ),
                 ),
               ],

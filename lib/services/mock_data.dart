@@ -21,23 +21,23 @@ class MockData {
   static const barbers = [
     Barber(
       id: '1',
-      name: 'Lucas Andrade',
-      shopName: 'Clube da Regua Centro',
+      name: 'David Marcomin',
+      shopName: 'Elite Barber Shop',
       imageUrl:
-          'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&w=900&q=80',
+          'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?auto=format&fit=crop&w=900&q=80',
       rating: 4.9,
-      startingPrice: 45,
+      startingPrice: 49.32,
       bio:
           'Especialista em degradê, barba desenhada e acabamento premium para quem gosta de sair pronto.',
     ),
     Barber(
       id: '2',
-      name: 'Diego Martins',
-      shopName: 'Clube da Regua Prime',
+      name: 'Richard Anderson',
+      shopName: 'Pro Barber Shop',
       imageUrl:
-          'https://images.unsplash.com/photo-1621605815971-fbc98d665033?auto=format&fit=crop&w=900&q=80',
-      rating: 4.8,
-      startingPrice: 50,
+          'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&w=900&q=80',
+      rating: 4.7,
+      startingPrice: 28.48,
       bio:
           'Atendimento preciso, agenda pontual e cortes modernos para rotina executiva.',
     ),

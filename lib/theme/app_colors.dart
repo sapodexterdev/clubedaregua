@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   static const orange = Color(0xFFFF6B2C);
-  static const background = Color(0xFFF4F4F4);
+  static const background = Color(0xFFF2F0EE);
+  static const softBackground = Color(0xFFEFE9E6);
   static const text = Color(0xFF151515);
   static const muted = Color(0xFF8A8A8A);
   static const dark = Color(0xFF111111);
