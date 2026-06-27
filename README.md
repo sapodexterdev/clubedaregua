@@ -144,6 +144,14 @@ Execute no SQL Editor:
 supabase/schema.sql
 ```
 
+Depois que o schema rodar sem erro, rode os dados de exemplo:
+
+```text
+supabase/seed_demo.sql
+```
+
+Nao rode o `seed_demo.sql` antes do `schema.sql`, porque ele depende das tabelas ja criadas.
+
 O schema SaaS cria:
 
 - users
