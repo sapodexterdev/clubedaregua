@@ -126,15 +126,20 @@ Install Command: vazio
 
 O script `scripts/vercel-build.sh` entra em `apps/cliente`, baixa o Flutter SDK, instala dependências e executa o build web.
 
-Na Vercel, cadastre estas variáveis em Project Settings > Environment Variables:
+Estado atual: o deploy do cliente não depende de variáveis do Supabase. O app
+está rodando com dados mockados para manter a navegação e o visual estáveis
+enquanto recriamos o banco do zero.
+
+Quando o Supabase for reativado, cadastre estas variáveis em Project Settings >
+Environment Variables:
 
 ```text
 SUPABASE_URL=https://seu-projeto.supabase.co
 SUPABASE_ANON_KEY=sua-chave-anon-publica
-ENABLE_SUPABASE=true
 ```
 
-Depois de salvar, faça um novo deploy para o app web receber a conexão real com o Supabase.
+Depois de salvar, faça um novo deploy para o app web receber a conexão real com
+o Supabase.
 
 ## Supabase
 
@@ -179,21 +184,14 @@ O schema SaaS cria:
 
 Também cria funções de autorização, policies de RLS por barbearia, índices básicos, planos iniciais e o bucket público `barbershop-media` para imagens.
 
-O app cliente já usa Supabase quando essas variáveis estão configuradas:
-
-- Supabase Auth para login e cadastro.
-- Leitura real de barbeiros, categorias e serviços.
-- Criação de agendamentos em `appointments`.
-- Criação de pagamento PIX pendente em `payments`.
-- Histórico real do cliente autenticado.
-- Cancelamento de agendamento pelo cliente.
-
-Se o banco ainda estiver vazio ou sem variáveis, o app mantém dados mockados para não quebrar a navegação visual.
+O app cliente está temporariamente desacoplado do Supabase. A próxima conexão
+real deve ser feita com calma, usando o novo schema SaaS e fallback mockado
+apenas para desenvolvimento.
 
 ## Próximos Passos
 
-- Mover os modelos e o tema compartilhado do App Cliente para `packages/shared`.
-- Remover telas de gestão que ainda ficaram dentro do App Cliente durante a transição.
-- Conectar `supabase_flutter` no pacote compartilhado.
-- Conectar Auth real no App Gestão.
-- Conectar agenda, serviços e equipe no App Gestão.
+- Manter o App Cliente rápido, com foco em agendamento em poucos cliques.
+- Evoluir `apps/gestao` como app separado para barbeiro, dono e equipe.
+- Recriar o Supabase do zero com multiempresa por `barber_shop_id`.
+- Conectar `supabase_flutter` somente depois do schema validado.
+- Conectar Auth, agenda, serviços, equipe, caixa e relatórios no App Gestão.

@@ -27,32 +27,6 @@
   </style>
 </head>
 <body>
-  <script>
-    async function clearOldPwaCache() {
-      try {
-        if ('serviceWorker' in navigator) {
-          var registrations = await navigator.serviceWorker.getRegistrations();
-          await Promise.all(registrations.map(function (registration) {
-            return registration.unregister();
-          }));
-        }
-
-        if ('caches' in window) {
-          var keys = await caches.keys();
-          await Promise.all(keys.map(function (key) {
-            return caches.delete(key);
-          }));
-        }
-      } catch (_) {
-      }
-    }
-
-    clearOldPwaCache().finally(function () {
-      var script = document.createElement('script');
-      script.src = 'flutter_bootstrap.js?v=3fee7bc';
-      script.async = true;
-      document.body.appendChild(script);
-    });
-  </script>
+  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
