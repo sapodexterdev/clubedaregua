@@ -23,11 +23,10 @@ Local: `apps/gestao`
 
 Experiência operacional para barbeiro, dono e equipe:
 
-- Agenda do dia.
-- Confirmação de atendimentos.
-- Serviços, barbeiros e clientes.
-- Bloqueio de horários, férias e indisponibilidade.
-- Caixa, estoque, cupons, relatórios e assinatura SaaS.
+- Visão Barbeiro: agenda, horários, clientes e comissão.
+- Visão Admin: painel, serviços, equipe, caixa e estoque.
+- Fluxo mockado para validar navegação e operação antes do banco.
+- Preparado para receber Auth, permissões e dados por barbearia.
 
 ### Pacote Compartilhado
 
@@ -191,7 +190,7 @@ apenas para desenvolvimento.
 ## Próximos Passos
 
 - Manter o App Cliente rápido, com foco em agendamento em poucos cliques.
-- Evoluir `apps/gestao` como app separado para barbeiro, dono e equipe.
+- Extrair widgets e modelos do `apps/gestao` conforme as telas crescerem.
 - Recriar o Supabase do zero com multiempresa por `barber_shop_id`.
 - Conectar `supabase_flutter` somente depois do schema validado.
 - Conectar Auth, agenda, serviços, equipe, caixa e relatórios no App Gestão.

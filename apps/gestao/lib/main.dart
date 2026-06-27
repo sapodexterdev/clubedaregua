@@ -27,6 +27,8 @@ class ClubeDaReguaGestaoApp extends StatelessWidget {
   }
 }
 
+enum ManagementRole { barber, admin }
+
 class ManagementHomeScreen extends StatefulWidget {
   const ManagementHomeScreen({super.key});
 
@@ -36,14 +38,18 @@ class ManagementHomeScreen extends StatefulWidget {
 
 class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
   var selectedRole = ManagementRole.barber;
+  var selectedTab = 0;
 
   @override
   Widget build(BuildContext context) {
     final isAdmin = selectedRole == ManagementRole.admin;
+    final tabs = isAdmin ? _adminTabs : _barberTabs;
+    final safeTab = selectedTab >= tabs.length ? 0 : selectedTab;
+    final page = tabs[safeTab];
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isAdmin ? 'Painel administrativo' : 'Agenda do barbeiro'),
+        title: Text(page.title),
         actions: [
           IconButton(
             tooltip: 'Notificações',
@@ -52,24 +58,119 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
           ),
         ],
       ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: safeTab,
+        backgroundColor: Colors.white,
+        indicatorColor: SharedAppColors.orange.withOpacity(.14),
+        onDestinationSelected: (index) => setState(() => selectedTab = index),
+        destinations: [
+          for (final tab in tabs)
+            NavigationDestination(
+              icon: Icon(tab.icon),
+              selectedIcon: Icon(tab.selectedIcon),
+              label: tab.label,
+            ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
         children: [
           _RoleSwitch(
             selectedRole: selectedRole,
-            onChanged: (role) => setState(() => selectedRole = role),
+            onChanged: (role) {
+              setState(() {
+                selectedRole = role;
+                selectedTab = 0;
+              });
+            },
           ),
           const SizedBox(height: 18),
           _Header(isAdmin: isAdmin),
           const SizedBox(height: 18),
-          if (isAdmin) const _AdminContent() else const _BarberContent(),
+          page.child,
         ],
       ),
     );
   }
 }
 
-enum ManagementRole { barber, admin }
+class _ManagementTab {
+  const _ManagementTab({
+    required this.label,
+    required this.title,
+    required this.icon,
+    required this.selectedIcon,
+    required this.child,
+  });
+
+  final String label;
+  final String title;
+  final IconData icon;
+  final IconData selectedIcon;
+  final Widget child;
+}
+
+const _barberTabs = [
+  _ManagementTab(
+    label: 'Agenda',
+    title: 'Agenda do barbeiro',
+    icon: Icons.calendar_month_outlined,
+    selectedIcon: Icons.calendar_month_rounded,
+    child: _BarberAgendaPage(),
+  ),
+  _ManagementTab(
+    label: 'Horários',
+    title: 'Disponibilidade',
+    icon: Icons.schedule_outlined,
+    selectedIcon: Icons.schedule_rounded,
+    child: _AvailabilityPage(),
+  ),
+  _ManagementTab(
+    label: 'Clientes',
+    title: 'Clientes atendidos',
+    icon: Icons.people_alt_outlined,
+    selectedIcon: Icons.people_alt_rounded,
+    child: _ClientsPage(),
+  ),
+  _ManagementTab(
+    label: 'Comissão',
+    title: 'Comissão e faturamento',
+    icon: Icons.payments_outlined,
+    selectedIcon: Icons.payments_rounded,
+    child: _CommissionPage(),
+  ),
+];
+
+const _adminTabs = [
+  _ManagementTab(
+    label: 'Painel',
+    title: 'Painel administrativo',
+    icon: Icons.dashboard_outlined,
+    selectedIcon: Icons.dashboard_rounded,
+    child: _AdminDashboardPage(),
+  ),
+  _ManagementTab(
+    label: 'Serviços',
+    title: 'Cadastro de serviços',
+    icon: Icons.design_services_outlined,
+    selectedIcon: Icons.design_services_rounded,
+    child: _ServicesPage(),
+  ),
+  _ManagementTab(
+    label: 'Equipe',
+    title: 'Cadastro de barbeiros',
+    icon: Icons.badge_outlined,
+    selectedIcon: Icons.badge_rounded,
+    child: _TeamPage(),
+  ),
+  _ManagementTab(
+    label: 'Caixa',
+    title: 'Caixa e estoque',
+    icon: Icons.point_of_sale_outlined,
+    selectedIcon: Icons.point_of_sale_rounded,
+    child: _CashPage(),
+  ),
+];
 
 class _RoleSwitch extends StatelessWidget {
   const _RoleSwitch({
@@ -151,8 +252,8 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _BarberContent extends StatelessWidget {
-  const _BarberContent();
+class _BarberAgendaPage extends StatelessWidget {
+  const _BarberAgendaPage();
 
   @override
   Widget build(BuildContext context) {
@@ -186,24 +287,110 @@ class _BarberContent extends StatelessWidget {
           service: 'Barba completa',
           status: 'Pago',
         ),
-        SizedBox(height: 22),
-        _SectionTitle('Ações rápidas'),
+      ],
+    );
+  }
+}
+
+class _AvailabilityPage extends StatelessWidget {
+  const _AvailabilityPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionTitle('Horários disponíveis'),
         SizedBox(height: 12),
-        _ShortcutGrid(
-          shortcuts: [
-            _ShortcutData('Confirmar', Icons.check_circle_rounded),
-            _ShortcutData('Bloquear horário', Icons.block_rounded),
-            _ShortcutData('Indisponibilidade', Icons.event_busy_rounded),
-            _ShortcutData('Clientes', Icons.people_alt_rounded),
-          ],
+        _ScheduleTile(day: 'Segunda a sexta', hours: '09:00 - 18:00'),
+        _ScheduleTile(day: 'Sábado', hours: '09:00 - 14:00'),
+        SizedBox(height: 22),
+        _SectionTitle('Bloqueios'),
+        SizedBox(height: 12),
+        _BlockedTile(
+          title: 'Almoço estendido',
+          detail: 'Hoje, 12:00 - 13:30',
+        ),
+        _BlockedTile(
+          title: 'Férias programadas',
+          detail: '12/08 até 18/08',
+        ),
+        SizedBox(height: 22),
+        _ActionPanel(
+          title: 'Ajustar disponibilidade',
+          subtitle: 'Crie horários fixos, folgas ou bloqueios rápidos.',
+          buttonLabel: 'Novo bloqueio',
+          icon: Icons.event_busy_rounded,
         ),
       ],
     );
   }
 }
 
-class _AdminContent extends StatelessWidget {
-  const _AdminContent();
+class _ClientsPage extends StatelessWidget {
+  const _ClientsPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SearchBox(hint: 'Buscar cliente'),
+        SizedBox(height: 18),
+        _ClientTile(
+          name: 'Marcos Lima',
+          detail: '12 visitas - último corte hoje',
+          points: '920 pts',
+        ),
+        _ClientTile(
+          name: 'João Pedro',
+          detail: '5 visitas - prefere corte baixo',
+          points: '410 pts',
+        ),
+        _ClientTile(
+          name: 'Lucas Almeida',
+          detail: '8 visitas - barba quinzenal',
+          points: '680 pts',
+        ),
+      ],
+    );
+  }
+}
+
+class _CommissionPage extends StatelessWidget {
+  const _CommissionPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _MetricsGrid(
+          cards: [
+            _MetricData('Semana', 'R\$ 1.780', Icons.trending_up_rounded),
+            _MetricData('Comissão', 'R\$ 712', Icons.account_balance_wallet_rounded),
+          ],
+        ),
+        SizedBox(height: 22),
+        _SectionTitle('Resumo'),
+        SizedBox(height: 12),
+        _InsightTile(
+          title: 'Atendimentos concluídos',
+          value: '31',
+          subtitle: 'Ticket médio de R\$ 57',
+        ),
+        _InsightTile(
+          title: 'Serviço mais feito',
+          value: 'Corte + barba',
+          subtitle: '14 atendimentos no período',
+        ),
+      ],
+    );
+  }
+}
+
+class _AdminDashboardPage extends StatelessWidget {
+  const _AdminDashboardPage();
 
   @override
   Widget build(BuildContext context) {
@@ -234,17 +421,94 @@ class _AdminContent extends StatelessWidget {
           value: 'R\$ 1.240',
           subtitle: 'PIX, dinheiro e cartão',
         ),
-        SizedBox(height: 22),
-        _SectionTitle('Administração'),
-        SizedBox(height: 12),
-        _ShortcutGrid(
-          shortcuts: [
-            _ShortcutData('Serviços', Icons.design_services_rounded),
-            _ShortcutData('Barbeiros', Icons.badge_rounded),
-            _ShortcutData('Cupons', Icons.local_offer_rounded),
-            _ShortcutData('Estoque', Icons.inventory_2_rounded),
+      ],
+    );
+  }
+}
+
+class _ServicesPage extends StatelessWidget {
+  const _ServicesPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _ActionPanel(
+          title: 'Catálogo de serviços',
+          subtitle: 'Cadastre preços, duração e comissão por serviço.',
+          buttonLabel: 'Novo serviço',
+          icon: Icons.add_circle_rounded,
+        ),
+        SizedBox(height: 18),
+        _ServiceTile(name: 'Corte premium', price: 'R\$ 55', duration: '45 min'),
+        _ServiceTile(name: 'Barba completa', price: 'R\$ 40', duration: '35 min'),
+        _ServiceTile(name: 'Corte + barba', price: 'R\$ 85', duration: '70 min'),
+      ],
+    );
+  }
+}
+
+class _TeamPage extends StatelessWidget {
+  const _TeamPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _ActionPanel(
+          title: 'Equipe da unidade',
+          subtitle: 'Gerencie barbeiros, permissões e percentuais.',
+          buttonLabel: 'Novo barbeiro',
+          icon: Icons.person_add_alt_1_rounded,
+        ),
+        SizedBox(height: 18),
+        _TeamTile(
+          name: 'Davi Marcomin',
+          role: 'Barbeiro principal',
+          detail: '40% comissão - agenda ativa',
+        ),
+        _TeamTile(
+          name: 'Ricardo Anderson',
+          role: 'Barbeiro',
+          detail: '35% comissão - agenda ativa',
+        ),
+        _TeamTile(
+          name: 'Camila Rocha',
+          role: 'Recepção',
+          detail: 'Acesso a agenda e caixa',
+        ),
+      ],
+    );
+  }
+}
+
+class _CashPage extends StatelessWidget {
+  const _CashPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _MetricsGrid(
+          cards: [
+            _MetricData('Entradas', 'R\$ 1.240', Icons.south_west_rounded),
+            _MetricData('Saídas', 'R\$ 180', Icons.north_east_rounded),
           ],
         ),
+        SizedBox(height: 22),
+        _SectionTitle('Movimentos de caixa'),
+        SizedBox(height: 12),
+        _CashMovementTile(title: 'PIX - Marcos Lima', value: '+ R\$ 85'),
+        _CashMovementTile(title: 'Dinheiro - João Pedro', value: '+ R\$ 55'),
+        _CashMovementTile(title: 'Compra de pomada', value: '- R\$ 180'),
+        SizedBox(height: 22),
+        _SectionTitle('Estoque crítico'),
+        SizedBox(height: 12),
+        _StockTile(name: 'Pomada modeladora', quantity: '3 un'),
+        _StockTile(name: 'Lâmina descartável', quantity: '18 un'),
       ],
     );
   }
@@ -320,6 +584,28 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
+class _SearchBox extends StatelessWidget {
+  const _SearchBox({required this.hint});
+
+  final String hint;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      decoration: InputDecoration(
+        hintText: hint,
+        prefixIcon: const Icon(Icons.search_rounded),
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    );
+  }
+}
+
 class _AppointmentTile extends StatelessWidget {
   const _AppointmentTile({
     required this.time,
@@ -335,48 +621,203 @@ class _AppointmentTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+    return _SurfaceTile(
+      leading: _TimeBadge(time),
+      title: client,
+      subtitle: service,
+      trailing: Chip(
+        label: Text(status),
+        side: BorderSide.none,
+        backgroundColor: SharedAppColors.background,
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 58,
-            height: 58,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: SharedAppColors.orange.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Text(
-              time,
-              style: const TextStyle(
-                color: SharedAppColors.orange,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(client, style: const TextStyle(fontWeight: FontWeight.w900)),
-                const SizedBox(height: 4),
-                Text(service, style: const TextStyle(color: SharedAppColors.muted)),
-              ],
-            ),
-          ),
-          Chip(
-            label: Text(status),
-            side: BorderSide.none,
-            backgroundColor: SharedAppColors.background,
-          ),
-        ],
+    );
+  }
+}
+
+class _TimeBadge extends StatelessWidget {
+  const _TimeBadge(this.time);
+
+  final String time;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 58,
+      height: 58,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: SharedAppColors.orange.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Text(
+        time,
+        style: const TextStyle(
+          color: SharedAppColors.orange,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+}
+
+class _ScheduleTile extends StatelessWidget {
+  const _ScheduleTile({required this.day, required this.hours});
+
+  final String day;
+  final String hours;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SurfaceTile(
+      leading: const _IconBadge(Icons.schedule_rounded),
+      title: day,
+      subtitle: hours,
+      trailing: const Icon(Icons.edit_rounded, color: SharedAppColors.muted),
+    );
+  }
+}
+
+class _BlockedTile extends StatelessWidget {
+  const _BlockedTile({required this.title, required this.detail});
+
+  final String title;
+  final String detail;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SurfaceTile(
+      leading: const _IconBadge(Icons.block_rounded),
+      title: title,
+      subtitle: detail,
+      trailing: const Icon(Icons.more_horiz_rounded, color: SharedAppColors.muted),
+    );
+  }
+}
+
+class _ClientTile extends StatelessWidget {
+  const _ClientTile({
+    required this.name,
+    required this.detail,
+    required this.points,
+  });
+
+  final String name;
+  final String detail;
+  final String points;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SurfaceTile(
+      leading: const CircleAvatar(
+        radius: 25,
+        backgroundColor: SharedAppColors.orange,
+        child: Icon(Icons.person_rounded, color: Colors.white),
+      ),
+      title: name,
+      subtitle: detail,
+      trailing: Text(
+        points,
+        style: const TextStyle(
+          color: SharedAppColors.orange,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+}
+
+class _ServiceTile extends StatelessWidget {
+  const _ServiceTile({
+    required this.name,
+    required this.price,
+    required this.duration,
+  });
+
+  final String name;
+  final String price;
+  final String duration;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SurfaceTile(
+      leading: const _IconBadge(Icons.content_cut_rounded),
+      title: name,
+      subtitle: duration,
+      trailing: Text(
+        price,
+        style: const TextStyle(fontWeight: FontWeight.w900),
+      ),
+    );
+  }
+}
+
+class _TeamTile extends StatelessWidget {
+  const _TeamTile({
+    required this.name,
+    required this.role,
+    required this.detail,
+  });
+
+  final String name;
+  final String role;
+  final String detail;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SurfaceTile(
+      leading: const CircleAvatar(
+        radius: 25,
+        backgroundColor: SharedAppColors.dark,
+        child: Icon(Icons.person_rounded, color: Colors.white),
+      ),
+      title: name,
+      subtitle: '$role • $detail',
+      trailing: const Icon(Icons.chevron_right_rounded),
+    );
+  }
+}
+
+class _CashMovementTile extends StatelessWidget {
+  const _CashMovementTile({required this.title, required this.value});
+
+  final String title;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final isPositive = value.trim().startsWith('+');
+    return _SurfaceTile(
+      leading: _IconBadge(
+        isPositive ? Icons.south_west_rounded : Icons.north_east_rounded,
+      ),
+      title: title,
+      subtitle: isPositive ? 'Entrada' : 'Saída',
+      trailing: Text(
+        value,
+        style: TextStyle(
+          color: isPositive ? Colors.green.shade700 : Colors.red.shade700,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+}
+
+class _StockTile extends StatelessWidget {
+  const _StockTile({required this.name, required this.quantity});
+
+  final String name;
+  final String quantity;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SurfaceTile(
+      leading: const _IconBadge(Icons.inventory_2_rounded),
+      title: name,
+      subtitle: 'Reposição recomendada',
+      trailing: Text(
+        quantity,
+        style: const TextStyle(fontWeight: FontWeight.w900),
       ),
     );
   }
@@ -395,6 +836,83 @@ class _InsightTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return _SurfaceTile(
+      leading: const _IconBadge(Icons.insights_rounded),
+      title: value,
+      subtitle: '$title • $subtitle',
+    );
+  }
+}
+
+class _ActionPanel extends StatelessWidget {
+  const _ActionPanel({
+    required this.title,
+    required this.subtitle,
+    required this.buttonLabel,
+    required this.icon,
+  });
+
+  final String title;
+  final String subtitle;
+  final String buttonLabel;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Row(
+        children: [
+          _IconBadge(icon),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(color: SharedAppColors.muted),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          FilledButton(
+            onPressed: () {},
+            style: FilledButton.styleFrom(
+              backgroundColor: SharedAppColors.orange,
+              foregroundColor: Colors.white,
+              visualDensity: VisualDensity.compact,
+            ),
+            child: Text(buttonLabel),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SurfaceTile extends StatelessWidget {
+  const _SurfaceTile({
+    required this.leading,
+    required this.title,
+    required this.subtitle,
+    this.trailing,
+  });
+
+  final Widget leading;
+  final String title;
+  final String subtitle;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(16),
@@ -404,57 +922,49 @@ class _InsightTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.insights_rounded, color: SharedAppColors.orange),
+          leading,
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(color: SharedAppColors.muted)),
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
                 const SizedBox(height: 4),
-                Text(value, style: const TextStyle(fontWeight: FontWeight.w900)),
-                const SizedBox(height: 2),
-                Text(subtitle, style: const TextStyle(color: SharedAppColors.muted)),
+                Text(
+                  subtitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: SharedAppColors.muted),
+                ),
               ],
             ),
           ),
+          if (trailing != null) ...[
+            const SizedBox(width: 12),
+            trailing!,
+          ],
         ],
       ),
     );
   }
 }
 
-class _ShortcutData {
-  const _ShortcutData(this.label, this.icon);
+class _IconBadge extends StatelessWidget {
+  const _IconBadge(this.icon);
 
-  final String label;
   final IconData icon;
-}
-
-class _ShortcutGrid extends StatelessWidget {
-  const _ShortcutGrid({required this.shortcuts});
-
-  final List<_ShortcutData> shortcuts;
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      children: shortcuts.map((item) {
-        return SizedBox(
-          width: 158,
-          height: 48,
-          child: FilledButton.tonalIcon(
-            onPressed: () {},
-            icon: Icon(item.icon),
-            label: Text(
-              item.label,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        );
-      }).toList(),
+    return Container(
+      width: 50,
+      height: 50,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: SharedAppColors.orange.withOpacity(.12),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Icon(icon, color: SharedAppColors.orange),
     );
   }
 }
