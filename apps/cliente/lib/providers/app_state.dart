@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../config/supabase_config.dart';
 import '../models/appointment.dart';
 import '../models/barber.dart';
 import '../models/service_category.dart';
@@ -52,6 +53,8 @@ class AppState extends ChangeNotifier {
   Future<void> loadInitialData() async {
     isLoading = true;
     notifyListeners();
+
+    await SupabaseConfig.initialize();
 
     final results = await Future.wait([
       _barberRepository.fetchBarbers(),

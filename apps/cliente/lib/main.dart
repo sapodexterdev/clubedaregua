@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'app.dart';
-import 'config/supabase_config.dart';
 import 'providers/app_state.dart';
 
 Future<void> main() async {
@@ -14,8 +13,6 @@ Future<void> main() async {
     FlutterError.onError = (details) {
       FlutterError.presentError(details);
     };
-
-    await SupabaseConfig.initialize();
 
     runApp(
       ChangeNotifierProvider(

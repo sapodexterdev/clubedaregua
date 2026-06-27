@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseConfig {
@@ -25,7 +27,9 @@ class SupabaseConfig {
     }
 
     try {
-      await Supabase.initialize(url: url, anonKey: anonKey);
+      await Supabase.initialize(url: url, anonKey: anonKey).timeout(
+        const Duration(seconds: 4),
+      );
       isConfigured = true;
     } catch (_) {
       isConfigured = false;
