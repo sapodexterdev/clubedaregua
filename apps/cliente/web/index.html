@@ -53,17 +53,25 @@
 <body>
   <div class="fallback-loader">Clube da Régua</div>
   <script>
-    window.addEventListener('flutter-first-frame', function () {
+    function hideFallbackLoader() {
       var fallback = document.querySelector('.fallback-loader');
       if (fallback) fallback.remove();
+    }
+
+    window.addEventListener('flutter-first-frame', function () {
+      hideFallbackLoader();
     });
 
     {{flutter_js}}
     {{flutter_build_config}}
 
     _flutter.loader.load({
-      config: {
-        renderer: 'html'
+      onEntrypointLoaded: async function (engineInitializer) {
+        var appRunner = await engineInitializer.initializeEngine({
+          renderer: 'html'
+        });
+        await appRunner.runApp();
+        window.setTimeout(hideFallbackLoader, 1200);
       }
     });
   </script>
