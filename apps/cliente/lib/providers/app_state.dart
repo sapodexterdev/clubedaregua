@@ -72,6 +72,29 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> createSelectedAppointment() async {
+    final barber = selectedBarber;
+    final service = selectedService;
+    if (barber == null || service == null) return;
+
+    await _appointmentRepository.createAppointment(
+      barberId: barber.id,
+      serviceId: service.id,
+      date: selectedDate,
+      time: selectedTime,
+      total: service.price,
+    );
+
+    appointments = await _appointmentRepository.fetchAppointments();
+    notifyListeners();
+  }
+
+  Future<void> cancelAppointment(String appointmentId) async {
+    await _appointmentRepository.cancelAppointment(appointmentId);
+    appointments = await _appointmentRepository.fetchAppointments();
+    notifyListeners();
+  }
+
   void selectBarber(Barber barber) {
     selectedBarber = barber;
     notifyListeners();

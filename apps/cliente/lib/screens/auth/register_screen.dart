@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../providers/app_state.dart';
 import '../../screens/client/home_screen.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_colors.dart';
@@ -35,6 +37,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         passwordController.text,
         nameController.text,
       );
+      if (mounted) {
+        await context.read<AppState>().loadInitialData();
+      }
     } catch (_) {}
     if (mounted) Navigator.pushReplacementNamed(context, HomeScreen.route);
   }

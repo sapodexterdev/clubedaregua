@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../providers/app_state.dart';
 import '../../screens/client/home_screen.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_colors.dart';
@@ -33,6 +35,9 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       if (emailController.text.isNotEmpty && passwordController.text.isNotEmpty) {
         await authService.signIn(emailController.text, passwordController.text);
+        if (mounted) {
+          await context.read<AppState>().loadInitialData();
+        }
       }
     } catch (_) {
       // Mantém o app navegável com dados mockados durante o desenvolvimento.

@@ -96,10 +96,16 @@ class AppointmentScreen extends StatelessWidget {
               const SizedBox(height: 20),
               PrimaryButton(
                 label: 'Agendar agora',
-                onPressed: () => Navigator.pushReplacementNamed(
-                  context,
-                  AppointmentConfirmationScreen.route,
-                ),
+                onPressed: () async {
+                  await state.createSelectedAppointment();
+
+                  if (context.mounted) {
+                    Navigator.pushReplacementNamed(
+                      context,
+                      AppointmentConfirmationScreen.route,
+                    );
+                  }
+                },
               ),
             ],
           ),

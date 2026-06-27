@@ -126,6 +126,15 @@ Install Command: vazio
 
 O script `scripts/vercel-build.sh` entra em `apps/cliente`, baixa o Flutter SDK, instala dependências e executa o build web.
 
+Na Vercel, cadastre estas variáveis em Project Settings > Environment Variables:
+
+```text
+SUPABASE_URL=https://seu-projeto.supabase.co
+SUPABASE_ANON_KEY=sua-chave-anon-publica
+```
+
+Depois de salvar, faça um novo deploy para o app web receber a conexão real com o Supabase.
+
 ## Supabase
 
 Execute no SQL Editor:
@@ -161,11 +170,21 @@ O schema SaaS cria:
 
 Também cria funções de autorização, policies de RLS por barbearia, índices básicos, planos iniciais e o bucket público `barbershop-media` para imagens.
 
+O app cliente já usa Supabase quando essas variáveis estão configuradas:
+
+- Supabase Auth para login e cadastro.
+- Leitura real de barbeiros, categorias e serviços.
+- Criação de agendamentos em `appointments`.
+- Criação de pagamento PIX pendente em `payments`.
+- Histórico real do cliente autenticado.
+- Cancelamento de agendamento pelo cliente.
+
+Se o banco ainda estiver vazio ou sem variáveis, o app mantém dados mockados para não quebrar a navegação visual.
+
 ## Próximos Passos
 
 - Mover os modelos e o tema compartilhado do App Cliente para `packages/shared`.
 - Remover telas de gestão que ainda ficaram dentro do App Cliente durante a transição.
 - Conectar `supabase_flutter` no pacote compartilhado.
-- Implementar Auth real nos dois apps.
-- Conectar fluxo real de agendamento no App Cliente.
+- Conectar Auth real no App Gestão.
 - Conectar agenda, serviços e equipe no App Gestão.

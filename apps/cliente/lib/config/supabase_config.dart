@@ -1,9 +1,13 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 class SupabaseConfig {
   static bool isConfigured = false;
   static String url = '';
   static String anonKey = '';
 
-  static Future<void> initialize() {
+  static SupabaseClient get client => Supabase.instance.client;
+
+  static Future<void> initialize() async {
     const definedUrl = String.fromEnvironment('SUPABASE_URL');
     const definedAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 
@@ -15,10 +19,10 @@ class SupabaseConfig {
         url.contains('your-project') ||
         anonKey.contains('your-public')) {
       isConfigured = false;
-      return Future.value();
+      return;
     }
 
+    await Supabase.initialize(url: url, anonKey: anonKey);
     isConfigured = true;
-    return Future.value();
   }
 }

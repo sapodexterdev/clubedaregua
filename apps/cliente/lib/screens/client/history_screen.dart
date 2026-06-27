@@ -69,7 +69,7 @@ class HistoryScreen extends StatelessWidget {
                           label: const Text('Avaliar'),
                         ),
                         TextButton.icon(
-                          onPressed: () {},
+                          onPressed: () => state.cancelAppointment(appointment.id),
                           icon: const Icon(Icons.close_rounded),
                           label: const Text('Cancelar'),
                         ),
