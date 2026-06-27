@@ -7,6 +7,7 @@ import '../models/service_category.dart';
 import '../models/service_item.dart';
 import '../repositories/appointment_repository.dart';
 import '../repositories/barber_repository.dart';
+import '../services/mock_data.dart';
 
 class AppState extends ChangeNotifier {
   final _barberRepository = BarberRepository();
@@ -54,7 +55,18 @@ class AppState extends ChangeNotifier {
     isLoading = true;
     notifyListeners();
 
+    _applyData(
+      barbersData: MockData.barbers,
+      categoriesData: MockData.categories,
+      servicesData: MockData.services,
+      appointmentsData: MockData.appointments,
+    );
+
+    isLoading = false;
+    notifyListeners();
+
     await SupabaseConfig.initialize();
+    if (!SupabaseConfig.isConfigured) return;
 
     final results = await Future.wait([
       _barberRepository.fetchBarbers(),
@@ -63,16 +75,28 @@ class AppState extends ChangeNotifier {
       _appointmentRepository.fetchAppointments(),
     ]);
 
-    barbers = results[0] as List<Barber>;
-    categories = results[1] as List<ServiceCategory>;
-    services = results[2] as List<ServiceItem>;
-    appointments = results[3] as List<Appointment>;
+    _applyData(
+      barbersData: results[0] as List<Barber>,
+      categoriesData: results[1] as List<ServiceCategory>,
+      servicesData: results[2] as List<ServiceItem>,
+      appointmentsData: results[3] as List<Appointment>,
+    );
+    notifyListeners();
+  }
+
+  void _applyData({
+    required List<Barber> barbersData,
+    required List<ServiceCategory> categoriesData,
+    required List<ServiceItem> servicesData,
+    required List<Appointment> appointmentsData,
+  }) {
+    barbers = barbersData;
+    categories = categoriesData;
+    services = servicesData;
+    appointments = appointmentsData;
     selectedBarber = barbers.isEmpty ? null : barbers.first;
     selectedService = services.isEmpty ? null : services.first;
-    selectedCategoryId = categories.isEmpty ? null : categories.first.id;
-
-    isLoading = false;
-    notifyListeners();
+    selectedCategoryId ??= categories.isEmpty ? null : categories.first.id;
   }
 
   Future<void> createSelectedAppointment() async {
