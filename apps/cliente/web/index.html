@@ -13,6 +13,15 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <title>Clube da Régua</title>
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #000000;
+    }
+  </style>
   <script>
     window.addEventListener('unhandledrejection', function (event) {
       console.error('CLUBE_DA_REGUA_UNHANDLED', event.reason && (event.reason.stack || event.reason));
