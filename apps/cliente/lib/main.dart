@@ -14,6 +14,12 @@ Future<void> main() async {
       FlutterError.presentError(details);
     };
 
+    const stableBoot = String.fromEnvironment('STABLE_BOOT') == 'true';
+    if (stableBoot) {
+      runApp(const StableBootApp());
+      return;
+    }
+
     runApp(
       ChangeNotifierProvider(
         create: (_) => AppState()..loadInitialData(),
@@ -23,6 +29,44 @@ Future<void> main() async {
   }, (error, stackTrace) {
     runApp(StartupErrorApp(error: error));
   });
+}
+
+class StableBootApp extends StatelessWidget {
+  const StableBootApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: Color(0xFFF4F4F4),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Clube da Regua',
+                style: TextStyle(
+                  color: Color(0xFFFF6B2C),
+                  fontSize: 30,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Flutter web OK',
+                style: TextStyle(
+                  color: Color(0xFF151515),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class StartupErrorApp extends StatelessWidget {
