@@ -18,5 +18,4 @@ flutter pub get
 flutter build web \
   --release \
   --web-renderer html \
-  --pwa-strategy=none \
-  --dart-define=STABLE_BOOT=true
+  --pwa-strategy=none
