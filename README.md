@@ -131,6 +131,7 @@ Na Vercel, cadastre estas variáveis em Project Settings > Environment Variables
 ```text
 SUPABASE_URL=https://seu-projeto.supabase.co
 SUPABASE_ANON_KEY=sua-chave-anon-publica
+ENABLE_SUPABASE=true
 ```
 
 Depois de salvar, faça um novo deploy para o app web receber a conexão real com o Supabase.

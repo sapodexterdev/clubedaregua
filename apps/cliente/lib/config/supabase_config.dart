@@ -8,13 +8,15 @@ class SupabaseConfig {
   static SupabaseClient get client => Supabase.instance.client;
 
   static Future<void> initialize() async {
+    const enableSupabase = String.fromEnvironment('ENABLE_SUPABASE');
     const definedUrl = String.fromEnvironment('SUPABASE_URL');
     const definedAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 
     url = definedUrl;
     anonKey = definedAnonKey;
 
-    if (url.isEmpty ||
+    if (enableSupabase != 'true' ||
+        url.isEmpty ||
         anonKey.isEmpty ||
         url.contains('your-project') ||
         anonKey.contains('your-public')) {
@@ -22,7 +24,11 @@ class SupabaseConfig {
       return;
     }
 
-    await Supabase.initialize(url: url, anonKey: anonKey);
-    isConfigured = true;
+    try {
+      await Supabase.initialize(url: url, anonKey: anonKey);
+      isConfigured = true;
+    } catch (_) {
+      isConfigured = false;
+    }
   }
 }
