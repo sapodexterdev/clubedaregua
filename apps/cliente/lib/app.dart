@@ -48,10 +48,13 @@ class _ResponsivePhoneFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final currentChild = child;
+    if (currentChild == null) return const SizedBox.shrink();
+
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth <= 520 || child == null) {
-          return child ?? const SizedBox.shrink();
+        if (constraints.maxWidth <= 520) {
+          return currentChild;
         }
 
         final height = (constraints.maxHeight - 36).clamp(640.0, 900.0).toDouble();
@@ -73,7 +76,7 @@ class _ResponsivePhoneFrame extends StatelessWidget {
                   size: Size(430, height),
                   padding: EdgeInsets.zero,
                 ),
-                child: child!,
+                child: currentChild,
               ),
             ),
           ),

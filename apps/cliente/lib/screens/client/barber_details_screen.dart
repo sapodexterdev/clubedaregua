@@ -414,7 +414,7 @@ class _CalendarStrip extends StatelessWidget {
       DateTime.sunday: 'Dom',
     };
 
-    return labels[weekday]!;
+    return labels[weekday] ?? '';
   }
 }
 
