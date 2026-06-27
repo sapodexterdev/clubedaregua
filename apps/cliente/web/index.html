@@ -6,10 +6,10 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="Clube da Régua - app premium de barbearia e agendamento.">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#F4F4F4">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Clube da Régua">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/svg+xml" href="icon.svg">
@@ -21,7 +21,18 @@
       height: 100%;
       margin: 0;
       overflow: hidden;
-      background: #000000;
+      background: #F4F4F4;
+      font-family: Arial, sans-serif;
+    }
+
+    .fallback-loader {
+      align-items: center;
+      color: #FF6B2C;
+      display: flex;
+      font-size: 24px;
+      font-weight: 800;
+      height: 100%;
+      justify-content: center;
     }
   </style>
   <script>
@@ -34,6 +45,7 @@
   </script>
 </head>
 <body>
+  <div class="fallback-loader">Clube da Régua</div>
   <script>
     {{flutter_js}}
     {{flutter_build_config}}
@@ -42,6 +54,9 @@
       config: {
         renderer: 'html'
       }
+    }).then(function () {
+      var fallback = document.querySelector('.fallback-loader');
+      if (fallback) fallback.remove();
     });
   </script>
 </body>

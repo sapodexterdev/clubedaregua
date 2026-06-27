@@ -23,7 +23,7 @@ ENV
 flutter build web \
   --release \
   --web-renderer html \
-  --pwa-strategy=offline-first \
+  --pwa-strategy=none \
   --dart-define=ENABLE_SUPABASE="${ENABLE_SUPABASE:-false}" \
   --dart-define=SUPABASE_URL="${SUPABASE_URL:-https://your-project.supabase.co}" \
   --dart-define=SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-your-public-anon-key}"
