@@ -10,6 +10,12 @@ class SupabaseConfig {
   static SupabaseClient get client => Supabase.instance.client;
 
   static Future<void> initialize() async {
+    const allowRuntimeConnection = String.fromEnvironment('ALLOW_SUPABASE_RUNTIME');
+    if (allowRuntimeConnection != 'true') {
+      isConfigured = false;
+      return;
+    }
+
     const enableSupabase = String.fromEnvironment('ENABLE_SUPABASE');
     const definedUrl = String.fromEnvironment('SUPABASE_URL');
     const definedAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');

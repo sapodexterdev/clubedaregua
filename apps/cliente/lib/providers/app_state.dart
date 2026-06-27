@@ -65,23 +65,31 @@ class AppState extends ChangeNotifier {
     isLoading = false;
     notifyListeners();
 
-    await SupabaseConfig.initialize();
-    if (!SupabaseConfig.isConfigured) return;
+    await refreshFromSupabase();
+  }
 
-    final results = await Future.wait([
-      _barberRepository.fetchBarbers(),
-      _barberRepository.fetchCategories(),
-      _barberRepository.fetchServices(),
-      _appointmentRepository.fetchAppointments(),
-    ]);
+  Future<void> refreshFromSupabase() async {
+    try {
+      await SupabaseConfig.initialize();
+      if (!SupabaseConfig.isConfigured) return;
 
-    _applyData(
-      barbersData: results[0] as List<Barber>,
-      categoriesData: results[1] as List<ServiceCategory>,
-      servicesData: results[2] as List<ServiceItem>,
-      appointmentsData: results[3] as List<Appointment>,
-    );
-    notifyListeners();
+      final results = await Future.wait([
+        _barberRepository.fetchBarbers(),
+        _barberRepository.fetchCategories(),
+        _barberRepository.fetchServices(),
+        _appointmentRepository.fetchAppointments(),
+      ]);
+
+      _applyData(
+        barbersData: results[0] as List<Barber>,
+        categoriesData: results[1] as List<ServiceCategory>,
+        servicesData: results[2] as List<ServiceItem>,
+        appointmentsData: results[3] as List<Appointment>,
+      );
+      notifyListeners();
+    } catch (_) {
+      SupabaseConfig.isConfigured = false;
+    }
   }
 
   void _applyData({
