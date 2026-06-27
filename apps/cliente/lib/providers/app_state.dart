@@ -15,6 +15,7 @@ class AppState extends ChangeNotifier {
   String selectedTab = 'home';
   Barber? selectedBarber;
   ServiceItem? selectedService;
+  String? selectedCategoryId;
   DateTime selectedDate = DateTime.now();
   String selectedTime = '10:30';
 
@@ -22,6 +23,31 @@ class AppState extends ChangeNotifier {
   List<ServiceCategory> categories = [];
   List<ServiceItem> services = [];
   List<Appointment> appointments = [];
+
+  List<Barber> get filteredBarbers {
+    final categoryId = selectedCategoryId;
+    if (categoryId == null) return barbers;
+
+    return barbers
+        .where((barber) => barber.categoryIds.contains(categoryId))
+        .toList();
+  }
+
+  String get selectedCategoryTitle {
+    final categoryId = selectedCategoryId;
+    if (categoryId == null) return 'Profissionais em destaque';
+
+    ServiceCategory? category;
+    for (final item in categories) {
+      if (item.id == categoryId) {
+        category = item;
+        break;
+      }
+    }
+
+    final label = _categoryDisplayName(category?.name ?? 'Serviços');
+    return '$label em destaque';
+  }
 
   Future<void> loadInitialData() async {
     isLoading = true;
@@ -40,6 +66,7 @@ class AppState extends ChangeNotifier {
     appointments = results[3] as List<Appointment>;
     selectedBarber = barbers.isEmpty ? null : barbers.first;
     selectedService = services.isEmpty ? null : services.first;
+    selectedCategoryId = categories.isEmpty ? null : categories.first.id;
 
     isLoading = false;
     notifyListeners();
@@ -55,6 +82,16 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void selectCategory(String categoryId) {
+    selectedCategoryId = categoryId;
+    notifyListeners();
+  }
+
+  void clearCategory() {
+    selectedCategoryId = null;
+    notifyListeners();
+  }
+
   void selectDate(DateTime date) {
     selectedDate = date;
     notifyListeners();
@@ -63,5 +100,15 @@ class AppState extends ChangeNotifier {
   void selectTime(String time) {
     selectedTime = time;
     notifyListeners();
+  }
+
+  String _categoryDisplayName(String name) {
+    return switch (name.toLowerCase()) {
+      'cabelo' => 'Cortes',
+      'barba' => 'Barbas',
+      'combo' => 'Combos',
+      'sobrancelha' => 'Sobrancelhas',
+      _ => name,
+    };
   }
 }

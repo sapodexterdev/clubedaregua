@@ -55,7 +55,7 @@ class BarberCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      '\$ ${barber.startingPrice.toStringAsFixed(2)}',
+                      _formatCurrency(barber.startingPrice),
                       style: const TextStyle(
                         fontSize: 19,
                         fontWeight: FontWeight.w900,
@@ -78,5 +78,10 @@ class BarberCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _formatCurrency(double value) {
+    final parts = value.toStringAsFixed(2).split('.');
+    return 'R\$ ${parts[0]},${parts[1]}';
   }
 }

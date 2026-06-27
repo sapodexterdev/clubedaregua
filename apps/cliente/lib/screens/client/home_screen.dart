@@ -177,19 +177,23 @@ class HomeScreen extends StatelessWidget {
                     separatorBuilder: (_, __) => const SizedBox(width: 10),
                     itemBuilder: (context, index) {
                       final category = state.categories[index];
-                      final selected = index == 0;
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: selected ? AppColors.orange : Colors.white,
-                          borderRadius: BorderRadius.circular(27),
-                        ),
-                        child: Text(
-                          index == 0 ? 'Corte' : category.name,
-                          style: TextStyle(
-                            color: selected ? Colors.white : AppColors.muted,
-                            fontWeight: FontWeight.w800,
+                      final selected = state.selectedCategoryId == category.id;
+                      return InkWell(
+                        borderRadius: BorderRadius.circular(27),
+                        onTap: () => state.selectCategory(category.id),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: selected ? AppColors.orange : Colors.white,
+                            borderRadius: BorderRadius.circular(27),
+                          ),
+                          child: Text(
+                            _categoryLabel(category.name),
+                            style: TextStyle(
+                              color: selected ? Colors.white : AppColors.muted,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
                       );
@@ -197,15 +201,19 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 22),
-                const SectionHeader(title: 'Cortes em destaque', actionLabel: 'Ver todos'),
+                SectionHeader(
+                  title: state.selectedCategoryTitle,
+                  actionLabel: state.selectedCategoryId == null ? null : 'Ver todos',
+                  onAction: state.clearCategory,
+                ),
                 const SizedBox(height: 12),
                 SizedBox(
                   height: 250,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
-                    itemCount: state.barbers.length,
+                    itemCount: state.filteredBarbers.length,
                     itemBuilder: (context, index) {
-                      final barber = state.barbers[index];
+                      final barber = state.filteredBarbers[index];
                       return BarberCard(
                         barber: barber,
                         onTap: () {
@@ -222,5 +230,12 @@ class HomeScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _categoryLabel(String name) {
+    return switch (name.toLowerCase()) {
+      'cabelo' => 'Corte',
+      _ => name,
+    };
   }
 }

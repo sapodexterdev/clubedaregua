@@ -29,6 +29,7 @@ class MockData {
       startingPrice: 49.32,
       bio:
           'Especialista em degradê, barba desenhada e acabamento premium para quem gosta de sair pronto.',
+      categoryIds: ['1', '2', '3'],
     ),
     Barber(
       id: '2',
@@ -40,6 +41,7 @@ class MockData {
       startingPrice: 28.48,
       bio:
           'Atendimento preciso, agenda pontual e cortes modernos para rotina executiva.',
+      categoryIds: ['1', '3', '4'],
     ),
   ];
 
