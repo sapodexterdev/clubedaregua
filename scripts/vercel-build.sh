@@ -15,16 +15,7 @@ cd apps/cliente
 flutter config --enable-web
 flutter pub get
 
-cat > .env <<ENV
-SUPABASE_URL=${SUPABASE_URL:-https://your-project.supabase.co}
-SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-your-public-anon-key}
-ENV
-
 flutter build web \
   --release \
   --web-renderer html \
-  --pwa-strategy=none \
-  --dart-define=ALLOW_SUPABASE_RUNTIME="${ALLOW_SUPABASE_RUNTIME:-false}" \
-  --dart-define=ENABLE_SUPABASE="${ENABLE_SUPABASE:-false}" \
-  --dart-define=SUPABASE_URL="${SUPABASE_URL:-https://your-project.supabase.co}" \
-  --dart-define=SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-your-public-anon-key}"
+  --pwa-strategy=none

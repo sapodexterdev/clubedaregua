@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 
-import '../config/supabase_config.dart';
 import '../models/appointment.dart';
 import '../models/barber.dart';
 import '../models/service_category.dart';
@@ -65,31 +64,6 @@ class AppState extends ChangeNotifier {
     isLoading = false;
     notifyListeners();
 
-    await refreshFromSupabase();
-  }
-
-  Future<void> refreshFromSupabase() async {
-    try {
-      await SupabaseConfig.initialize();
-      if (!SupabaseConfig.isConfigured) return;
-
-      final results = await Future.wait([
-        _barberRepository.fetchBarbers(),
-        _barberRepository.fetchCategories(),
-        _barberRepository.fetchServices(),
-        _appointmentRepository.fetchAppointments(),
-      ]);
-
-      _applyData(
-        barbersData: results[0] as List<Barber>,
-        categoriesData: results[1] as List<ServiceCategory>,
-        servicesData: results[2] as List<ServiceItem>,
-        appointmentsData: results[3] as List<Appointment>,
-      );
-      notifyListeners();
-    } catch (_) {
-      SupabaseConfig.isConfigured = false;
-    }
   }
 
   void _applyData({
