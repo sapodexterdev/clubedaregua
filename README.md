@@ -142,19 +142,20 @@ o Supabase.
 
 ## Supabase
 
-Execute no SQL Editor:
+Em um projeto Supabase novo, execute no SQL Editor:
 
 ```text
 supabase/schema.sql
 ```
 
-Depois que o schema rodar sem erro, rode os dados de exemplo:
+Depois que o schema rodar sem erro, rode os dados de exemplo se quiser popular
+a barbearia demo:
 
 ```text
 supabase/seed_demo.sql
 ```
 
-Nao rode o `seed_demo.sql` antes do `schema.sql`, porque ele depende das tabelas ja criadas.
+Nao rode o `seed_demo.sql` antes do `schema.sql`, porque ele depende das tabelas ja criadas. Os dois arquivos foram preparados para poderem ser reexecutados durante ajustes.
 
 O schema SaaS cria:
 

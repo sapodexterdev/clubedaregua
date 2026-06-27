@@ -1,14 +1,52 @@
+-- Clube da Regua - Supabase SaaS schema
+-- Execute este arquivo primeiro em um projeto Supabase novo.
+-- Depois execute supabase/seed_demo.sql.
+
 create extension if not exists "pgcrypto";
 
-create type public.user_role as enum ('client', 'barber', 'manager', 'owner', 'admin');
-create type public.shop_member_role as enum ('owner', 'manager', 'barber', 'receptionist');
-create type public.subscription_status as enum ('trialing', 'active', 'past_due', 'cancelled', 'expired');
-create type public.appointment_status as enum ('pending', 'confirmed', 'completed', 'cancelled', 'no_show');
-create type public.payment_status as enum ('pending', 'paid', 'failed', 'refunded');
-create type public.payment_method as enum ('pix', 'cash', 'card');
-create type public.cash_movement_type as enum ('income', 'expense');
+do $$
+begin
+  create type public.user_role as enum ('client', 'barber', 'manager', 'owner', 'admin');
+exception when duplicate_object then null;
+end $$;
 
-create table public.users (
+do $$
+begin
+  create type public.shop_member_role as enum ('owner', 'manager', 'barber', 'receptionist');
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type public.subscription_status as enum ('trialing', 'active', 'past_due', 'cancelled', 'expired');
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type public.appointment_status as enum ('pending', 'confirmed', 'completed', 'cancelled', 'no_show');
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type public.payment_status as enum ('pending', 'paid', 'failed', 'refunded');
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type public.payment_method as enum ('pix', 'cash', 'card');
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type public.cash_movement_type as enum ('income', 'expense');
+exception when duplicate_object then null;
+end $$;
+
+create table if not exists public.users (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null unique,
   role public.user_role not null default 'client',
@@ -17,7 +55,7 @@ create table public.users (
   updated_at timestamptz not null default now()
 );
 
-create table public.profiles (
+create table if not exists public.profiles (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null unique references public.users(id) on delete cascade,
   full_name text not null,
@@ -28,7 +66,7 @@ create table public.profiles (
   updated_at timestamptz not null default now()
 );
 
-create table public.plans (
+create table if not exists public.plans (
   id uuid primary key default gen_random_uuid(),
   name text not null unique,
   slug text not null unique,
@@ -40,7 +78,7 @@ create table public.plans (
   created_at timestamptz not null default now()
 );
 
-create table public.barber_shops (
+create table if not exists public.barber_shops (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid references public.users(id) on delete set null,
   name text not null,
@@ -64,7 +102,7 @@ create table public.barber_shops (
   updated_at timestamptz not null default now()
 );
 
-create table public.shop_settings (
+create table if not exists public.shop_settings (
   id uuid primary key default gen_random_uuid(),
   barber_shop_id uuid not null unique references public.barber_shops(id) on delete cascade,
   booking_interval_minutes integer not null default 30,
@@ -78,7 +116,7 @@ create table public.shop_settings (
   updated_at timestamptz not null default now()
 );
 
-create table public.subscriptions (
+create table if not exists public.subscriptions (
   id uuid primary key default gen_random_uuid(),
   barber_shop_id uuid not null references public.barber_shops(id) on delete cascade,
   plan_id uuid not null references public.plans(id) on delete restrict,
@@ -92,7 +130,7 @@ create table public.subscriptions (
   updated_at timestamptz not null default now()
 );
 
-create table public.shop_members (
+create table if not exists public.shop_members (
   id uuid primary key default gen_random_uuid(),
   barber_shop_id uuid not null references public.barber_shops(id) on delete cascade,
   user_id uuid not null references public.users(id) on delete cascade,
@@ -104,7 +142,7 @@ create table public.shop_members (
   unique (barber_shop_id, user_id)
 );
 
-create table public.client_shop_relationships (
+create table if not exists public.client_shop_relationships (
   id uuid primary key default gen_random_uuid(),
   barber_shop_id uuid not null references public.barber_shops(id) on delete cascade,
   client_id uuid not null references public.users(id) on delete cascade,
@@ -115,7 +153,18 @@ create table public.client_shop_relationships (
   unique (barber_shop_id, client_id)
 );
 
-create table public.barbers (
+create table if not exists public.service_categories (
+  id uuid primary key default gen_random_uuid(),
+  barber_shop_id uuid references public.barber_shops(id) on delete cascade,
+  name text not null,
+  icon text,
+  sort_order integer not null default 0,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  unique (barber_shop_id, name)
+);
+
+create table if not exists public.barbers (
   id uuid primary key default gen_random_uuid(),
   barber_shop_id uuid not null references public.barber_shops(id) on delete cascade,
   user_id uuid references public.users(id) on delete set null,
@@ -127,34 +176,26 @@ create table public.barbers (
   commission_percent numeric(5,2) not null default 0,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  unique (barber_shop_id, name)
 );
 
-create table public.service_categories (
-  id uuid primary key default gen_random_uuid(),
-  barber_shop_id uuid references public.barber_shops(id) on delete cascade,
-  name text not null,
-  icon text,
-  sort_order integer not null default 0,
-  is_active boolean not null default true,
-  created_at timestamptz not null default now()
-);
-
-create table public.services (
+create table if not exists public.services (
   id uuid primary key default gen_random_uuid(),
   barber_shop_id uuid not null references public.barber_shops(id) on delete cascade,
   category_id uuid references public.service_categories(id) on delete set null,
   name text not null,
   description text,
-  duration_minutes integer not null default 30,
-  price numeric(10,2) not null,
+  duration_minutes integer not null default 30 check (duration_minutes > 0),
+  price numeric(10,2) not null check (price >= 0),
   image_url text,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  unique (barber_shop_id, name)
 );
 
-create table public.barber_services (
+create table if not exists public.barber_services (
   id uuid primary key default gen_random_uuid(),
   barber_shop_id uuid not null references public.barber_shops(id) on delete cascade,
   barber_id uuid not null references public.barbers(id) on delete cascade,
@@ -163,19 +204,20 @@ create table public.barber_services (
   unique (barber_id, service_id)
 );
 
-create table public.schedules (
+create table if not exists public.schedules (
   id uuid primary key default gen_random_uuid(),
   barber_shop_id uuid not null references public.barber_shops(id) on delete cascade,
   barber_id uuid not null references public.barbers(id) on delete cascade,
   weekday integer not null check (weekday between 0 and 6),
   start_time time not null,
   end_time time not null,
-  slot_minutes integer not null default 30,
+  slot_minutes integer not null default 30 check (slot_minutes > 0),
   is_active boolean not null default true,
-  unique (barber_id, weekday, start_time)
+  unique (barber_id, weekday, start_time),
+  check (end_time > start_time)
 );
 
-create table public.blocked_times (
+create table if not exists public.blocked_times (
   id uuid primary key default gen_random_uuid(),
   barber_shop_id uuid not null references public.barber_shops(id) on delete cascade,
   barber_id uuid references public.barbers(id) on delete cascade,
@@ -183,10 +225,11 @@ create table public.blocked_times (
   ends_at timestamptz not null,
   reason text,
   created_by uuid references public.users(id) on delete set null,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  check (ends_at > starts_at)
 );
 
-create table public.appointments (
+create table if not exists public.appointments (
   id uuid primary key default gen_random_uuid(),
   barber_shop_id uuid not null references public.barber_shops(id) on delete cascade,
   client_id uuid references public.users(id) on delete set null,
@@ -195,29 +238,30 @@ create table public.appointments (
   starts_at timestamptz not null,
   ends_at timestamptz not null,
   status public.appointment_status not null default 'pending',
-  total_price numeric(10,2) not null,
+  total_price numeric(10,2) not null check (total_price >= 0),
   notes text,
   cancelled_reason text,
   created_by uuid references public.users(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique (barber_id, starts_at)
+  unique (barber_id, starts_at),
+  check (ends_at > starts_at)
 );
 
-create table public.payments (
+create table if not exists public.payments (
   id uuid primary key default gen_random_uuid(),
   barber_shop_id uuid not null references public.barber_shops(id) on delete cascade,
   appointment_id uuid not null references public.appointments(id) on delete cascade,
   method public.payment_method not null default 'pix',
   status public.payment_status not null default 'pending',
-  amount numeric(10,2) not null,
+  amount numeric(10,2) not null check (amount >= 0),
   pix_qr_code text,
   external_reference text,
   paid_at timestamptz,
   created_at timestamptz not null default now()
 );
 
-create table public.reviews (
+create table if not exists public.reviews (
   id uuid primary key default gen_random_uuid(),
   barber_shop_id uuid not null references public.barber_shops(id) on delete cascade,
   appointment_id uuid not null unique references public.appointments(id) on delete cascade,
@@ -228,7 +272,7 @@ create table public.reviews (
   created_at timestamptz not null default now()
 );
 
-create table public.loyalty_points (
+create table if not exists public.loyalty_points (
   id uuid primary key default gen_random_uuid(),
   barber_shop_id uuid not null references public.barber_shops(id) on delete cascade,
   user_id uuid not null references public.users(id) on delete cascade,
@@ -239,7 +283,7 @@ create table public.loyalty_points (
   created_at timestamptz not null default now()
 );
 
-create table public.coupons (
+create table if not exists public.coupons (
   id uuid primary key default gen_random_uuid(),
   barber_shop_id uuid not null references public.barber_shops(id) on delete cascade,
   code text not null,
@@ -251,10 +295,12 @@ create table public.coupons (
   starts_at timestamptz,
   ends_at timestamptz,
   is_active boolean not null default true,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  check (discount_percent is null or discount_percent between 0 and 100),
+  check (discount_amount is null or discount_amount >= 0)
 );
 
-create table public.notifications (
+create table if not exists public.notifications (
   id uuid primary key default gen_random_uuid(),
   barber_shop_id uuid references public.barber_shops(id) on delete cascade,
   user_id uuid references public.users(id) on delete cascade,
@@ -265,7 +311,7 @@ create table public.notifications (
   created_at timestamptz not null default now()
 );
 
-create table public.stock_items (
+create table if not exists public.stock_items (
   id uuid primary key default gen_random_uuid(),
   barber_shop_id uuid not null references public.barber_shops(id) on delete cascade,
   name text not null,
@@ -274,20 +320,31 @@ create table public.stock_items (
   min_quantity integer not null default 0,
   unit_cost numeric(10,2) not null default 0,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  unique (barber_shop_id, name)
 );
 
-create table public.cash_movements (
+create table if not exists public.cash_movements (
   id uuid primary key default gen_random_uuid(),
   barber_shop_id uuid not null references public.barber_shops(id) on delete cascade,
   appointment_id uuid references public.appointments(id) on delete set null,
   type public.cash_movement_type not null,
-  amount numeric(10,2) not null,
+  amount numeric(10,2) not null check (amount >= 0),
   description text not null,
   movement_date date not null default current_date,
   created_by uuid references public.users(id) on delete set null,
   created_at timestamptz not null default now()
 );
+
+create or replace function public.set_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
 
 create or replace function public.current_user_role()
 returns public.user_role
@@ -339,17 +396,17 @@ stable
 security definer
 set search_path = public
 as $$
-  select public.is_shop_member(
-    target_shop_id,
-    array['owner', 'manager']::public.shop_member_role[]
-  )
-  or exists (
-    select 1
-    from public.barber_shops bs
-    where bs.id = target_shop_id
-      and bs.owner_id = auth.uid()
-  )
-  or public.is_platform_admin()
+  select public.is_platform_admin()
+    or public.is_shop_member(
+      target_shop_id,
+      array['owner', 'manager']::public.shop_member_role[]
+    )
+    or exists (
+      select 1
+      from public.barber_shops bs
+      where bs.id = target_shop_id
+        and bs.owner_id = auth.uid()
+    )
 $$;
 
 create or replace function public.handle_new_auth_user()
@@ -358,20 +415,32 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  requested_role public.user_role;
 begin
+  begin
+    requested_role := coalesce((new.raw_user_meta_data->>'role')::public.user_role, 'client');
+  exception when others then
+    requested_role := 'client';
+  end;
+
+  if requested_role = 'admin' then
+    requested_role := 'client';
+  end if;
+
   insert into public.users (id, email, role)
-  values (
-    new.id,
-    new.email,
-    coalesce((new.raw_user_meta_data->>'role')::public.user_role, 'client')
-  );
+  values (new.id, new.email, requested_role)
+  on conflict (id) do update set
+    email = excluded.email,
+    updated_at = now();
 
   insert into public.profiles (user_id, full_name, avatar_url)
   values (
     new.id,
     coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
     new.raw_user_meta_data->>'avatar_url'
-  );
+  )
+  on conflict (user_id) do nothing;
 
   return new;
 end;
@@ -382,20 +451,49 @@ create trigger on_auth_user_created
 after insert on auth.users
 for each row execute function public.handle_new_auth_user();
 
-create index idx_shop_members_user on public.shop_members(user_id, is_active);
-create index idx_subscriptions_shop on public.subscriptions(barber_shop_id, status);
-create index idx_clients_shop on public.client_shop_relationships(barber_shop_id, client_id);
-create index idx_barbers_shop on public.barbers(barber_shop_id, is_active);
-create index idx_services_shop on public.services(barber_shop_id, is_active);
-create index idx_barber_services_barber on public.barber_services(barber_id, is_active);
-create index idx_schedules_barber on public.schedules(barber_id, weekday, is_active);
-create index idx_blocked_times_shop on public.blocked_times(barber_shop_id, starts_at, ends_at);
-create index idx_appointments_shop_starts on public.appointments(barber_shop_id, starts_at);
-create index idx_appointments_client on public.appointments(client_id, starts_at);
-create index idx_appointments_barber_starts on public.appointments(barber_id, starts_at);
-create index idx_reviews_shop on public.reviews(barber_shop_id, barber_id);
-create index idx_notifications_user on public.notifications(user_id, is_read);
-create unique index idx_coupons_shop_code on public.coupons(barber_shop_id, lower(code));
+drop trigger if exists set_users_updated_at on public.users;
+create trigger set_users_updated_at before update on public.users
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_profiles_updated_at on public.profiles;
+create trigger set_profiles_updated_at before update on public.profiles
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_barber_shops_updated_at on public.barber_shops;
+create trigger set_barber_shops_updated_at before update on public.barber_shops
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_shop_settings_updated_at on public.shop_settings;
+create trigger set_shop_settings_updated_at before update on public.shop_settings
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_services_updated_at on public.services;
+create trigger set_services_updated_at before update on public.services
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_barbers_updated_at on public.barbers;
+create trigger set_barbers_updated_at before update on public.barbers
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_appointments_updated_at on public.appointments;
+create trigger set_appointments_updated_at before update on public.appointments
+for each row execute function public.set_updated_at();
+
+create index if not exists idx_shop_members_user on public.shop_members(user_id, is_active);
+create index if not exists idx_clients_shop on public.client_shop_relationships(barber_shop_id, client_id);
+create index if not exists idx_barbers_shop on public.barbers(barber_shop_id, is_active);
+create index if not exists idx_services_shop on public.services(barber_shop_id, is_active);
+create index if not exists idx_barber_services_barber on public.barber_services(barber_id, is_active);
+create index if not exists idx_schedules_barber on public.schedules(barber_id, weekday, is_active);
+create index if not exists idx_appointments_shop_starts on public.appointments(barber_shop_id, starts_at);
+create index if not exists idx_appointments_client on public.appointments(client_id, starts_at);
+create index if not exists idx_appointments_barber_starts on public.appointments(barber_id, starts_at);
+create index if not exists idx_reviews_shop on public.reviews(barber_shop_id, barber_id);
+create index if not exists idx_notifications_user on public.notifications(user_id, is_read);
+create unique index if not exists idx_coupons_shop_code on public.coupons(barber_shop_id, lower(code));
+create unique index if not exists idx_global_category_name
+on public.service_categories(lower(name))
+where barber_shop_id is null;
 
 alter table public.users enable row level security;
 alter table public.profiles enable row level security;
@@ -405,8 +503,8 @@ alter table public.shop_settings enable row level security;
 alter table public.subscriptions enable row level security;
 alter table public.shop_members enable row level security;
 alter table public.client_shop_relationships enable row level security;
-alter table public.barbers enable row level security;
 alter table public.service_categories enable row level security;
+alter table public.barbers enable row level security;
 alter table public.services enable row level security;
 alter table public.barber_services enable row level security;
 alter table public.schedules enable row level security;
@@ -420,69 +518,83 @@ alter table public.notifications enable row level security;
 alter table public.stock_items enable row level security;
 alter table public.cash_movements enable row level security;
 
-create policy "users read own row" on public.users
+drop policy if exists users_read_own_or_admin on public.users;
+create policy users_read_own_or_admin on public.users
 for select using (auth.uid() = id or public.is_platform_admin());
 
-create policy "profiles read own" on public.profiles
+drop policy if exists users_update_own_or_admin on public.users;
+create policy users_update_own_or_admin on public.users
+for update using (auth.uid() = id or public.is_platform_admin())
+with check (auth.uid() = id or public.is_platform_admin());
+
+drop policy if exists profiles_read_own_or_admin on public.profiles;
+create policy profiles_read_own_or_admin on public.profiles
 for select using (auth.uid() = user_id or public.is_platform_admin());
 
-create policy "profiles update own" on public.profiles
+drop policy if exists profiles_update_own on public.profiles;
+create policy profiles_update_own on public.profiles
 for update using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
-create policy "plans read active" on public.plans
+drop policy if exists plans_read_active on public.plans;
+create policy plans_read_active on public.plans
 for select using (is_active = true or public.is_platform_admin());
 
-create policy "shops read active" on public.barber_shops
+drop policy if exists shops_read_active on public.barber_shops;
+create policy shops_read_active on public.barber_shops
 for select using (is_active = true or public.is_shop_member(id) or public.is_platform_admin());
 
-create policy "shops create by authenticated owner" on public.barber_shops
-for insert with check (auth.uid() = owner_id);
+drop policy if exists shops_insert_owner on public.barber_shops;
+create policy shops_insert_owner on public.barber_shops
+for insert with check (auth.uid() = owner_id or public.is_platform_admin());
 
-create policy "shops update by owner or manager" on public.barber_shops
+drop policy if exists shops_update_owner_manager on public.barber_shops;
+create policy shops_update_owner_manager on public.barber_shops
 for update using (public.is_shop_owner_or_manager(id))
 with check (public.is_shop_owner_or_manager(id));
 
-create policy "settings read by staff" on public.shop_settings
+drop policy if exists settings_read_staff on public.shop_settings;
+create policy settings_read_staff on public.shop_settings
 for select using (public.is_shop_member(barber_shop_id) or public.is_platform_admin());
 
-create policy "settings manage by owner or manager" on public.shop_settings
+drop policy if exists settings_manage_owner_manager on public.shop_settings;
+create policy settings_manage_owner_manager on public.shop_settings
 for all using (public.is_shop_owner_or_manager(barber_shop_id))
 with check (public.is_shop_owner_or_manager(barber_shop_id));
 
-create policy "subscriptions read by owner or manager" on public.subscriptions
+drop policy if exists subscriptions_read_owner_manager on public.subscriptions;
+create policy subscriptions_read_owner_manager on public.subscriptions
 for select using (public.is_shop_owner_or_manager(barber_shop_id));
 
-create policy "subscriptions manage by platform admin" on public.subscriptions
+drop policy if exists subscriptions_manage_admin on public.subscriptions;
+create policy subscriptions_manage_admin on public.subscriptions
 for all using (public.is_platform_admin())
 with check (public.is_platform_admin());
 
-create policy "members read by shop staff" on public.shop_members
+drop policy if exists members_read_staff on public.shop_members;
+create policy members_read_staff on public.shop_members
 for select using (public.is_shop_member(barber_shop_id) or public.is_platform_admin());
 
-create policy "members manage by owner or manager" on public.shop_members
+drop policy if exists members_manage_owner_manager on public.shop_members;
+create policy members_manage_owner_manager on public.shop_members
 for all using (public.is_shop_owner_or_manager(barber_shop_id))
 with check (public.is_shop_owner_or_manager(barber_shop_id));
 
-create policy "client relationships read own or staff" on public.client_shop_relationships
+drop policy if exists client_relationships_read on public.client_shop_relationships;
+create policy client_relationships_read on public.client_shop_relationships
 for select using (
   auth.uid() = client_id
   or public.is_shop_member(barber_shop_id)
   or public.is_platform_admin()
 );
 
-create policy "client relationships manage by staff" on public.client_shop_relationships
+drop policy if exists client_relationships_manage_staff on public.client_shop_relationships;
+create policy client_relationships_manage_staff on public.client_shop_relationships
 for all using (public.is_shop_member(barber_shop_id))
 with check (public.is_shop_member(barber_shop_id));
 
-create policy "barbers read active" on public.barbers
-for select using (is_active = true or public.is_shop_member(barber_shop_id) or public.is_platform_admin());
-
-create policy "barbers manage by owner or manager" on public.barbers
-for all using (public.is_shop_owner_or_manager(barber_shop_id))
-with check (public.is_shop_owner_or_manager(barber_shop_id));
-
-create policy "categories read public or staff" on public.service_categories
+drop policy if exists categories_read_public on public.service_categories;
+create policy categories_read_public on public.service_categories
 for select using (
   barber_shop_id is null
   or is_active = true
@@ -490,7 +602,8 @@ for select using (
   or public.is_platform_admin()
 );
 
-create policy "categories manage by shop owner or manager" on public.service_categories
+drop policy if exists categories_manage_owner_manager on public.service_categories;
+create policy categories_manage_owner_manager on public.service_categories
 for all using (
   barber_shop_id is not null and public.is_shop_owner_or_manager(barber_shop_id)
 )
@@ -498,157 +611,206 @@ with check (
   barber_shop_id is not null and public.is_shop_owner_or_manager(barber_shop_id)
 );
 
-create policy "services read active" on public.services
+drop policy if exists barbers_read_active on public.barbers;
+create policy barbers_read_active on public.barbers
 for select using (is_active = true or public.is_shop_member(barber_shop_id) or public.is_platform_admin());
 
-create policy "services manage by owner or manager" on public.services
+drop policy if exists barbers_manage_owner_manager on public.barbers;
+create policy barbers_manage_owner_manager on public.barbers
 for all using (public.is_shop_owner_or_manager(barber_shop_id))
 with check (public.is_shop_owner_or_manager(barber_shop_id));
 
-create policy "barber services read active" on public.barber_services
+drop policy if exists services_read_active on public.services;
+create policy services_read_active on public.services
 for select using (is_active = true or public.is_shop_member(barber_shop_id) or public.is_platform_admin());
 
-create policy "barber services manage by owner or manager" on public.barber_services
+drop policy if exists services_manage_owner_manager on public.services;
+create policy services_manage_owner_manager on public.services
 for all using (public.is_shop_owner_or_manager(barber_shop_id))
 with check (public.is_shop_owner_or_manager(barber_shop_id));
 
-create policy "schedules read active" on public.schedules
+drop policy if exists barber_services_read_active on public.barber_services;
+create policy barber_services_read_active on public.barber_services
 for select using (is_active = true or public.is_shop_member(barber_shop_id) or public.is_platform_admin());
 
-create policy "schedules manage by shop staff" on public.schedules
-for all using (public.is_shop_member(barber_shop_id))
-with check (public.is_shop_member(barber_shop_id));
+drop policy if exists barber_services_manage_owner_manager on public.barber_services;
+create policy barber_services_manage_owner_manager on public.barber_services
+for all using (public.is_shop_owner_or_manager(barber_shop_id))
+with check (public.is_shop_owner_or_manager(barber_shop_id));
 
-create policy "blocked times read for booking" on public.blocked_times
+drop policy if exists schedules_read_active on public.schedules;
+create policy schedules_read_active on public.schedules
+for select using (is_active = true or public.is_shop_member(barber_shop_id) or public.is_platform_admin());
+
+drop policy if exists schedules_manage_staff on public.schedules;
+create policy schedules_manage_staff on public.schedules
+for all using (public.is_shop_member(barber_shop_id) or public.is_platform_admin())
+with check (public.is_shop_member(barber_shop_id) or public.is_platform_admin());
+
+drop policy if exists blocked_times_read_public on public.blocked_times;
+create policy blocked_times_read_public on public.blocked_times
 for select using (true);
 
-create policy "blocked times manage by shop staff" on public.blocked_times
-for all using (public.is_shop_member(barber_shop_id))
-with check (public.is_shop_member(barber_shop_id));
+drop policy if exists blocked_times_manage_staff on public.blocked_times;
+create policy blocked_times_manage_staff on public.blocked_times
+for all using (public.is_shop_member(barber_shop_id) or public.is_platform_admin())
+with check (public.is_shop_member(barber_shop_id) or public.is_platform_admin());
 
-create policy "appointments read involved users" on public.appointments
+drop policy if exists appointments_read_involved on public.appointments;
+create policy appointments_read_involved on public.appointments
 for select using (
   auth.uid() = client_id
   or public.is_shop_member(barber_shop_id)
   or public.is_platform_admin()
 );
 
-create policy "clients create own appointments" on public.appointments
+drop policy if exists appointments_insert_client on public.appointments;
+create policy appointments_insert_client on public.appointments
 for insert with check (
   auth.uid() = client_id
   and exists (
-    select 1
-    from public.barber_shops bs
-    where bs.id = barber_shop_id
-      and bs.is_active = true
+    select 1 from public.barber_shops bs
+    where bs.id = barber_shop_id and bs.is_active = true
   )
 );
 
-create policy "shop staff create appointments" on public.appointments
-for insert with check (public.is_shop_member(barber_shop_id));
+drop policy if exists appointments_insert_staff on public.appointments;
+create policy appointments_insert_staff on public.appointments
+for insert with check (public.is_shop_member(barber_shop_id) or public.is_platform_admin());
 
-create policy "clients update own appointments" on public.appointments
+drop policy if exists appointments_update_client on public.appointments;
+create policy appointments_update_client on public.appointments
 for update using (auth.uid() = client_id)
 with check (auth.uid() = client_id);
 
-create policy "shop staff update appointments" on public.appointments
-for update using (public.is_shop_member(barber_shop_id))
-with check (public.is_shop_member(barber_shop_id));
+drop policy if exists appointments_update_staff on public.appointments;
+create policy appointments_update_staff on public.appointments
+for update using (public.is_shop_member(barber_shop_id) or public.is_platform_admin())
+with check (public.is_shop_member(barber_shop_id) or public.is_platform_admin());
 
-create policy "payments read involved users" on public.payments
+drop policy if exists payments_read_involved on public.payments;
+create policy payments_read_involved on public.payments
 for select using (
   public.is_shop_member(barber_shop_id)
   or public.is_platform_admin()
   or exists (
-    select 1
-    from public.appointments a
-    where a.id = appointment_id
-      and a.client_id = auth.uid()
+    select 1 from public.appointments a
+    where a.id = appointment_id and a.client_id = auth.uid()
   )
 );
 
-create policy "payments manage by shop staff" on public.payments
-for all using (public.is_shop_member(barber_shop_id))
-with check (public.is_shop_member(barber_shop_id));
-
-create policy "clients create own pending pix payments" on public.payments
+drop policy if exists payments_insert_client_pix on public.payments;
+create policy payments_insert_client_pix on public.payments
 for insert with check (
   method = 'pix'
   and status = 'pending'
   and exists (
-    select 1
-    from public.appointments a
+    select 1 from public.appointments a
     where a.id = appointment_id
       and a.client_id = auth.uid()
       and a.barber_shop_id = public.payments.barber_shop_id
   )
 );
 
-create policy "reviews read public" on public.reviews
+drop policy if exists payments_manage_staff on public.payments;
+create policy payments_manage_staff on public.payments
+for all using (public.is_shop_member(barber_shop_id) or public.is_platform_admin())
+with check (public.is_shop_member(barber_shop_id) or public.is_platform_admin());
+
+drop policy if exists reviews_read_public on public.reviews;
+create policy reviews_read_public on public.reviews
 for select using (true);
 
-create policy "clients create own reviews" on public.reviews
+drop policy if exists reviews_insert_client on public.reviews;
+create policy reviews_insert_client on public.reviews
 for insert with check (auth.uid() = client_id);
 
-create policy "loyalty read own or shop staff" on public.loyalty_points
+drop policy if exists loyalty_read_own_staff on public.loyalty_points;
+create policy loyalty_read_own_staff on public.loyalty_points
 for select using (
   auth.uid() = user_id
   or public.is_shop_member(barber_shop_id)
   or public.is_platform_admin()
 );
 
-create policy "loyalty manage by shop staff" on public.loyalty_points
-for all using (public.is_shop_member(barber_shop_id))
-with check (public.is_shop_member(barber_shop_id));
+drop policy if exists loyalty_manage_staff on public.loyalty_points;
+create policy loyalty_manage_staff on public.loyalty_points
+for all using (public.is_shop_member(barber_shop_id) or public.is_platform_admin())
+with check (public.is_shop_member(barber_shop_id) or public.is_platform_admin());
 
-create policy "coupons read active by shop" on public.coupons
-for select using (is_active = true or public.is_shop_member(barber_shop_id));
+drop policy if exists coupons_read_active on public.coupons;
+create policy coupons_read_active on public.coupons
+for select using (is_active = true or public.is_shop_member(barber_shop_id) or public.is_platform_admin());
 
-create policy "coupons manage by owner or manager" on public.coupons
+drop policy if exists coupons_manage_owner_manager on public.coupons;
+create policy coupons_manage_owner_manager on public.coupons
 for all using (public.is_shop_owner_or_manager(barber_shop_id))
 with check (public.is_shop_owner_or_manager(barber_shop_id));
 
-create policy "notifications read own" on public.notifications
-for select using (auth.uid() = user_id);
+drop policy if exists notifications_read_own on public.notifications;
+create policy notifications_read_own on public.notifications
+for select using (auth.uid() = user_id or public.is_platform_admin());
 
-create policy "notifications update own" on public.notifications
+drop policy if exists notifications_update_own on public.notifications;
+create policy notifications_update_own on public.notifications
 for update using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
-create policy "notifications create by shop staff" on public.notifications
+drop policy if exists notifications_insert_staff on public.notifications;
+create policy notifications_insert_staff on public.notifications
 for insert with check (
   barber_shop_id is null
   or public.is_shop_member(barber_shop_id)
   or public.is_platform_admin()
 );
 
-create policy "stock read by shop staff" on public.stock_items
+drop policy if exists stock_read_staff on public.stock_items;
+create policy stock_read_staff on public.stock_items
 for select using (public.is_shop_member(barber_shop_id) or public.is_platform_admin());
 
-create policy "stock manage by owner or manager" on public.stock_items
+drop policy if exists stock_manage_owner_manager on public.stock_items;
+create policy stock_manage_owner_manager on public.stock_items
 for all using (public.is_shop_owner_or_manager(barber_shop_id))
 with check (public.is_shop_owner_or_manager(barber_shop_id));
 
-create policy "cash read by owner or manager" on public.cash_movements
+drop policy if exists cash_read_owner_manager on public.cash_movements;
+create policy cash_read_owner_manager on public.cash_movements
 for select using (public.is_shop_owner_or_manager(barber_shop_id));
 
-create policy "cash manage by owner or manager" on public.cash_movements
+drop policy if exists cash_manage_owner_manager on public.cash_movements;
+create policy cash_manage_owner_manager on public.cash_movements
 for all using (public.is_shop_owner_or_manager(barber_shop_id))
 with check (public.is_shop_owner_or_manager(barber_shop_id));
 
-insert into public.plans (name, slug, monthly_price, max_barbers, max_shops, features) values
-  ('Básico', 'basico', 49.90, 2, 1, '{"agenda": true, "relatorios": false, "estoque": false}'::jsonb),
+insert into public.plans (name, slug, monthly_price, max_barbers, max_shops, features)
+values
+  ('Basico', 'basico', 49.90, 2, 1, '{"agenda": true, "relatorios": false, "estoque": false}'::jsonb),
   ('Pro', 'pro', 99.90, 8, 1, '{"agenda": true, "relatorios": true, "estoque": false, "cupons": true}'::jsonb),
   ('Premium', 'premium', 199.90, 30, 3, '{"agenda": true, "relatorios": true, "estoque": true, "cupons": true, "multi_unidade": true}'::jsonb)
-on conflict (slug) do nothing;
+on conflict (slug) do update set
+  name = excluded.name,
+  monthly_price = excluded.monthly_price,
+  max_barbers = excluded.max_barbers,
+  max_shops = excluded.max_shops,
+  features = excluded.features,
+  is_active = true;
 
-insert into public.service_categories (name, icon, sort_order) values
-  ('Cabelo', 'content_cut', 1),
-  ('Barba', 'face', 2),
-  ('Combo', 'bolt', 3),
-  ('Sobrancelha', 'visibility', 4)
-on conflict do nothing;
+insert into public.service_categories (barber_shop_id, name, icon, sort_order)
+select null, category.name, category.icon, category.sort_order
+from (
+  values
+    ('Cabelo', 'content_cut', 1),
+    ('Barba', 'face', 2),
+    ('Combo', 'bolt', 3),
+    ('Sobrancelha', 'visibility', 4)
+) as category(name, icon, sort_order)
+where not exists (
+  select 1
+  from public.service_categories existing
+  where existing.barber_shop_id is null
+    and lower(existing.name) = lower(category.name)
+);
 
 insert into storage.buckets (id, name, public)
 values ('barbershop-media', 'barbershop-media', true)
-on conflict (id) do nothing;
+on conflict (id) do update set public = excluded.public;
