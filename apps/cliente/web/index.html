@@ -4,76 +4,29 @@
   <base href="$FLUTTER_BASE_HREF">
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Clube da Régua - app premium de barbearia e agendamento.">
+  <meta name="description" content="Clube da Regua - app premium de barbearia e agendamento.">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#F4F4F4">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Clube da Régua">
+  <meta name="apple-mobile-web-app-title" content="Clube da Regua">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
-  <title>Clube da Régua</title>
+  <title>Clube da Regua</title>
   <style>
-    html, body {
-      width: 100%;
+    html,
+    body {
+      background: #F4F4F4;
       height: 100%;
       margin: 0;
       overflow: hidden;
-      background: #F4F4F4;
-      font-family: Arial, sans-serif;
-    }
-
-    .fallback-loader {
-      align-items: center;
-      background: #F4F4F4;
-      color: #FF6B2C;
-      display: flex;
-      font-size: 24px;
-      font-weight: 800;
-      height: 100%;
-      justify-content: center;
-      left: 0;
-      position: fixed;
-      top: 0;
       width: 100%;
-      z-index: 9999;
     }
   </style>
-  <script>
-    window.addEventListener('unhandledrejection', function (event) {
-      console.error('CLUBE_DA_REGUA_UNHANDLED', event.reason && (event.reason.stack || event.reason));
-    });
-    window.addEventListener('error', function (event) {
-      console.error('CLUBE_DA_REGUA_ERROR', event.error && (event.error.stack || event.message));
-    });
-  </script>
 </head>
 <body>
-  <div class="fallback-loader">Clube da Régua</div>
-  <script>
-    function hideFallbackLoader() {
-      var fallback = document.querySelector('.fallback-loader');
-      if (fallback) fallback.remove();
-    }
-
-    window.addEventListener('flutter-first-frame', function () {
-      hideFallbackLoader();
-    });
-
-    {{flutter_js}}
-    {{flutter_build_config}}
-
-    _flutter.loader.load({
-      onEntrypointLoaded: async function (engineInitializer) {
-        var appRunner = await engineInitializer.initializeEngine({
-          renderer: 'html'
-        });
-        await appRunner.runApp();
-        window.setTimeout(hideFallbackLoader, 1200);
-      }
-    });
-  </script>
+  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
