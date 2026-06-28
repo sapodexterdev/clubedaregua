@@ -2,6 +2,7 @@ class Barber {
   const Barber({
     required this.id,
     required this.name,
+    required this.barberShopId,
     required this.shopName,
     required this.imageUrl,
     required this.rating,
@@ -12,6 +13,7 @@ class Barber {
 
   final String id;
   final String name;
+  final String barberShopId;
   final String shopName;
   final String imageUrl;
   final double rating;
@@ -23,6 +25,7 @@ class Barber {
     return Barber(
       id: map['id'].toString(),
       name: map['name'] ?? '',
+      barberShopId: map['barber_shop_id']?.toString() ?? '',
       shopName: map['barber_shops']?['name'] ?? map['shop_name'] ?? '',
       imageUrl: map['photo_url'] ?? '',
       rating: (map['rating'] ?? 0).toDouble(),

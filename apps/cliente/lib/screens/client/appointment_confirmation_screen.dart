@@ -33,21 +33,24 @@ class AppointmentConfirmationScreen extends StatelessWidget {
               ),
               const SizedBox(height: 28),
               const Text(
-                'Agendamento criado',
+                'Solicitacao enviada',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 10),
               const Text(
-                'Seu horário foi reservado. O pagamento PIX está aguardando confirmação.',
+                'Recebemos seu pedido. A barbearia vai confirmar o horario pelo WhatsApp.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: AppColors.muted, fontSize: 16),
               ),
               const SizedBox(height: 34),
               PrimaryButton(
                 label: 'Voltar para home',
-                onPressed: () =>
-                    Navigator.pushNamedAndRemoveUntil(context, HomeScreen.route, (_) => false),
+                onPressed: () => Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  HomeScreen.route,
+                  (_) => false,
+                ),
               ),
             ],
           ),

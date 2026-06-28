@@ -8,10 +8,26 @@ import '../../widgets/primary_button.dart';
 import '../../widgets/service_card.dart';
 import 'appointment_confirmation_screen.dart';
 
-class AppointmentScreen extends StatelessWidget {
+class AppointmentScreen extends StatefulWidget {
   const AppointmentScreen({super.key});
 
   static const route = '/appointment';
+
+  @override
+  State<AppointmentScreen> createState() => _AppointmentScreenState();
+}
+
+class _AppointmentScreenState extends State<AppointmentScreen> {
+  final _nameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +42,7 @@ class AppointmentScreen extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             children: [
               const Text(
-                'Selecione o serviço',
+                'Selecione o servico',
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 14),
@@ -56,12 +72,12 @@ class AppointmentScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     _SummaryRow(label: 'Barbeiro', value: barber?.name ?? '-'),
-                    _SummaryRow(label: 'Serviço', value: service?.name ?? '-'),
+                    _SummaryRow(label: 'Servico', value: service?.name ?? '-'),
                     _SummaryRow(
                       label: 'Data',
                       value: DateFormat('dd/MM').format(state.selectedDate),
                     ),
-                    _SummaryRow(label: 'Horário', value: state.selectedTime),
+                    _SummaryRow(label: 'Horario', value: state.selectedTime),
                     const Divider(height: 28),
                     _SummaryRow(
                       label: 'Total',
@@ -83,7 +99,7 @@ class AppointmentScreen extends StatelessWidget {
                           SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'Pagamento via PIX: aguardando confirmação',
+                              'Pagamento via PIX: aguardando confirmacao',
                               style: TextStyle(fontWeight: FontWeight.w700),
                             ),
                           ),
@@ -94,18 +110,67 @@ class AppointmentScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
+              TextField(
+                controller: _nameController,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'Seu nome',
+                  prefixIcon: Icon(Icons.person_outline_rounded),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'WhatsApp',
+                  prefixIcon: Icon(Icons.phone_outlined),
+                ),
+              ),
+              const SizedBox(height: 20),
               PrimaryButton(
-                label: 'Agendar agora',
-                onPressed: () async {
-                  await state.createSelectedAppointment();
+                label: _isSubmitting ? 'Enviando...' : 'Agendar agora',
+                onPressed: _isSubmitting
+                    ? null
+                    : () async {
+                        final name = _nameController.text.trim();
+                        final phone = _phoneController.text.trim();
 
-                  if (context.mounted) {
-                    Navigator.pushReplacementNamed(
-                      context,
-                      AppointmentConfirmationScreen.route,
-                    );
-                  }
-                },
+                        if (name.length < 3 || phone.length < 8) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Informe seu nome e WhatsApp para confirmar.',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+
+                        setState(() => _isSubmitting = true);
+                        final created = await state.createSelectedAppointment(
+                          customerName: name,
+                          customerPhone: phone,
+                        );
+
+                        if (!context.mounted) return;
+                        setState(() => _isSubmitting = false);
+
+                        if (created) {
+                          Navigator.pushReplacementNamed(
+                            context,
+                            AppointmentConfirmationScreen.route,
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Nao foi possivel enviar agora. Tente novamente.',
+                              ),
+                            ),
+                          );
+                        }
+                      },
               ),
             ],
           ),

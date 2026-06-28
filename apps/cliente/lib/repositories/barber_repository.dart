@@ -17,7 +17,7 @@ class BarberRepository {
       final rows = await _rest.getRows(
         'barbers',
         select:
-            'id,name,bio,photo_url,rating,starting_price,barber_shops(name),barber_services(services(category_id))',
+            'id,barber_shop_id,name,bio,photo_url,rating,starting_price,barber_shops(name),barber_services(services(category_id))',
         filters: const {'is_active': 'eq.true'},
         order: 'name.asc',
       );
@@ -66,7 +66,7 @@ class BarberRepository {
     try {
       final rows = await _rest.getRows(
         'services',
-        select: 'id,name,duration_minutes,price,category_id',
+        select: 'id,barber_shop_id,name,duration_minutes,price,category_id',
         filters: const {'is_active': 'eq.true'},
         order: 'name.asc',
       );

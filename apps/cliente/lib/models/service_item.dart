@@ -4,6 +4,7 @@ class ServiceItem {
     required this.name,
     required this.durationMinutes,
     required this.price,
+    required this.barberShopId,
     this.categoryId,
   });
 
@@ -11,6 +12,7 @@ class ServiceItem {
   final String name;
   final int durationMinutes;
   final double price;
+  final String barberShopId;
   final String? categoryId;
 
   factory ServiceItem.fromMap(Map<String, dynamic> map) {
@@ -19,6 +21,7 @@ class ServiceItem {
       name: map['name'] ?? '',
       durationMinutes: map['duration_minutes'] ?? 30,
       price: (map['price'] ?? 0).toDouble(),
+      barberShopId: map['barber_shop_id']?.toString() ?? '',
       categoryId: map['category_id']?.toString(),
     );
   }

@@ -49,4 +49,30 @@ class SupabaseRestService {
         .map((row) => Map<String, dynamic>.from(row))
         .toList();
   }
+
+  Future<bool> insertRow(
+    String table,
+    Map<String, dynamic> data,
+  ) async {
+    if (!isConfigured) return false;
+
+    final uri = Uri.parse('${SupabaseConfig.url}/rest/v1/$table');
+
+    final response = await http.post(
+      uri,
+      headers: {
+        'apikey': SupabaseConfig.anonKey,
+        'authorization': 'Bearer ${SupabaseConfig.anonKey}',
+        'content-type': 'application/json',
+        'prefer': 'return=minimal',
+      },
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw StateError('Supabase REST ${response.statusCode}: ${response.body}');
+    }
+
+    return true;
+  }
 }

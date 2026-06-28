@@ -5,6 +5,8 @@ import '../models/service_category.dart';
 import '../models/service_item.dart';
 
 class MockData {
+  static const demoShopId = '11111111-1111-4111-8111-111111111111';
+
   static const categories = [
     ServiceCategory(id: '1', name: 'Cabelo', icon: 'content_cut'),
     ServiceCategory(id: '2', name: 'Barba', icon: 'face'),
@@ -13,14 +15,33 @@ class MockData {
   ];
 
   static const services = [
-    ServiceItem(id: '1', name: 'Corte premium', durationMinutes: 45, price: 55),
-    ServiceItem(id: '2', name: 'Barba completa', durationMinutes: 35, price: 40),
-    ServiceItem(id: '3', name: 'Corte + barba', durationMinutes: 70, price: 85),
+    ServiceItem(
+      id: '1',
+      barberShopId: demoShopId,
+      name: 'Corte premium',
+      durationMinutes: 45,
+      price: 55,
+    ),
+    ServiceItem(
+      id: '2',
+      barberShopId: demoShopId,
+      name: 'Barba completa',
+      durationMinutes: 35,
+      price: 40,
+    ),
+    ServiceItem(
+      id: '3',
+      barberShopId: demoShopId,
+      name: 'Corte + barba',
+      durationMinutes: 70,
+      price: 85,
+    ),
   ];
 
   static const barbers = [
     Barber(
       id: '1',
+      barberShopId: demoShopId,
       name: 'Davi Marcomin',
       shopName: 'Barbearia Elite',
       imageUrl:
@@ -33,6 +54,7 @@ class MockData {
     ),
     Barber(
       id: '2',
+      barberShopId: demoShopId,
       name: 'Ricardo Anderson',
       shopName: 'Barbearia Pro',
       imageUrl:
@@ -82,4 +104,5 @@ class MockData {
   ];
 
   static const times = ['09:00', '10:30', '13:00', '14:30', '16:00', '18:00'];
+
 }

@@ -23,6 +23,7 @@ class AppState extends ChangeNotifier {
   List<ServiceCategory> categories = [];
   List<ServiceItem> services = [];
   List<Appointment> appointments = [];
+  bool lastBookingRequestCreated = false;
 
   List<Barber> get filteredBarbers {
     final categoryId = selectedCategoryId;
@@ -85,21 +86,28 @@ class AppState extends ChangeNotifier {
     selectedCategoryId ??= categories.isEmpty ? null : categories.first.id;
   }
 
-  Future<void> createSelectedAppointment() async {
+  Future<bool> createSelectedAppointment({
+    required String customerName,
+    required String customerPhone,
+  }) async {
     final barber = selectedBarber;
     final service = selectedService;
-    if (barber == null || service == null) return;
+    if (barber == null || service == null) return false;
 
-    await _appointmentRepository.createAppointment(
+    lastBookingRequestCreated = await _appointmentRepository.createAppointment(
       barberId: barber.id,
       serviceId: service.id,
       date: selectedDate,
       time: selectedTime,
       total: service.price,
+      barberShopId: barber.barberShopId,
+      customerName: customerName,
+      customerPhone: customerPhone,
     );
 
     appointments = await _appointmentRepository.fetchAppointments();
     notifyListeners();
+    return lastBookingRequestCreated;
   }
 
   Future<void> cancelAppointment(String appointmentId) async {
