@@ -74,6 +74,20 @@ class BookingRequest {
   final String status;
   final double total;
 
+  BookingRequest copyWith({String? status}) {
+    return BookingRequest(
+      id: id,
+      client: client,
+      phone: phone,
+      service: service,
+      barber: barber,
+      date: date,
+      time: time,
+      status: status ?? this.status,
+      total: total,
+    );
+  }
+
   factory BookingRequest.fromMap(Map<String, dynamic> map) {
     return BookingRequest(
       id: map['id']?.toString() ?? '',
@@ -183,6 +197,46 @@ class ManagementSession extends ChangeNotifier {
           .map((row) => BookingRequest.fromMap(Map<String, dynamic>.from(row)))
           .toList();
       errorMessage = null;
+    } catch (error) {
+      errorMessage = error.toString();
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> updateBookingRequestStatus(String id, String status) async {
+    final token = _accessToken;
+    if (token == null) return;
+
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      final uri = Uri.parse(
+        '${GestaoSupabaseConfig.url}/rest/v1/booking_requests',
+      ).replace(queryParameters: {'id': 'eq.$id'});
+
+      final response = await http.patch(
+        uri,
+        headers: {
+          'apikey': GestaoSupabaseConfig.anonKey,
+          'authorization': 'Bearer $token',
+          'content-type': 'application/json',
+          'prefer': 'return=minimal',
+        },
+        body: jsonEncode({'status': status}),
+      );
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw StateError('Nao foi possivel atualizar o pedido.');
+      }
+
+      bookingRequests = [
+        for (final request in bookingRequests)
+          if (request.id == id) request.copyWith(status: status) else request,
+      ];
     } catch (error) {
       errorMessage = error.toString();
     } finally {
@@ -635,11 +689,24 @@ class _BookingRequestsPage extends StatelessWidget {
             else
               for (final request in requests)
                 _BookingRequestTile(
+                  status: request.status,
                   client: request.client,
                   phone: request.phone,
                   service: request.service,
                   dateTime: '${request.date} - ${request.time}',
                   total: _formatCurrency(request.total),
+                  onContacted: () => session.updateBookingRequestStatus(
+                    request.id,
+                    'contacted',
+                  ),
+                  onConverted: () => session.updateBookingRequestStatus(
+                    request.id,
+                    'converted',
+                  ),
+                  onCancelled: () => session.updateBookingRequestStatus(
+                    request.id,
+                    'cancelled',
+                  ),
                 ),
           ],
         );
@@ -1039,21 +1106,42 @@ class _AppointmentTile extends StatelessWidget {
 
 class _BookingRequestTile extends StatelessWidget {
   const _BookingRequestTile({
+    required this.status,
     required this.client,
     required this.phone,
     required this.service,
     required this.dateTime,
     required this.total,
+    required this.onContacted,
+    required this.onConverted,
+    required this.onCancelled,
   });
 
+  final String status;
   final String client;
   final String phone;
   final String service;
   final String dateTime;
   final String total;
+  final VoidCallback onContacted;
+  final VoidCallback onConverted;
+  final VoidCallback onCancelled;
 
   @override
   Widget build(BuildContext context) {
+    final statusLabel = switch (status) {
+      'contacted' => 'Contatado',
+      'converted' => 'Confirmado',
+      'cancelled' => 'Cancelado',
+      _ => 'Novo',
+    };
+    final statusColor = switch (status) {
+      'contacted' => Colors.blue.shade700,
+      'converted' => Colors.green.shade700,
+      'cancelled' => Colors.red.shade700,
+      _ => SharedAppColors.orange,
+    };
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -1089,9 +1177,25 @@ class _BookingRequestTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              Text(
-                total,
-                style: const TextStyle(fontWeight: FontWeight.w900),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    total,
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 6),
+                  Chip(
+                    label: Text(statusLabel),
+                    side: BorderSide.none,
+                    labelStyle: TextStyle(
+                      color: statusColor,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                    backgroundColor: statusColor.withOpacity(.1),
+                  ),
+                ],
               ),
             ],
           ),
@@ -1100,14 +1204,29 @@ class _BookingRequestTile extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () {},
+                  onPressed: status == 'converted' || status == 'cancelled'
+                      ? null
+                      : onContacted,
                   icon: const Icon(Icons.chat_bubble_outline_rounded),
-                  label: Text(phone),
+                  label: Text(
+                    status == 'contacted' ? phone : 'Contatar',
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
+              IconButton.filledTonal(
+                tooltip: 'Cancelar',
+                onPressed: status == 'cancelled' || status == 'converted'
+                    ? null
+                    : onCancelled,
+                icon: const Icon(Icons.close_rounded),
+              ),
+              const SizedBox(width: 10),
               FilledButton.icon(
-                onPressed: () {},
+                onPressed: status == 'converted' || status == 'cancelled'
+                    ? null
+                    : onConverted,
                 style: FilledButton.styleFrom(
                   backgroundColor: SharedAppColors.orange,
                   foregroundColor: Colors.white,
