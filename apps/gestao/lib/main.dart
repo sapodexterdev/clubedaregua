@@ -112,6 +112,13 @@ class _ManagementTab {
 
 const _barberTabs = [
   _ManagementTab(
+    label: 'Pedidos',
+    title: 'Solicitacoes recebidas',
+    icon: Icons.inbox_outlined,
+    selectedIcon: Icons.inbox_rounded,
+    child: _BookingRequestsPage(),
+  ),
+  _ManagementTab(
     label: 'Agenda',
     title: 'Agenda do barbeiro',
     icon: Icons.calendar_month_outlined,
@@ -142,6 +149,13 @@ const _barberTabs = [
 ];
 
 const _adminTabs = [
+  _ManagementTab(
+    label: 'Pedidos',
+    title: 'Solicitacoes recebidas',
+    icon: Icons.inbox_outlined,
+    selectedIcon: Icons.inbox_rounded,
+    child: _BookingRequestsPage(),
+  ),
   _ManagementTab(
     label: 'Painel',
     title: 'Painel administrativo',
@@ -286,6 +300,50 @@ class _BarberAgendaPage extends StatelessWidget {
           client: 'Lucas Almeida',
           service: 'Barba completa',
           status: 'Pago',
+        ),
+      ],
+    );
+  }
+}
+
+class _BookingRequestsPage extends StatelessWidget {
+  const _BookingRequestsPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _MetricsGrid(
+          cards: [
+            _MetricData('Novas', '3', Icons.mark_email_unread_rounded),
+            _MetricData('Hoje', '5', Icons.today_rounded),
+          ],
+        ),
+        SizedBox(height: 22),
+        _SectionTitle('Novas solicitacoes'),
+        SizedBox(height: 12),
+        _BookingRequestTile(
+          client: 'Teste Codex',
+          phone: '11 99999-9999',
+          service: 'Corte premium',
+          dateTime: '29/06 - 10:30',
+          total: 'R\$ 55',
+        ),
+        _BookingRequestTile(
+          client: 'Rafael Sapao',
+          phone: 'WhatsApp informado no app',
+          service: 'Corte + barba',
+          dateTime: 'Hoje - 11:30',
+          total: 'R\$ 85',
+        ),
+        SizedBox(height: 18),
+        _ActionPanel(
+          title: 'Conectar pedidos reais',
+          subtitle:
+              'Ao ativar login da equipe, esta tela buscara booking_requests com seguranca.',
+          buttonLabel: 'Configurar',
+          icon: Icons.lock_open_rounded,
         ),
       ],
     );
@@ -629,6 +687,92 @@ class _AppointmentTile extends StatelessWidget {
         label: Text(status),
         side: BorderSide.none,
         backgroundColor: SharedAppColors.background,
+      ),
+    );
+  }
+}
+
+class _BookingRequestTile extends StatelessWidget {
+  const _BookingRequestTile({
+    required this.client,
+    required this.phone,
+    required this.service,
+    required this.dateTime,
+    required this.total,
+  });
+
+  final String client;
+  final String phone;
+  final String service;
+  final String dateTime;
+  final String total;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const _IconBadge(Icons.event_available_rounded),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      client,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$service - $dateTime',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: SharedAppColors.muted),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                total,
+                style: const TextStyle(fontWeight: FontWeight.w900),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.chat_bubble_outline_rounded),
+                  label: Text(phone),
+                ),
+              ),
+              const SizedBox(width: 10),
+              FilledButton.icon(
+                onPressed: () {},
+                style: FilledButton.styleFrom(
+                  backgroundColor: SharedAppColors.orange,
+                  foregroundColor: Colors.white,
+                ),
+                icon: const Icon(Icons.check_rounded),
+                label: const Text('Confirmar'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
