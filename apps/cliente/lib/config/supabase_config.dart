@@ -6,4 +6,7 @@ class SupabaseConfig {
 
   static bool get isConfigured =>
       url.startsWith('https://') && anonKey.trim().isNotEmpty;
+
+  static bool get canInitializeAuthSdk =>
+      isConfigured && anonKey.trim().startsWith('eyJ');
 }

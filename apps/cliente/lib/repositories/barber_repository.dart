@@ -2,33 +2,28 @@ import '../models/barber.dart';
 import '../models/service_category.dart';
 import '../models/service_item.dart';
 import '../services/mock_data.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/supabase_rest_service.dart';
 
 class BarberRepository {
-  SupabaseClient? get _client {
-    try {
-      return Supabase.instance.client;
-    } catch (_) {
-      return null;
-    }
-  }
+  const BarberRepository({SupabaseRestService? rest})
+      : _rest = rest ?? const SupabaseRestService();
+
+  final SupabaseRestService _rest;
 
   Future<List<Barber>> fetchBarbers() async {
-    final client = _client;
-    if (client == null) return MockData.barbers;
+    if (!_rest.isConfigured) return MockData.barbers;
 
     try {
-      final rows = await client
-          .from('barbers')
-          .select(
+      final rows = await _rest.getRows(
+        'barbers',
+        select:
             'id,name,bio,photo_url,rating,starting_price,barber_shops(name),barber_services(services(category_id))',
-          )
-          .eq('is_active', true)
-          .order('name');
+        filters: const {'is_active': 'eq.true'},
+        order: 'name.asc',
+      );
 
       final barbers = rows.map<Barber>((row) {
-        final map = Map<String, dynamic>.from(row as Map);
-        final links = map['barber_services'] as List<dynamic>? ?? const [];
+        final links = row['barber_services'] as List<dynamic>? ?? const [];
         final categoryIds = links
             .map((link) => link['services']?['category_id'])
             .where((id) => id != null)
@@ -36,7 +31,7 @@ class BarberRepository {
             .toSet()
             .toList();
 
-        return Barber.fromMap({...map, 'category_ids': categoryIds});
+        return Barber.fromMap({...row, 'category_ids': categoryIds});
       }).toList();
 
       return barbers.isEmpty ? MockData.barbers : barbers;
@@ -46,20 +41,18 @@ class BarberRepository {
   }
 
   Future<List<ServiceCategory>> fetchCategories() async {
-    final client = _client;
-    if (client == null) return MockData.categories;
+    if (!_rest.isConfigured) return MockData.categories;
 
     try {
-      final rows = await client
-          .from('service_categories')
-          .select('id,name,icon')
-          .eq('is_active', true)
-          .order('sort_order');
+      final rows = await _rest.getRows(
+        'service_categories',
+        select: 'id,name,icon',
+        filters: const {'is_active': 'eq.true'},
+        order: 'sort_order.asc',
+      );
 
       final categories = rows
-          .map<ServiceCategory>(
-            (row) => ServiceCategory.fromMap(Map<String, dynamic>.from(row)),
-          )
+          .map<ServiceCategory>((row) => ServiceCategory.fromMap(row))
           .toList();
       return categories.isEmpty ? MockData.categories : categories;
     } catch (_) {
@@ -68,20 +61,18 @@ class BarberRepository {
   }
 
   Future<List<ServiceItem>> fetchServices() async {
-    final client = _client;
-    if (client == null) return MockData.services;
+    if (!_rest.isConfigured) return MockData.services;
 
     try {
-      final rows = await client
-          .from('services')
-          .select('id,name,duration_minutes,price,category_id')
-          .eq('is_active', true)
-          .order('name');
+      final rows = await _rest.getRows(
+        'services',
+        select: 'id,name,duration_minutes,price,category_id',
+        filters: const {'is_active': 'eq.true'},
+        order: 'name.asc',
+      );
 
       final services = rows
-          .map<ServiceItem>(
-            (row) => ServiceItem.fromMap(Map<String, dynamic>.from(row)),
-          )
+          .map<ServiceItem>((row) => ServiceItem.fromMap(row))
           .toList();
       return services.isEmpty ? MockData.services : services;
     } catch (_) {

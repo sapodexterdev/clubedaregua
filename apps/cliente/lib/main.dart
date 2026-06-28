@@ -16,7 +16,7 @@ Future<void> main() async {
       FlutterError.presentError(details);
     };
 
-    if (SupabaseConfig.isConfigured) {
+    if (SupabaseConfig.canInitializeAuthSdk) {
       try {
         await Supabase.initialize(
           url: SupabaseConfig.url,
