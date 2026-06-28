@@ -33,6 +33,10 @@ class ClubeDaReguaGestaoApp extends StatelessWidget {
       ),
       home: Consumer<ManagementSession>(
         builder: (context, session, _) {
+          final recoveryToken = PasswordRecoveryLink.accessToken;
+          if (recoveryToken != null) {
+            return PasswordRecoveryScreen(accessToken: recoveryToken);
+          }
           if (!session.isSignedIn) return const ManagementLoginScreen();
           return const ManagementHomeScreen();
         },
@@ -49,6 +53,36 @@ class GestaoSupabaseConfig {
 
   static bool get isConfigured =>
       url.startsWith('https://') && anonKey.trim().isNotEmpty;
+}
+
+class PasswordRecoveryLink {
+  const PasswordRecoveryLink._();
+
+  static String? get accessToken {
+    final params = <String, String>{...Uri.base.queryParameters};
+    final fragmentParams = _fragmentParams(Uri.base.fragment);
+    params.addAll(fragmentParams);
+
+    final type = params['type'];
+    final token = params['access_token'];
+    if (type == 'recovery' && token != null && token.isNotEmpty) {
+      return token;
+    }
+
+    return null;
+  }
+
+  static Map<String, String> _fragmentParams(String fragment) {
+    if (fragment.isEmpty) return const {};
+
+    if (fragment.contains('=') && !fragment.startsWith('/')) {
+      return Uri.splitQueryString(fragment);
+    }
+
+    final parsed = Uri.tryParse(fragment);
+    if (parsed == null) return const {};
+    return parsed.queryParameters;
+  }
 }
 
 class BookingRequest {
@@ -354,6 +388,210 @@ class _ManagementLoginScreenState extends State<ManagementLoginScreen> {
                       session.errorMessage!,
                       textAlign: TextAlign.center,
                       style: const TextStyle(color: Colors.red),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class PasswordRecoveryScreen extends StatefulWidget {
+  const PasswordRecoveryScreen({super.key, required this.accessToken});
+
+  final String accessToken;
+
+  @override
+  State<PasswordRecoveryScreen> createState() => _PasswordRecoveryScreenState();
+}
+
+class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  var _showPassword = false;
+  var _showConfirmPassword = false;
+  var _isLoading = false;
+  var _isDone = false;
+  var _showLogin = false;
+  String? _message;
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _updatePassword() async {
+    final password = _passwordController.text.trim();
+    final confirmPassword = _confirmPasswordController.text.trim();
+
+    if (password.length < 6) {
+      setState(() => _message = 'A senha precisa ter pelo menos 6 caracteres.');
+      return;
+    }
+
+    if (password != confirmPassword) {
+      setState(() => _message = 'As senhas digitadas nao conferem.');
+      return;
+    }
+
+    if (!GestaoSupabaseConfig.isConfigured) {
+      setState(() => _message = 'Configure SUPABASE_URL e SUPABASE_ANON_KEY.');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _message = null;
+    });
+
+    try {
+      final response = await http.put(
+        Uri.parse('${GestaoSupabaseConfig.url}/auth/v1/user'),
+        headers: {
+          'apikey': GestaoSupabaseConfig.anonKey,
+          'authorization': 'Bearer ${widget.accessToken}',
+          'content-type': 'application/json',
+        },
+        body: jsonEncode({'password': password}),
+      );
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw StateError('Nao foi possivel redefinir a senha.');
+      }
+
+      setState(() {
+        _isDone = true;
+        _message = 'Senha redefinida com sucesso.';
+      });
+    } catch (error) {
+      setState(() => _message = error.toString());
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_showLogin) {
+      return const ManagementLoginScreen();
+    }
+
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Icon(
+                    _isDone
+                        ? Icons.check_circle_rounded
+                        : Icons.lock_reset_rounded,
+                    color:
+                        _isDone ? Colors.green.shade700 : SharedAppColors.orange,
+                    size: 58,
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    _isDone ? 'Senha redefinida' : 'Redefinir senha',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _isDone
+                        ? 'Agora voce ja pode entrar com sua nova senha.'
+                        : 'Digite sua nova senha para acessar a gestao.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: SharedAppColors.muted),
+                  ),
+                  const SizedBox(height: 28),
+                  if (!_isDone) ...[
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: !_showPassword,
+                      decoration: InputDecoration(
+                        labelText: 'Nova senha',
+                        prefixIcon: const Icon(Icons.lock_outline_rounded),
+                        suffixIcon: IconButton(
+                          tooltip:
+                              _showPassword ? 'Ocultar senha' : 'Mostrar senha',
+                          onPressed: () => setState(
+                            () => _showPassword = !_showPassword,
+                          ),
+                          icon: Icon(
+                            _showPassword
+                                ? Icons.visibility_off_rounded
+                                : Icons.visibility_rounded,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _confirmPasswordController,
+                      obscureText: !_showConfirmPassword,
+                      decoration: InputDecoration(
+                        labelText: 'Confirmar nova senha',
+                        prefixIcon: const Icon(Icons.lock_outline_rounded),
+                        suffixIcon: IconButton(
+                          tooltip: _showConfirmPassword
+                              ? 'Ocultar senha'
+                              : 'Mostrar senha',
+                          onPressed: () => setState(
+                            () => _showConfirmPassword = !_showConfirmPassword,
+                          ),
+                          icon: Icon(
+                            _showConfirmPassword
+                                ? Icons.visibility_off_rounded
+                                : Icons.visibility_rounded,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 18),
+                  FilledButton(
+                    onPressed: _isLoading
+                        ? null
+                        : _isDone
+                            ? () => setState(() => _showLogin = true)
+                            : _updatePassword,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: SharedAppColors.orange,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(54),
+                    ),
+                    child: Text(
+                      _isLoading
+                          ? 'Salvando...'
+                          : _isDone
+                              ? 'Entrar'
+                              : 'Salvar senha',
+                    ),
+                  ),
+                  if (_message != null) ...[
+                    const SizedBox(height: 14),
+                    Text(
+                      _message!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: _isDone ? Colors.green : Colors.red,
+                      ),
                     ),
                   ],
                 ],
