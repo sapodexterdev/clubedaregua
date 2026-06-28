@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Clube da Regua Gestao - painel para barbearias.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#F4F4F4">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Clube Gestao">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <title>Clube da Regua Gestao</title>
+  <style>
+    html,
+    body {
+      background: #F4F4F4;
+      color: #151515;
+      font-family: Arial, Helvetica, sans-serif;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      width: 100%;
+    }
+
+    #boot-status {
+      align-items: center;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      height: 100%;
+      justify-content: center;
+      left: 0;
+      pointer-events: none;
+      position: fixed;
+      text-align: center;
+      top: 0;
+      transition: opacity .2s ease, visibility .2s ease;
+      width: 100%;
+      z-index: 1;
+    }
+
+    #boot-status.is-hidden {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    #boot-status strong {
+      color: #FF6B2C;
+      font-size: 26px;
+      font-weight: 900;
+    }
+
+    #boot-status span {
+      color: #8A8A8A;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div id="boot-status">
+    <strong>Clube Gestao</strong>
+    <span>Carregando painel...</span>
+  </div>
+  <script>
+    function hideBootStatus() {
+      document.getElementById('boot-status')?.classList.add('is-hidden');
+    }
+
+    window.addEventListener('flutter-first-frame', hideBootStatus);
+
+    const observer = new MutationObserver(() => {
+      const flutterReady = document.querySelector('flutter-view, flt-glass-pane, flt-scene-host');
+      if (flutterReady) {
+        hideBootStatus();
+        observer.disconnect();
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  </script>
+  <script src="flutter_bootstrap.js" defer></script>
+</body>
+</html>

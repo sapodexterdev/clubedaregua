@@ -46,9 +46,26 @@
           "value": "no-store, max-age=0"
         }
       ]
+    },
+    {
+      "source": "/gestao/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     }
   ],
   "rewrites": [
+    {
+      "source": "/gestao",
+      "destination": "/gestao/index.html"
+    },
+    {
+      "source": "/gestao/(.*)",
+      "destination": "/gestao/index.html"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"

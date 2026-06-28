@@ -35,3 +35,32 @@ content = re.sub(
 )
 path.write_text(content, encoding="utf-8")
 PY
+
+cd ../gestao
+
+flutter pub get
+
+flutter build web \
+  --release \
+  --web-renderer html \
+  --pwa-strategy=none \
+  --base-href=/gestao/ \
+  --dart-define=SUPABASE_URL="${SUPABASE_URL:-}" \
+  --dart-define=SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-}"
+
+python3 - <<'PY'
+import re
+from pathlib import Path
+
+path = Path("build/web/flutter_bootstrap.js")
+content = path.read_text(encoding="utf-8")
+content = re.sub(
+    r"""serviceWorkerSettings:\s*\{\s*serviceWorkerVersion:\s*["'][^"']*["']\s*\}""",
+    "serviceWorkerSettings: null",
+    content,
+)
+path.write_text(content, encoding="utf-8")
+PY
+
+mkdir -p ../cliente/build/web/gestao
+cp -R build/web/. ../cliente/build/web/gestao/
