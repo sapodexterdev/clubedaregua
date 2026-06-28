@@ -264,6 +264,7 @@ class ManagementLoginScreen extends StatefulWidget {
 class _ManagementLoginScreenState extends State<ManagementLoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  var _showPassword = false;
 
   @override
   void dispose() {
@@ -315,10 +316,21 @@ class _ManagementLoginScreenState extends State<ManagementLoginScreen> {
                   const SizedBox(height: 12),
                   TextField(
                     controller: _passwordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
+                    obscureText: !_showPassword,
+                    decoration: InputDecoration(
                       labelText: 'Senha',
-                      prefixIcon: Icon(Icons.lock_outline_rounded),
+                      prefixIcon: const Icon(Icons.lock_outline_rounded),
+                      suffixIcon: IconButton(
+                        tooltip: _showPassword ? 'Ocultar senha' : 'Mostrar senha',
+                        onPressed: () => setState(
+                          () => _showPassword = !_showPassword,
+                        ),
+                        icon: Icon(
+                          _showPassword
+                              ? Icons.visibility_off_rounded
+                              : Icons.visibility_rounded,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 18),
