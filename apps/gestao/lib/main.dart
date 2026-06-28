@@ -1,8 +1,17 @@
+import 'dart:convert';
+
 import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 
 void main() {
-  runApp(const ClubeDaReguaGestaoApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ManagementSession(),
+      child: const ClubeDaReguaGestaoApp(),
+    ),
+  );
 }
 
 class ClubeDaReguaGestaoApp extends StatelessWidget {
@@ -22,7 +31,271 @@ class ClubeDaReguaGestaoApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'Inter',
       ),
-      home: const ManagementHomeScreen(),
+      home: Consumer<ManagementSession>(
+        builder: (context, session, _) {
+          if (!session.isSignedIn) return const ManagementLoginScreen();
+          return const ManagementHomeScreen();
+        },
+      ),
+    );
+  }
+}
+
+class GestaoSupabaseConfig {
+  const GestaoSupabaseConfig._();
+
+  static const url = String.fromEnvironment('SUPABASE_URL');
+  static const anonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+
+  static bool get isConfigured =>
+      url.startsWith('https://') && anonKey.trim().isNotEmpty;
+}
+
+class BookingRequest {
+  const BookingRequest({
+    required this.id,
+    required this.client,
+    required this.phone,
+    required this.service,
+    required this.barber,
+    required this.date,
+    required this.time,
+    required this.status,
+    required this.total,
+  });
+
+  final String id;
+  final String client;
+  final String phone;
+  final String service;
+  final String barber;
+  final String date;
+  final String time;
+  final String status;
+  final double total;
+
+  factory BookingRequest.fromMap(Map<String, dynamic> map) {
+    return BookingRequest(
+      id: map['id']?.toString() ?? '',
+      client: map['customer_name']?.toString() ?? 'Cliente',
+      phone: map['customer_phone']?.toString() ?? '',
+      service: map['services']?['name']?.toString() ?? 'Servico',
+      barber: map['barbers']?['name']?.toString() ?? 'Barbeiro',
+      date: map['requested_date']?.toString() ?? '',
+      time: _timeOnly(map['requested_time']?.toString() ?? ''),
+      status: map['status']?.toString() ?? 'new',
+      total: (map['total_price'] as num?)?.toDouble() ?? 0,
+    );
+  }
+
+  static String _timeOnly(String value) {
+    if (value.length >= 5) return value.substring(0, 5);
+    return value;
+  }
+}
+
+class ManagementSession extends ChangeNotifier {
+  String? _accessToken;
+  String? email;
+  bool isLoading = false;
+  String? errorMessage;
+  List<BookingRequest> bookingRequests = [];
+
+  bool get isSignedIn => _accessToken != null;
+
+  Future<void> signIn(String emailValue, String password) async {
+    if (!GestaoSupabaseConfig.isConfigured) {
+      errorMessage = 'Configure SUPABASE_URL e SUPABASE_ANON_KEY.';
+      notifyListeners();
+      return;
+    }
+
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      final uri = Uri.parse(
+        '${GestaoSupabaseConfig.url}/auth/v1/token',
+      ).replace(queryParameters: {'grant_type': 'password'});
+
+      final response = await http.post(
+        uri,
+        headers: {
+          'apikey': GestaoSupabaseConfig.anonKey,
+          'content-type': 'application/json',
+        },
+        body: jsonEncode({
+          'email': emailValue.trim(),
+          'password': password,
+        }),
+      );
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw StateError('Login invalido ou usuario sem acesso.');
+      }
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      _accessToken = data['access_token']?.toString();
+      email = emailValue.trim();
+      await fetchBookingRequests();
+    } catch (error) {
+      _accessToken = null;
+      errorMessage = error.toString();
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchBookingRequests() async {
+    final token = _accessToken;
+    if (token == null) return;
+
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      final uri = Uri.parse(
+        '${GestaoSupabaseConfig.url}/rest/v1/booking_requests',
+      ).replace(queryParameters: {
+        'select':
+            'id,customer_name,customer_phone,requested_date,requested_time,status,total_price,barbers(name),services(name)',
+        'order': 'created_at.desc',
+        'limit': '20',
+      });
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'apikey': GestaoSupabaseConfig.anonKey,
+          'authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw StateError('Nao foi possivel carregar pedidos.');
+      }
+
+      final rows = jsonDecode(response.body) as List<dynamic>;
+      bookingRequests = rows
+          .whereType<Map>()
+          .map((row) => BookingRequest.fromMap(Map<String, dynamic>.from(row)))
+          .toList();
+      errorMessage = null;
+    } catch (error) {
+      errorMessage = error.toString();
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  void signOut() {
+    _accessToken = null;
+    email = null;
+    bookingRequests = [];
+    errorMessage = null;
+    notifyListeners();
+  }
+}
+
+class ManagementLoginScreen extends StatefulWidget {
+  const ManagementLoginScreen({super.key});
+
+  @override
+  State<ManagementLoginScreen> createState() => _ManagementLoginScreenState();
+}
+
+class _ManagementLoginScreenState extends State<ManagementLoginScreen> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final session = context.watch<ManagementSession>();
+
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Icon(
+                    Icons.content_cut_rounded,
+                    color: SharedAppColors.orange,
+                    size: 58,
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'Clube da Regua Gestao',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Entre para ver pedidos, agenda e operacao da barbearia.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: SharedAppColors.muted),
+                  ),
+                  const SizedBox(height: 28),
+                  TextField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(
+                      labelText: 'E-mail',
+                      prefixIcon: Icon(Icons.mail_outline_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Senha',
+                      prefixIcon: Icon(Icons.lock_outline_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  FilledButton(
+                    onPressed: session.isLoading
+                        ? null
+                        : () => session.signIn(
+                              _emailController.text,
+                              _passwordController.text,
+                            ),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: SharedAppColors.orange,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(54),
+                    ),
+                    child: Text(session.isLoading ? 'Entrando...' : 'Entrar'),
+                  ),
+                  if (session.errorMessage != null) ...[
+                    const SizedBox(height: 14),
+                    Text(
+                      session.errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -52,9 +325,19 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
         title: Text(page.title),
         actions: [
           IconButton(
+            tooltip: 'Atualizar',
+            onPressed: () => context.read<ManagementSession>().fetchBookingRequests(),
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+          IconButton(
             tooltip: 'Notificações',
             onPressed: () {},
             icon: const Icon(Icons.notifications_none_rounded),
+          ),
+          IconButton(
+            tooltip: 'Sair',
+            onPressed: () => context.read<ManagementSession>().signOut(),
+            icon: const Icon(Icons.logout_rounded),
           ),
         ],
       ),
@@ -311,42 +594,62 @@ class _BookingRequestsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _MetricsGrid(
-          cards: [
-            _MetricData('Novas', '3', Icons.mark_email_unread_rounded),
-            _MetricData('Hoje', '5', Icons.today_rounded),
+    return Consumer<ManagementSession>(
+      builder: (context, session, _) {
+        final requests = session.bookingRequests;
+        final newCount =
+            requests.where((request) => request.status == 'new').length;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _MetricsGrid(
+              cards: [
+                _MetricData(
+                  'Novas',
+                  '$newCount',
+                  Icons.mark_email_unread_rounded,
+                ),
+                _MetricData('Pedidos', '${requests.length}', Icons.today_rounded),
+              ],
+            ),
+            const SizedBox(height: 22),
+            const _SectionTitle('Novas solicitacoes'),
+            const SizedBox(height: 12),
+            if (session.isLoading) ...[
+              const LinearProgressIndicator(color: SharedAppColors.orange),
+              const SizedBox(height: 12),
+            ],
+            if (session.errorMessage != null)
+              _InlineNotice(
+                icon: Icons.warning_amber_rounded,
+                title: 'Nao foi possivel carregar',
+                subtitle: session.errorMessage!,
+              )
+            else if (requests.isEmpty)
+              const _InlineNotice(
+                icon: Icons.inbox_rounded,
+                title: 'Nenhum pedido por enquanto',
+                subtitle: 'As solicitacoes do app cliente aparecerao aqui.',
+              )
+            else
+              for (final request in requests)
+                _BookingRequestTile(
+                  client: request.client,
+                  phone: request.phone,
+                  service: request.service,
+                  dateTime: '${request.date} - ${request.time}',
+                  total: _formatCurrency(request.total),
+                ),
           ],
-        ),
-        SizedBox(height: 22),
-        _SectionTitle('Novas solicitacoes'),
-        SizedBox(height: 12),
-        _BookingRequestTile(
-          client: 'Teste Codex',
-          phone: '11 99999-9999',
-          service: 'Corte premium',
-          dateTime: '29/06 - 10:30',
-          total: 'R\$ 55',
-        ),
-        _BookingRequestTile(
-          client: 'Rafael Sapao',
-          phone: 'WhatsApp informado no app',
-          service: 'Corte + barba',
-          dateTime: 'Hoje - 11:30',
-          total: 'R\$ 85',
-        ),
-        SizedBox(height: 18),
-        _ActionPanel(
-          title: 'Conectar pedidos reais',
-          subtitle:
-              'Ao ativar login da equipe, esta tela buscara booking_requests com seguranca.',
-          buttonLabel: 'Configurar',
-          icon: Icons.lock_open_rounded,
-        ),
-      ],
+        );
+      },
     );
+  }
+
+  String _formatCurrency(double value) {
+    final parts = value.toStringAsFixed(2).split('.');
+    return 'R\$ ${parts[0]},${parts[1]}';
   }
 }
 
@@ -659,6 +962,48 @@ class _SearchBox extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           borderSide: BorderSide.none,
         ),
+      ),
+    );
+  }
+}
+
+class _InlineNotice extends StatelessWidget {
+  const _InlineNotice({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          _IconBadge(icon),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(color: SharedAppColors.muted),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
