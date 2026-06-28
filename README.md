@@ -100,7 +100,7 @@ Variáveis:
 
 ```text
 SUPABASE_URL=https://seu-projeto.supabase.co
-SUPABASE_ANON_KEY=sua-chave-anon-pública
+SUPABASE_ANON_KEY=sua-chave-anon-ou-publishable
 ```
 
 Também é possível rodar com `dart-define`:
@@ -108,7 +108,7 @@ Também é possível rodar com `dart-define`:
 ```bash
 flutter run \
   --dart-define=SUPABASE_URL=https://seu-projeto.supabase.co \
-  --dart-define=SUPABASE_ANON_KEY=sua-chave-anon-pública
+  --dart-define=SUPABASE_ANON_KEY=sua-chave-anon-ou-publishable
 ```
 
 > Enquanto a conexão real com Supabase não estiver ativada no app, as telas usam dados mockados para permitir navegação e validação visual.
@@ -125,16 +125,15 @@ Install Command: vazio
 
 O script `scripts/vercel-build.sh` entra em `apps/cliente`, baixa o Flutter SDK, instala dependências e executa o build web.
 
-Estado atual: o deploy do cliente não depende de variáveis do Supabase. O app
-está rodando com dados mockados para manter a navegação e o visual estáveis
-enquanto recriamos o banco do zero.
+O app cliente tenta usar Supabase quando as variáveis abaixo existem. Se alguma
+chamada falhar, ele mantém dados mockados para preservar a navegação e evitar
+tela branca.
 
-Quando o Supabase for reativado, cadastre estas variáveis em Project Settings >
-Environment Variables:
+Cadastre estas variáveis em Project Settings > Environment Variables:
 
 ```text
 SUPABASE_URL=https://seu-projeto.supabase.co
-SUPABASE_ANON_KEY=sua-chave-anon-publica
+SUPABASE_ANON_KEY=sua-chave-anon-ou-publishable
 ```
 
 Depois de salvar, faça um novo deploy para o app web receber a conexão real com
@@ -184,14 +183,14 @@ O schema SaaS cria:
 
 Também cria funções de autorização, policies de RLS por barbearia, índices básicos, planos iniciais e o bucket público `barbershop-media` para imagens.
 
-O app cliente está temporariamente desacoplado do Supabase. A próxima conexão
-real deve ser feita com calma, usando o novo schema SaaS e fallback mockado
-apenas para desenvolvimento.
+O app cliente já possui conexão inicial para leitura de barbeiros, categorias e
+serviços. Login/cadastro usam Supabase Auth quando configurado. Agendamentos
+reais exigem usuário autenticado; sem sessão, o fluxo permanece mockado.
 
 ## Próximos Passos
 
 - Manter o App Cliente rápido, com foco em agendamento em poucos cliques.
 - Extrair widgets e modelos do `apps/gestao` conforme as telas crescerem.
-- Recriar o Supabase do zero com multiempresa por `barber_shop_id`.
-- Conectar `supabase_flutter` somente depois do schema validado.
-- Conectar Auth, agenda, serviços, equipe, caixa e relatórios no App Gestão.
+- Conectar dados reais no App Gestão usando o mesmo Supabase.
+- Expandir agendamento real no App Cliente com usuário autenticado.
+- Conectar agenda, equipe, caixa e relatórios no App Gestão.

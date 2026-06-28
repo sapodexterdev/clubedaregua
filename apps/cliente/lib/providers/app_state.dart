@@ -6,7 +6,6 @@ import '../models/service_category.dart';
 import '../models/service_item.dart';
 import '../repositories/appointment_repository.dart';
 import '../repositories/barber_repository.dart';
-import '../services/mock_data.dart';
 
 class AppState extends ChangeNotifier {
   final _barberRepository = BarberRepository();
@@ -54,11 +53,16 @@ class AppState extends ChangeNotifier {
     isLoading = true;
     notifyListeners();
 
+    final fetchedBarbers = await _barberRepository.fetchBarbers();
+    final fetchedCategories = await _barberRepository.fetchCategories();
+    final fetchedServices = await _barberRepository.fetchServices();
+    final fetchedAppointments = await _appointmentRepository.fetchAppointments();
+
     _applyData(
-      barbersData: MockData.barbers,
-      categoriesData: MockData.categories,
-      servicesData: MockData.services,
-      appointmentsData: MockData.appointments,
+      barbersData: fetchedBarbers,
+      categoriesData: fetchedCategories,
+      servicesData: fetchedServices,
+      appointmentsData: fetchedAppointments,
     );
 
     isLoading = false;

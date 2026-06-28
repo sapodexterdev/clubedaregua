@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
+import 'config/supabase_config.dart';
 import 'providers/app_state.dart';
 
 Future<void> main() async {
@@ -13,6 +15,17 @@ Future<void> main() async {
     FlutterError.onError = (details) {
       FlutterError.presentError(details);
     };
+
+    if (SupabaseConfig.isConfigured) {
+      try {
+        await Supabase.initialize(
+          url: SupabaseConfig.url,
+          anonKey: SupabaseConfig.anonKey,
+        );
+      } catch (_) {
+        // Mantem o app navegavel com dados mockados se o backend falhar.
+      }
+    }
 
     runApp(
       ChangeNotifierProvider(
