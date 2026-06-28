@@ -21,3 +21,17 @@ flutter build web \
   --pwa-strategy=none \
   --dart-define=SUPABASE_URL="${SUPABASE_URL:-}" \
   --dart-define=SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-}"
+
+python3 - <<'PY'
+import re
+from pathlib import Path
+
+path = Path("build/web/flutter_bootstrap.js")
+content = path.read_text(encoding="utf-8")
+content = re.sub(
+    r"""serviceWorkerSettings:\s*\{\s*serviceWorkerVersion:\s*["'][^"']*["']\s*\}""",
+    "serviceWorkerSettings: null",
+    content,
+)
+path.write_text(content, encoding="utf-8")
+PY

@@ -34,8 +34,19 @@
       gap: 14px;
       height: 100%;
       justify-content: center;
+      left: 0;
+      pointer-events: none;
+      position: fixed;
       text-align: center;
+      top: 0;
+      transition: opacity .2s ease, visibility .2s ease;
       width: 100%;
+      z-index: 1;
+    }
+
+    #boot-status.is-hidden {
+      opacity: 0;
+      visibility: hidden;
     }
 
     #boot-status strong {
@@ -59,6 +70,7 @@
       font-size: 15px;
       font-weight: 800;
       margin-top: 8px;
+      pointer-events: auto;
       padding: 14px 22px;
     }
   </style>
@@ -76,6 +88,10 @@
     function showBootError(message) {
       bootMessage.textContent = message;
       reloadButton.hidden = false;
+    }
+
+    function hideBootStatus() {
+      document.getElementById('boot-status')?.classList.add('is-hidden');
     }
 
     reloadButton.addEventListener('click', async () => {
@@ -103,19 +119,16 @@
       console.error(event.reason);
     });
 
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations()
-        .then((registrations) => Promise.all(
-          registrations.map((registration) => registration.unregister()),
-        ))
-        .catch(() => {});
-    }
+    window.addEventListener('flutter-first-frame', hideBootStatus);
 
-    if ('caches' in window) {
-      caches.keys()
-        .then((cacheNames) => Promise.all(cacheNames.map((name) => caches.delete(name))))
-        .catch(() => {});
-    }
+    const observer = new MutationObserver(() => {
+      const flutterReady = document.querySelector('flutter-view, flt-glass-pane, flt-scene-host');
+      if (flutterReady) {
+        hideBootStatus();
+        observer.disconnect();
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
 
     setTimeout(() => {
       const flutterReady = document.querySelector('flutter-view, flt-glass-pane');
