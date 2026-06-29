@@ -303,8 +303,8 @@ class ManagementSession extends ChangeNotifier {
   String _cleanErrorMessage(Object error) {
     final message = error
         .toString()
-        .replaceFirst('Bad state: ', '')
-        .replaceFirst('Exception: ', '');
+        .replaceFirst(RegExp(r'^\s*Bad state:\s*', caseSensitive: false), '')
+        .replaceFirst(RegExp(r'^\s*Exception:\s*', caseSensitive: false), '');
 
     return switch (message) {
       'Login invalido ou usuario sem acesso.' =>
@@ -524,8 +524,8 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
   String _cleanErrorMessage(Object error) {
     return error
         .toString()
-        .replaceFirst('Bad state: ', '')
-        .replaceFirst('Exception: ', '');
+        .replaceFirst(RegExp(r'^\s*Bad state:\s*', caseSensitive: false), '')
+        .replaceFirst(RegExp(r'^\s*Exception:\s*', caseSensitive: false), '');
   }
 
   Future<http.Response> _sendPasswordUpdate({
