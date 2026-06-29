@@ -193,7 +193,7 @@ class ManagementSession extends ChangeNotifier {
       );
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw StateError('Login invalido ou usuario sem acesso.');
+        throw StateError('Login inválido ou usuário sem acesso.');
       }
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -202,7 +202,7 @@ class ManagementSession extends ChangeNotifier {
       await fetchBookingRequests();
     } catch (error) {
       _accessToken = null;
-      errorMessage = error.toString();
+      errorMessage = _cleanErrorMessage(error);
     } finally {
       isLoading = false;
       notifyListeners();
@@ -235,7 +235,7 @@ class ManagementSession extends ChangeNotifier {
       );
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw StateError('Nao foi possivel carregar pedidos.');
+        throw StateError('Não foi possível carregar os pedidos.');
       }
 
       final rows = jsonDecode(response.body) as List<dynamic>;
@@ -245,7 +245,7 @@ class ManagementSession extends ChangeNotifier {
           .toList();
       errorMessage = null;
     } catch (error) {
-      errorMessage = error.toString();
+      errorMessage = _cleanErrorMessage(error);
     } finally {
       isLoading = false;
       notifyListeners();
@@ -277,7 +277,7 @@ class ManagementSession extends ChangeNotifier {
       );
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw StateError('Nao foi possivel atualizar o pedido.');
+        throw StateError('Não foi possível atualizar o pedido.');
       }
 
       bookingRequests = [
@@ -285,7 +285,7 @@ class ManagementSession extends ChangeNotifier {
           if (request.id == id) request.copyWith(status: status) else request,
       ];
     } catch (error) {
-      errorMessage = error.toString();
+      errorMessage = _cleanErrorMessage(error);
     } finally {
       isLoading = false;
       notifyListeners();
@@ -298,6 +298,29 @@ class ManagementSession extends ChangeNotifier {
     bookingRequests = [];
     errorMessage = null;
     notifyListeners();
+  }
+
+  String _cleanErrorMessage(Object error) {
+    final message = error
+        .toString()
+        .replaceFirst('Bad state: ', '')
+        .replaceFirst('Exception: ', '');
+
+    return switch (message) {
+      'Login invalido ou usuario sem acesso.' =>
+        'Login inválido ou usuário sem acesso.',
+      'Login inválido ou usuário sem acesso.' =>
+        'Login inválido ou usuário sem acesso.',
+      'Nao foi possivel carregar pedidos.' =>
+        'Não foi possível carregar os pedidos.',
+      'Não foi possível carregar os pedidos.' =>
+        'Não foi possível carregar os pedidos.',
+      'Nao foi possivel atualizar o pedido.' =>
+        'Não foi possível atualizar o pedido.',
+      'Não foi possível atualizar o pedido.' =>
+        'Não foi possível atualizar o pedido.',
+      _ => message,
+    };
   }
 }
 
@@ -341,13 +364,13 @@ class _ManagementLoginScreenState extends State<ManagementLoginScreen> {
                   ),
                   const SizedBox(height: 18),
                   const Text(
-                    'Clube da Regua Gestao',
+                    'Clube da Régua Gestão',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Entre para ver pedidos, agenda e operacao da barbearia.',
+                    'Entre para ver pedidos, agenda e operação da barbearia.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: SharedAppColors.muted),
                   ),
@@ -449,7 +472,7 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
     }
 
     if (password != confirmPassword) {
-      setState(() => _message = 'As senhas digitadas nao conferem.');
+      setState(() => _message = 'As senhas digitadas não conferem.');
       return;
     }
 
@@ -554,7 +577,7 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
       // Keep the fallback below when Supabase returns an empty or non-JSON body.
     }
 
-    return 'Nao foi possivel redefinir a senha. Gere um novo link e tente novamente.';
+    return 'Não foi possível redefinir a senha. Gere um novo link e tente novamente.';
   }
 
   @override
@@ -593,8 +616,8 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
                   const SizedBox(height: 8),
                   Text(
                     _isDone
-                        ? 'Agora voce ja pode entrar com sua nova senha.'
-                        : 'Digite sua nova senha para acessar a gestao.',
+                        ? 'Agora você já pode entrar com sua nova senha.'
+                        : 'Digite sua nova senha para acessar a gestão.',
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: SharedAppColors.muted),
                   ),
@@ -779,7 +802,7 @@ class _ManagementTab {
 const _barberTabs = [
   _ManagementTab(
     label: 'Pedidos',
-    title: 'Solicitacoes recebidas',
+    title: 'Solicitações recebidas',
     icon: Icons.inbox_outlined,
     selectedIcon: Icons.inbox_rounded,
     child: _BookingRequestsPage(),
@@ -817,7 +840,7 @@ const _barberTabs = [
 const _adminTabs = [
   _ManagementTab(
     label: 'Pedidos',
-    title: 'Solicitacoes recebidas',
+    title: 'Solicitações recebidas',
     icon: Icons.inbox_outlined,
     selectedIcon: Icons.inbox_rounded,
     child: _BookingRequestsPage(),
@@ -1006,7 +1029,7 @@ class _BookingRequestsPage extends StatelessWidget {
             if (session.errorMessage != null)
               _InlineNotice(
                 icon: Icons.warning_amber_rounded,
-                title: 'Nao foi possivel carregar',
+                title: 'Não foi possível carregar',
                 subtitle: session.errorMessage!,
               )
             else if (requests.isEmpty)
