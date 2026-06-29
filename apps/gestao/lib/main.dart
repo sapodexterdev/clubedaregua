@@ -33,9 +33,9 @@ class ClubeDaReguaGestaoApp extends StatelessWidget {
       ),
       home: Consumer<ManagementSession>(
         builder: (context, session, _) {
-          final recoveryToken = PasswordRecoveryLink.accessToken;
-          if (recoveryToken != null) {
-            return PasswordRecoveryScreen(accessToken: recoveryToken);
+          final recoverySession = PasswordRecoveryLink.session;
+          if (recoverySession != null) {
+            return PasswordRecoveryScreen(session: recoverySession);
           }
           if (!session.isSignedIn) return const ManagementLoginScreen();
           return const ManagementHomeScreen();
@@ -58,7 +58,7 @@ class GestaoSupabaseConfig {
 class PasswordRecoveryLink {
   const PasswordRecoveryLink._();
 
-  static String? get accessToken {
+  static PasswordRecoverySession? get session {
     final params = <String, String>{...Uri.base.queryParameters};
     final fragmentParams = _fragmentParams(Uri.base.fragment);
     params.addAll(fragmentParams);
@@ -66,7 +66,10 @@ class PasswordRecoveryLink {
     final type = params['type'];
     final token = params['access_token'];
     if (type == 'recovery' && token != null && token.isNotEmpty) {
-      return token;
+      return PasswordRecoverySession(
+        accessToken: token,
+        refreshToken: params['refresh_token'],
+      );
     }
 
     return null;
@@ -83,6 +86,16 @@ class PasswordRecoveryLink {
     if (parsed == null) return const {};
     return parsed.queryParameters;
   }
+}
+
+class PasswordRecoverySession {
+  const PasswordRecoverySession({
+    required this.accessToken,
+    required this.refreshToken,
+  });
+
+  final String accessToken;
+  final String? refreshToken;
 }
 
 class BookingRequest {
@@ -401,9 +414,9 @@ class _ManagementLoginScreenState extends State<ManagementLoginScreen> {
 }
 
 class PasswordRecoveryScreen extends StatefulWidget {
-  const PasswordRecoveryScreen({super.key, required this.accessToken});
+  const PasswordRecoveryScreen({super.key, required this.session});
 
-  final String accessToken;
+  final PasswordRecoverySession session;
 
   @override
   State<PasswordRecoveryScreen> createState() => _PasswordRecoveryScreenState();
@@ -451,18 +464,25 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
     });
 
     try {
-      final response = await http.put(
-        Uri.parse('${GestaoSupabaseConfig.url}/auth/v1/user'),
-        headers: {
-          'apikey': GestaoSupabaseConfig.anonKey,
-          'authorization': 'Bearer ${widget.accessToken}',
-          'content-type': 'application/json',
-        },
-        body: jsonEncode({'password': password}),
+      final response = await _sendPasswordUpdate(
+        accessToken: widget.session.accessToken,
+        password: password,
       );
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw StateError('Nao foi possivel redefinir a senha.');
+        final refreshedAccessToken = await _refreshRecoverySession();
+        if (refreshedAccessToken == null) {
+          throw StateError(_supabaseErrorMessage(response));
+        }
+
+        final retryResponse = await _sendPasswordUpdate(
+          accessToken: refreshedAccessToken,
+          password: password,
+        );
+
+        if (retryResponse.statusCode < 200 || retryResponse.statusCode >= 300) {
+          throw StateError(_supabaseErrorMessage(retryResponse));
+        }
       }
 
       setState(() {
@@ -470,12 +490,71 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
         _message = 'Senha redefinida com sucesso.';
       });
     } catch (error) {
-      setState(() => _message = error.toString());
+      setState(() => _message = _cleanErrorMessage(error));
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  String _cleanErrorMessage(Object error) {
+    return error
+        .toString()
+        .replaceFirst('Bad state: ', '')
+        .replaceFirst('Exception: ', '');
+  }
+
+  Future<http.Response> _sendPasswordUpdate({
+    required String accessToken,
+    required String password,
+  }) {
+    return http.put(
+      Uri.parse('${GestaoSupabaseConfig.url}/auth/v1/user'),
+      headers: {
+        'apikey': GestaoSupabaseConfig.anonKey,
+        'authorization': 'Bearer $accessToken',
+        'content-type': 'application/json',
+      },
+      body: jsonEncode({'password': password}),
+    );
+  }
+
+  Future<String?> _refreshRecoverySession() async {
+    final refreshToken = widget.session.refreshToken;
+    if (refreshToken == null || refreshToken.isEmpty) return null;
+
+    final response = await http.post(
+      Uri.parse('${GestaoSupabaseConfig.url}/auth/v1/token').replace(
+        queryParameters: {'grant_type': 'refresh_token'},
+      ),
+      headers: {
+        'apikey': GestaoSupabaseConfig.anonKey,
+        'content-type': 'application/json',
+      },
+      body: jsonEncode({'refresh_token': refreshToken}),
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      return null;
+    }
+
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    return body['access_token']?.toString();
+  }
+
+  String _supabaseErrorMessage(http.Response response) {
+    try {
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final message = body['msg'] ?? body['message'] ?? body['error_description'];
+      if (message != null && message.toString().trim().isNotEmpty) {
+        return message.toString();
+      }
+    } catch (_) {
+      // Keep the fallback below when Supabase returns an empty or non-JSON body.
+    }
+
+    return 'Nao foi possivel redefinir a senha. Gere um novo link e tente novamente.';
   }
 
   @override
