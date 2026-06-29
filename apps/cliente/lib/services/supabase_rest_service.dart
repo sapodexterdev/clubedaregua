@@ -7,6 +7,8 @@ import '../config/supabase_config.dart';
 class SupabaseRestService {
   const SupabaseRestService();
 
+  static const _requestTimeout = Duration(milliseconds: 1400);
+
   bool get isConfigured => SupabaseConfig.isConfigured;
 
   Future<List<Map<String, dynamic>>> getRows(
@@ -29,13 +31,15 @@ class SupabaseRestService {
       queryParameters: query,
     );
 
-    final response = await http.get(
-      uri,
-      headers: {
-        'apikey': SupabaseConfig.anonKey,
-        'authorization': 'Bearer ${SupabaseConfig.anonKey}',
-      },
-    );
+    final response = await http
+        .get(
+          uri,
+          headers: {
+            'apikey': SupabaseConfig.anonKey,
+            'authorization': 'Bearer ${SupabaseConfig.anonKey}',
+          },
+        )
+        .timeout(_requestTimeout);
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw StateError('Supabase REST ${response.statusCode}: ${response.body}');
@@ -58,16 +62,18 @@ class SupabaseRestService {
 
     final uri = Uri.parse('${SupabaseConfig.url}/rest/v1/$table');
 
-    final response = await http.post(
-      uri,
-      headers: {
-        'apikey': SupabaseConfig.anonKey,
-        'authorization': 'Bearer ${SupabaseConfig.anonKey}',
-        'content-type': 'application/json',
-        'prefer': 'return=minimal',
-      },
-      body: jsonEncode(data),
-    );
+    final response = await http
+        .post(
+          uri,
+          headers: {
+            'apikey': SupabaseConfig.anonKey,
+            'authorization': 'Bearer ${SupabaseConfig.anonKey}',
+            'content-type': 'application/json',
+            'prefer': 'return=minimal',
+          },
+          body: jsonEncode(data),
+        )
+        .timeout(const Duration(seconds: 8));
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw StateError('Supabase REST ${response.statusCode}: ${response.body}');

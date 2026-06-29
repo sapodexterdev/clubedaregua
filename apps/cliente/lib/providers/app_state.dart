@@ -6,6 +6,7 @@ import '../models/service_category.dart';
 import '../models/service_item.dart';
 import '../repositories/appointment_repository.dart';
 import '../repositories/barber_repository.dart';
+import '../services/mock_data.dart';
 
 class AppState extends ChangeNotifier {
   final _barberRepository = BarberRepository();
@@ -13,16 +14,16 @@ class AppState extends ChangeNotifier {
 
   bool isLoading = false;
   String selectedTab = 'home';
-  Barber? selectedBarber;
-  ServiceItem? selectedService;
-  String? selectedCategoryId;
+  Barber? selectedBarber = MockData.barbers.first;
+  ServiceItem? selectedService = MockData.services.first;
+  String? selectedCategoryId = MockData.categories.first.id;
   DateTime selectedDate = DateTime.now();
   String selectedTime = '10:30';
 
-  List<Barber> barbers = [];
-  List<ServiceCategory> categories = [];
-  List<ServiceItem> services = [];
-  List<Appointment> appointments = [];
+  List<Barber> barbers = List.of(MockData.barbers);
+  List<ServiceCategory> categories = List.of(MockData.categories);
+  List<ServiceItem> services = List.of(MockData.services);
+  List<Appointment> appointments = List.of(MockData.appointments);
   bool lastBookingRequestCreated = false;
 
   List<Barber> get filteredBarbers {
@@ -51,13 +52,20 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> loadInitialData() async {
+    if (isLoading) return;
+
     isLoading = true;
     notifyListeners();
 
-    final fetchedBarbers = await _barberRepository.fetchBarbers();
-    final fetchedCategories = await _barberRepository.fetchCategories();
-    final fetchedServices = await _barberRepository.fetchServices();
-    final fetchedAppointments = await _appointmentRepository.fetchAppointments();
+    final barbersFuture = _barberRepository.fetchBarbers();
+    final categoriesFuture = _barberRepository.fetchCategories();
+    final servicesFuture = _barberRepository.fetchServices();
+    final appointmentsFuture = _appointmentRepository.fetchAppointments();
+
+    final fetchedBarbers = await barbersFuture;
+    final fetchedCategories = await categoriesFuture;
+    final fetchedServices = await servicesFuture;
+    final fetchedAppointments = await appointmentsFuture;
 
     _applyData(
       barbersData: fetchedBarbers,
@@ -68,7 +76,6 @@ class AppState extends ChangeNotifier {
 
     isLoading = false;
     notifyListeners();
-
   }
 
   void _applyData({
@@ -81,9 +88,42 @@ class AppState extends ChangeNotifier {
     categories = categoriesData;
     services = servicesData;
     appointments = appointmentsData;
-    selectedBarber = barbers.isEmpty ? null : barbers.first;
-    selectedService = services.isEmpty ? null : services.first;
-    selectedCategoryId ??= categories.isEmpty ? null : categories.first.id;
+    selectedBarber = _preserveSelectedBarber(selectedBarber);
+    selectedService = _preserveSelectedService(selectedService);
+    selectedCategoryId = _preserveSelectedCategory(selectedCategoryId);
+  }
+
+  Barber? _preserveSelectedBarber(Barber? current) {
+    if (barbers.isEmpty) return null;
+    if (current == null) return barbers.first;
+
+    for (final barber in barbers) {
+      if (barber.id == current.id) return barber;
+    }
+
+    return barbers.first;
+  }
+
+  ServiceItem? _preserveSelectedService(ServiceItem? current) {
+    if (services.isEmpty) return null;
+    if (current == null) return services.first;
+
+    for (final service in services) {
+      if (service.id == current.id) return service;
+    }
+
+    return services.first;
+  }
+
+  String? _preserveSelectedCategory(String? current) {
+    if (categories.isEmpty) return null;
+    if (current == null) return categories.first.id;
+
+    for (final category in categories) {
+      if (category.id == current) return category.id;
+    }
+
+    return categories.first.id;
   }
 
   Future<bool> createSelectedAppointment({
