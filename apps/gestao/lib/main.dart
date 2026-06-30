@@ -159,6 +159,7 @@ class TeamBarber {
   const TeamBarber({
     required this.id,
     required this.barberShopId,
+    required this.userId,
     required this.name,
     required this.bio,
     required this.photoUrl,
@@ -169,6 +170,7 @@ class TeamBarber {
 
   final String id;
   final String barberShopId;
+  final String userId;
   final String name;
   final String bio;
   final String photoUrl;
@@ -188,6 +190,7 @@ class TeamBarber {
     return TeamBarber(
       id: map['id']?.toString() ?? '',
       barberShopId: map['barber_shop_id']?.toString() ?? '',
+      userId: map['user_id']?.toString() ?? '',
       name: map['name']?.toString() ?? 'Barbeiro',
       bio: map['bio']?.toString() ?? '',
       photoUrl: map['photo_url']?.toString() ?? '',
@@ -201,6 +204,7 @@ class TeamBarber {
 
 class ManagementSession extends ChangeNotifier {
   String? _accessToken;
+  String? _userId;
   String? _barberShopId;
   String? barberShopName;
   String? email;
@@ -210,6 +214,20 @@ class ManagementSession extends ChangeNotifier {
   List<TeamBarber> teamBarbers = [];
 
   bool get isSignedIn => _accessToken != null;
+
+  TeamBarber? get currentBarber {
+    final userId = _userId;
+    if (userId != null && userId.isNotEmpty) {
+      for (final barber in teamBarbers) {
+        if (barber.userId == userId && barber.isActive) return barber;
+      }
+    }
+
+    return null;
+  }
+
+  String get barberHeaderName =>
+      currentBarber?.name ?? barberShopName ?? 'Agenda do barbeiro';
 
   Future<void> signIn(String emailValue, String password) async {
     if (!GestaoSupabaseConfig.isConfigured) {
@@ -245,6 +263,8 @@ class ManagementSession extends ChangeNotifier {
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       _accessToken = data['access_token']?.toString();
+      final user = data['user'];
+      if (user is Map) _userId = user['id']?.toString();
       email = emailValue.trim();
       await refreshManagementData();
     } catch (error) {
@@ -318,7 +338,7 @@ class ManagementSession extends ChangeNotifier {
         'barbers',
         query: {
           'select':
-              'id,barber_shop_id,name,bio,photo_url,starting_price,commission_percent,is_active',
+              'id,barber_shop_id,user_id,name,bio,photo_url,starting_price,commission_percent,is_active',
           'barber_shop_id': 'eq.$shopId',
           'order': 'name.asc',
         },
@@ -483,6 +503,7 @@ class ManagementSession extends ChangeNotifier {
 
   void signOut() {
     _accessToken = null;
+    _userId = null;
     _barberShopId = null;
     barberShopName = null;
     email = null;
@@ -1088,7 +1109,16 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
             },
           ),
           const SizedBox(height: 18),
-          _Header(isAdmin: isAdmin),
+          Consumer<ManagementSession>(
+            builder: (context, session, _) {
+              return _Header(
+                isAdmin: isAdmin,
+                title: isAdmin
+                    ? session.barberShopName ?? 'Barbearia'
+                    : session.barberHeaderName,
+              );
+            },
+          ),
           const SizedBox(height: 18),
           page.child,
         ],
@@ -1233,9 +1263,13 @@ class _RoleSwitch extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.isAdmin});
+  const _Header({
+    required this.isAdmin,
+    required this.title,
+  });
 
   final bool isAdmin;
+  final String title;
 
   @override
   Widget build(BuildContext context) {
@@ -1249,7 +1283,7 @@ class _Header extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            isAdmin ? 'Barbearia Elite' : 'Davi Marcomin',
+            title,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 24,
@@ -1502,7 +1536,7 @@ class _AdminDashboardPage extends StatelessWidget {
         SizedBox(height: 12),
         _InsightTile(
           title: 'Barbeiro destaque',
-          value: 'Davi Marcomin',
+          value: 'Equipe ativa',
           subtitle: '18 atendimentos esta semana',
         ),
         _InsightTile(
@@ -1626,7 +1660,7 @@ class LegacyTeamPage extends StatelessWidget {
         ),
         SizedBox(height: 18),
         _TeamTile(
-          name: 'Davi Marcomin',
+          name: 'Barbeiro demo',
           role: 'Barbeiro principal',
           detail: '40% comissão - agenda ativa',
         ),
