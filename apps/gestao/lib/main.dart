@@ -128,6 +128,16 @@ class BookingRequest {
     return match?.group(1)?.trim() ?? 'Não informado';
   }
 
+  String get formattedDate {
+    final parts = date.split('-');
+    if (parts.length != 3 || parts.first.length < 4) return date;
+
+    final year = parts[0].substring(2);
+    return '${parts[2]}/${parts[1]}/$year';
+  }
+
+  String get formattedDateTime => '$formattedDate às $time';
+
   BookingRequest copyWith({String? status}) {
     return BookingRequest(
       id: id,
@@ -1403,7 +1413,7 @@ class _BookingRequestsPage extends StatelessWidget {
                   phone: request.phone,
                   service: request.service,
                   paymentMethod: request.paymentMethod,
-                  dateTime: '${request.date} - ${request.time}',
+                  dateTime: request.formattedDateTime,
                   total: _formatCurrency(request.total),
                   onContacted: () => session.updateBookingRequestStatus(
                     request.id,
@@ -2198,8 +2208,8 @@ class _BookingRequestTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '$service - $dateTime - $paymentMethod',
-                      maxLines: 2,
+                      '$service\n$dateTime - $paymentMethod',
+                      maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(color: SharedAppColors.muted),
                     ),
