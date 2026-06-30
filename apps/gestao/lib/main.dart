@@ -720,7 +720,6 @@ class _ManagementLoginScreenState extends State<ManagementLoginScreen> {
                       labelText: 'Senha',
                       prefixIcon: const Icon(Icons.lock_outline_rounded),
                       suffixIcon: TextButton(
-                        tooltip: _showPassword ? 'Ocultar senha' : 'Mostrar senha',
                         onPressed: () => setState(
                           () => _showPassword = !_showPassword,
                         ),
@@ -955,8 +954,6 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
                         labelText: 'Nova senha',
                         prefixIcon: const Icon(Icons.lock_outline_rounded),
                         suffixIcon: TextButton(
-                          tooltip:
-                              _showPassword ? 'Ocultar senha' : 'Mostrar senha',
                           onPressed: () => setState(
                             () => _showPassword = !_showPassword,
                           ),
@@ -972,9 +969,6 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
                         labelText: 'Confirmar nova senha',
                         prefixIcon: const Icon(Icons.lock_outline_rounded),
                         suffixIcon: TextButton(
-                          tooltip: _showConfirmPassword
-                              ? 'Ocultar senha'
-                              : 'Mostrar senha',
                           onPressed: () => setState(
                             () => _showConfirmPassword = !_showConfirmPassword,
                           ),
