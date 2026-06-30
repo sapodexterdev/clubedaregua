@@ -181,7 +181,7 @@ class TeamBarber {
   String get detail {
     final commission = commissionPercent.toStringAsFixed(0);
     final status = isActive ? 'agenda ativa' : 'inativo';
-    return '$commission% comissÃ£o - $status';
+    return '$commission% comissão - $status';
   }
 
   factory TeamBarber.fromMap(Map<String, dynamic> map) {
@@ -527,14 +527,14 @@ class ManagementSession extends ChangeNotifier {
     );
 
     if (shops.isEmpty) {
-      throw StateError('Nenhuma barbearia disponÃ­vel para este usuÃ¡rio.');
+      throw StateError('Nenhuma barbearia disponível para este usuário.');
     }
 
     final shop = shops.first;
     _barberShopId = shop['id']?.toString();
     barberShopName = shop['name']?.toString();
     if (_barberShopId == null || _barberShopId!.isEmpty) {
-      throw StateError('Barbearia sem identificador vÃ¡lido.');
+      throw StateError('Barbearia sem identificador válido.');
     }
 
     return _barberShopId!;
@@ -1588,7 +1588,7 @@ class _TeamPage extends StatelessWidget {
             if (session.errorMessage != null)
               _InlineNotice(
                 icon: Icons.warning_amber_rounded,
-                title: 'NÃ£o foi possÃ­vel carregar a equipe',
+                title: 'Não foi possível carregar a equipe',
                 subtitle: session.errorMessage!,
               )
             else if (session.teamBarbers.isEmpty)
@@ -1781,7 +1781,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     decoration: const InputDecoration(
-                      labelText: 'PreÃ§o inicial',
+                      labelText: 'Preço inicial',
                       prefixIcon: Icon(Icons.attach_money_rounded),
                     ),
                     validator: _validateMoney,
@@ -1794,7 +1794,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     decoration: const InputDecoration(
-                      labelText: 'ComissÃ£o %',
+                      labelText: 'Comissão %',
                       prefixIcon: Icon(Icons.percent_rounded),
                     ),
                     validator: _validateCommission,
@@ -1840,7 +1840,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
 
   String? _validateMoney(String? value) {
     final parsed = _parseNumber(value);
-    if (parsed == null || parsed < 0) return 'Valor invÃ¡lido.';
+    if (parsed == null || parsed < 0) return 'Valor inválido.';
     return null;
   }
 

@@ -18,6 +18,7 @@ flutter pub get
 flutter build web \
   --release \
   --web-renderer html \
+  --no-tree-shake-icons \
   --pwa-strategy=none \
   --dart-define=SUPABASE_URL="${SUPABASE_URL:-}" \
   --dart-define=SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-}"
@@ -43,6 +44,7 @@ flutter pub get
 flutter build web \
   --release \
   --web-renderer html \
+  --no-tree-shake-icons \
   --pwa-strategy=none \
   --base-href=/gestao/ \
   --dart-define=SUPABASE_URL="${SUPABASE_URL:-}" \
