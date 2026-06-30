@@ -155,12 +155,59 @@ class BookingRequest {
   }
 }
 
+class TeamBarber {
+  const TeamBarber({
+    required this.id,
+    required this.barberShopId,
+    required this.name,
+    required this.bio,
+    required this.photoUrl,
+    required this.startingPrice,
+    required this.commissionPercent,
+    required this.isActive,
+  });
+
+  final String id;
+  final String barberShopId;
+  final String name;
+  final String bio;
+  final String photoUrl;
+  final double startingPrice;
+  final double commissionPercent;
+  final bool isActive;
+
+  String get role => commissionPercent >= 40 ? 'Barbeiro principal' : 'Barbeiro';
+
+  String get detail {
+    final commission = commissionPercent.toStringAsFixed(0);
+    final status = isActive ? 'agenda ativa' : 'inativo';
+    return '$commission% comissÃ£o - $status';
+  }
+
+  factory TeamBarber.fromMap(Map<String, dynamic> map) {
+    return TeamBarber(
+      id: map['id']?.toString() ?? '',
+      barberShopId: map['barber_shop_id']?.toString() ?? '',
+      name: map['name']?.toString() ?? 'Barbeiro',
+      bio: map['bio']?.toString() ?? '',
+      photoUrl: map['photo_url']?.toString() ?? '',
+      startingPrice: (map['starting_price'] as num?)?.toDouble() ?? 0,
+      commissionPercent:
+          (map['commission_percent'] as num?)?.toDouble() ?? 0,
+      isActive: map['is_active'] != false,
+    );
+  }
+}
+
 class ManagementSession extends ChangeNotifier {
   String? _accessToken;
+  String? _barberShopId;
+  String? barberShopName;
   String? email;
   bool isLoading = false;
   String? errorMessage;
   List<BookingRequest> bookingRequests = [];
+  List<TeamBarber> teamBarbers = [];
 
   bool get isSignedIn => _accessToken != null;
 
@@ -199,7 +246,7 @@ class ManagementSession extends ChangeNotifier {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       _accessToken = data['access_token']?.toString();
       email = emailValue.trim();
-      await fetchBookingRequests();
+      await refreshManagementData();
     } catch (error) {
       _accessToken = null;
       errorMessage = _cleanErrorMessage(error);
@@ -207,6 +254,11 @@ class ManagementSession extends ChangeNotifier {
       isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> refreshManagementData() async {
+    await fetchBookingRequests();
+    await fetchTeamBarbers();
   }
 
   Future<void> fetchBookingRequests() async {
@@ -252,6 +304,143 @@ class ManagementSession extends ChangeNotifier {
     }
   }
 
+  Future<void> fetchTeamBarbers() async {
+    final token = _accessToken;
+    if (token == null) return;
+
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      final shopId = await _ensureBarberShopId(token);
+      final rows = await _getRestRows(
+        token,
+        'barbers',
+        query: {
+          'select':
+              'id,barber_shop_id,name,bio,photo_url,starting_price,commission_percent,is_active',
+          'barber_shop_id': 'eq.$shopId',
+          'order': 'name.asc',
+        },
+      );
+
+      teamBarbers = rows.map(TeamBarber.fromMap).toList();
+      errorMessage = null;
+    } catch (error) {
+      errorMessage = _cleanErrorMessage(error);
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> createTeamBarber({
+    required String name,
+    required String bio,
+    required String photoUrl,
+    required double startingPrice,
+    required double commissionPercent,
+  }) async {
+    final token = _accessToken;
+    if (token == null) return;
+
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      final shopId = await _ensureBarberShopId(token);
+      final rows = await _postRestRows(
+        token,
+        'barbers',
+        data: {
+          'barber_shop_id': shopId,
+          'name': name.trim(),
+          'bio': bio.trim().isEmpty ? null : bio.trim(),
+          'photo_url': photoUrl.trim().isEmpty ? null : photoUrl.trim(),
+          'starting_price': startingPrice,
+          'commission_percent': commissionPercent,
+          'is_active': true,
+        },
+      );
+
+      final created = rows.isEmpty ? null : TeamBarber.fromMap(rows.first);
+      if (created != null) {
+        teamBarbers = [...teamBarbers, created]
+          ..sort((a, b) => a.name.compareTo(b.name));
+      } else {
+        await fetchTeamBarbers();
+      }
+    } catch (error) {
+      errorMessage = _cleanErrorMessage(error);
+      rethrow;
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> updateTeamBarber(
+    TeamBarber barber, {
+    required String name,
+    required String bio,
+    required String photoUrl,
+    required double startingPrice,
+    required double commissionPercent,
+    required bool isActive,
+  }) async {
+    final token = _accessToken;
+    if (token == null) return;
+
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      final rows = await _patchRestRows(
+        token,
+        'barbers',
+        query: {'id': 'eq.${barber.id}'},
+        data: {
+          'name': name.trim(),
+          'bio': bio.trim().isEmpty ? null : bio.trim(),
+          'photo_url': photoUrl.trim().isEmpty ? null : photoUrl.trim(),
+          'starting_price': startingPrice,
+          'commission_percent': commissionPercent,
+          'is_active': isActive,
+        },
+      );
+
+      final updated = rows.isEmpty ? null : TeamBarber.fromMap(rows.first);
+      if (updated != null) {
+        teamBarbers = [
+          for (final item in teamBarbers)
+            if (item.id == updated.id) updated else item,
+        ]..sort((a, b) => a.name.compareTo(b.name));
+      } else {
+        await fetchTeamBarbers();
+      }
+    } catch (error) {
+      errorMessage = _cleanErrorMessage(error);
+      rethrow;
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> deactivateTeamBarber(TeamBarber barber) async {
+    await updateTeamBarber(
+      barber,
+      name: barber.name,
+      bio: barber.bio,
+      photoUrl: barber.photoUrl,
+      startingPrice: barber.startingPrice,
+      commissionPercent: barber.commissionPercent,
+      isActive: false,
+    );
+  }
+
   Future<void> updateBookingRequestStatus(String id, String status) async {
     final token = _accessToken;
     if (token == null) return;
@@ -294,10 +483,150 @@ class ManagementSession extends ChangeNotifier {
 
   void signOut() {
     _accessToken = null;
+    _barberShopId = null;
+    barberShopName = null;
     email = null;
     bookingRequests = [];
+    teamBarbers = [];
     errorMessage = null;
     notifyListeners();
+  }
+
+  Future<String> _ensureBarberShopId(String token) async {
+    if (_barberShopId != null) return _barberShopId!;
+
+    final memberships = await _getRestRows(
+      token,
+      'shop_members',
+      query: {
+        'select': 'barber_shop_id,barber_shops(name)',
+        'is_active': 'eq.true',
+        'order': 'created_at.asc',
+        'limit': '1',
+      },
+    );
+
+    if (memberships.isNotEmpty) {
+      final membership = memberships.first;
+      _barberShopId = membership['barber_shop_id']?.toString();
+      final shop = membership['barber_shops'];
+      if (shop is Map) barberShopName = shop['name']?.toString();
+      if (_barberShopId != null && _barberShopId!.isNotEmpty) {
+        return _barberShopId!;
+      }
+    }
+
+    final shops = await _getRestRows(
+      token,
+      'barber_shops',
+      query: {
+        'select': 'id,name',
+        'order': 'name.asc',
+        'limit': '1',
+      },
+    );
+
+    if (shops.isEmpty) {
+      throw StateError('Nenhuma barbearia disponÃ­vel para este usuÃ¡rio.');
+    }
+
+    final shop = shops.first;
+    _barberShopId = shop['id']?.toString();
+    barberShopName = shop['name']?.toString();
+    if (_barberShopId == null || _barberShopId!.isEmpty) {
+      throw StateError('Barbearia sem identificador vÃ¡lido.');
+    }
+
+    return _barberShopId!;
+  }
+
+  Future<List<Map<String, dynamic>>> _getRestRows(
+    String token,
+    String table, {
+    required Map<String, String> query,
+  }) async {
+    final uri = Uri.parse('${GestaoSupabaseConfig.url}/rest/v1/$table')
+        .replace(queryParameters: query);
+
+    final response = await http.get(uri, headers: _restHeaders(token));
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw StateError('Supabase REST ${response.statusCode}: ${response.body}');
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! List) return const [];
+
+    return decoded
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
+  }
+
+  Future<List<Map<String, dynamic>>> _postRestRows(
+    String token,
+    String table, {
+    required Map<String, dynamic> data,
+  }) async {
+    final uri = Uri.parse('${GestaoSupabaseConfig.url}/rest/v1/$table');
+
+    final response = await http.post(
+      uri,
+      headers: _restHeaders(token, preferRepresentation: true),
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw StateError('Supabase REST ${response.statusCode}: ${response.body}');
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! List) return const [];
+
+    return decoded
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
+  }
+
+  Future<List<Map<String, dynamic>>> _patchRestRows(
+    String token,
+    String table, {
+    required Map<String, String> query,
+    required Map<String, dynamic> data,
+  }) async {
+    final uri = Uri.parse('${GestaoSupabaseConfig.url}/rest/v1/$table')
+        .replace(queryParameters: query);
+
+    final response = await http.patch(
+      uri,
+      headers: _restHeaders(token, preferRepresentation: true),
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw StateError('Supabase REST ${response.statusCode}: ${response.body}');
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! List) return const [];
+
+    return decoded
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
+  }
+
+  Map<String, String> _restHeaders(
+    String token, {
+    bool preferRepresentation = false,
+  }) {
+    return {
+      'apikey': GestaoSupabaseConfig.anonKey,
+      'authorization': 'Bearer $token',
+      'content-type': 'application/json',
+      if (preferRepresentation) 'prefer': 'return=representation',
+    };
   }
 
   String _cleanErrorMessage(Object error) {
@@ -732,7 +1061,8 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
         actions: [
           IconButton(
             tooltip: 'Atualizar',
-            onPressed: () => context.read<ManagementSession>().fetchBookingRequests(),
+            onPressed: () =>
+                context.read<ManagementSession>().refreshManagementData(),
             icon: const Icon(Icons.refresh_rounded),
           ),
           IconButton(
@@ -1234,6 +1564,73 @@ class _TeamPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return Consumer<ManagementSession>(
+      builder: (context, session, _) {
+        final activeCount =
+            session.teamBarbers.where((barber) => barber.isActive).length;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _ActionPanel(
+              title: 'Equipe da unidade',
+              subtitle:
+                  '$activeCount barbeiro(s) ativo(s). Gerencie percentuais e agenda.',
+              buttonLabel: 'Novo barbeiro',
+              icon: Icons.person_add_alt_1_rounded,
+              onPressed: () => _openTeamBarberForm(context),
+            ),
+            const SizedBox(height: 18),
+            if (session.isLoading) ...[
+              const LinearProgressIndicator(color: SharedAppColors.orange),
+              const SizedBox(height: 12),
+            ],
+            if (session.errorMessage != null)
+              _InlineNotice(
+                icon: Icons.warning_amber_rounded,
+                title: 'NÃ£o foi possÃ­vel carregar a equipe',
+                subtitle: session.errorMessage!,
+              )
+            else if (session.teamBarbers.isEmpty)
+              const _InlineNotice(
+                icon: Icons.groups_rounded,
+                title: 'Nenhum barbeiro cadastrado',
+                subtitle: 'Cadastre o primeiro profissional da unidade.',
+              )
+            else
+              for (final barber in session.teamBarbers)
+                _TeamBarberTile(
+                  barber: barber,
+                  onTap: () => _openTeamBarberForm(context, barber: barber),
+                ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _openTeamBarberForm(
+    BuildContext context, {
+    TeamBarber? barber,
+  }) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.white,
+      builder: (_) => ChangeNotifierProvider.value(
+        value: context.read<ManagementSession>(),
+        child: _TeamBarberForm(barber: barber),
+      ),
+    );
+  }
+}
+
+class LegacyTeamPage extends StatelessWidget {
+  const LegacyTeamPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
     return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1261,6 +1658,259 @@ class _TeamPage extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _TeamBarberForm extends StatefulWidget {
+  const _TeamBarberForm({this.barber});
+
+  final TeamBarber? barber;
+
+  @override
+  State<_TeamBarberForm> createState() => _TeamBarberFormState();
+}
+
+class _TeamBarberFormState extends State<_TeamBarberForm> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameController;
+  late final TextEditingController _bioController;
+  late final TextEditingController _photoUrlController;
+  late final TextEditingController _startingPriceController;
+  late final TextEditingController _commissionController;
+  late bool _isActive;
+  var _isSaving = false;
+
+  bool get _isEditing => widget.barber != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final barber = widget.barber;
+    _nameController = TextEditingController(text: barber?.name ?? '');
+    _bioController = TextEditingController(text: barber?.bio ?? '');
+    _photoUrlController = TextEditingController(text: barber?.photoUrl ?? '');
+    _startingPriceController = TextEditingController(
+      text: barber == null ? '' : barber.startingPrice.toStringAsFixed(2),
+    );
+    _commissionController = TextEditingController(
+      text: barber == null ? '' : barber.commissionPercent.toStringAsFixed(0),
+    );
+    _isActive = barber?.isActive ?? true;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _bioController.dispose();
+    _photoUrlController.dispose();
+    _startingPriceController.dispose();
+    _commissionController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.viewInsetsOf(context).bottom + 20;
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(20, 20, 20, bottomPadding),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _isEditing ? 'Editar barbeiro' : 'Novo barbeiro',
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Fechar',
+                  onPressed: _isSaving ? null : () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _nameController,
+              textInputAction: TextInputAction.next,
+              decoration: const InputDecoration(
+                labelText: 'Nome',
+                prefixIcon: Icon(Icons.person_outline_rounded),
+              ),
+              validator: (value) {
+                if (value == null || value.trim().length < 2) {
+                  return 'Informe o nome do barbeiro.';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _bioController,
+              minLines: 2,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Bio',
+                prefixIcon: Icon(Icons.notes_rounded),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _photoUrlController,
+              textInputAction: TextInputAction.next,
+              decoration: const InputDecoration(
+                labelText: 'URL da foto',
+                prefixIcon: Icon(Icons.image_outlined),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _startingPriceController,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(
+                      labelText: 'PreÃ§o inicial',
+                      prefixIcon: Icon(Icons.attach_money_rounded),
+                    ),
+                    validator: _validateMoney,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextFormField(
+                    controller: _commissionController,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(
+                      labelText: 'ComissÃ£o %',
+                      prefixIcon: Icon(Icons.percent_rounded),
+                    ),
+                    validator: _validateCommission,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _isActive,
+              activeColor: SharedAppColors.orange,
+              onChanged: _isSaving
+                  ? null
+                  : (value) => setState(() => _isActive = value),
+              title: const Text('Agenda ativa'),
+              subtitle: const Text('Barbeiros inativos deixam de aparecer.'),
+            ),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: _isSaving ? null : _save,
+              style: FilledButton.styleFrom(
+                backgroundColor: SharedAppColors.orange,
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(52),
+              ),
+              icon: Icon(_isEditing ? Icons.save_rounded : Icons.add_rounded),
+              label: Text(_isSaving ? 'Salvando...' : 'Salvar'),
+            ),
+            if (_isEditing) ...[
+              const SizedBox(height: 8),
+              TextButton.icon(
+                onPressed: _isSaving ? null : _deactivate,
+                icon: const Icon(Icons.person_off_rounded),
+                label: const Text('Desativar barbeiro'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  String? _validateMoney(String? value) {
+    final parsed = _parseNumber(value);
+    if (parsed == null || parsed < 0) return 'Valor invÃ¡lido.';
+    return null;
+  }
+
+  String? _validateCommission(String? value) {
+    final parsed = _parseNumber(value);
+    if (parsed == null || parsed < 0 || parsed > 100) {
+      return 'Use 0 a 100.';
+    }
+    return null;
+  }
+
+  double? _parseNumber(String? value) {
+    if (value == null) return null;
+    return double.tryParse(value.trim().replaceAll(',', '.'));
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSaving = true);
+    try {
+      final session = context.read<ManagementSession>();
+      final barber = widget.barber;
+      if (barber == null) {
+        await session.createTeamBarber(
+          name: _nameController.text,
+          bio: _bioController.text,
+          photoUrl: _photoUrlController.text,
+          startingPrice: _parseNumber(_startingPriceController.text)!,
+          commissionPercent: _parseNumber(_commissionController.text)!,
+        );
+      } else {
+        await session.updateTeamBarber(
+          barber,
+          name: _nameController.text,
+          bio: _bioController.text,
+          photoUrl: _photoUrlController.text,
+          startingPrice: _parseNumber(_startingPriceController.text)!,
+          commissionPercent: _parseNumber(_commissionController.text)!,
+          isActive: _isActive,
+        );
+      }
+
+      if (mounted) Navigator.pop(context);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _deactivate() async {
+    final barber = widget.barber;
+    if (barber == null) return;
+
+    setState(() => _isSaving = true);
+    try {
+      await context.read<ManagementSession>().deactivateTeamBarber(barber);
+      if (mounted) Navigator.pop(context);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 }
 
@@ -1737,6 +2387,39 @@ class _TeamTile extends StatelessWidget {
   }
 }
 
+class _TeamBarberTile extends StatelessWidget {
+  const _TeamBarberTile({
+    required this.barber,
+    required this.onTap,
+  });
+
+  final TeamBarber barber;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SurfaceTile(
+      leading: CircleAvatar(
+        radius: 25,
+        backgroundColor:
+            barber.isActive ? SharedAppColors.dark : SharedAppColors.muted,
+        backgroundImage:
+            barber.photoUrl.isEmpty ? null : NetworkImage(barber.photoUrl),
+        child: barber.photoUrl.isEmpty
+            ? const Icon(Icons.person_rounded, color: Colors.white)
+            : null,
+      ),
+      title: barber.name,
+      subtitle: '${barber.role} - ${barber.detail}',
+      trailing: IconButton(
+        tooltip: 'Editar barbeiro',
+        onPressed: onTap,
+        icon: const Icon(Icons.chevron_right_rounded),
+      ),
+    );
+  }
+}
+
 class _CashMovementTile extends StatelessWidget {
   const _CashMovementTile({required this.title, required this.value});
 
@@ -1810,12 +2493,14 @@ class _ActionPanel extends StatelessWidget {
     required this.subtitle,
     required this.buttonLabel,
     required this.icon,
+    this.onPressed,
   });
 
   final String title;
   final String subtitle;
   final String buttonLabel;
   final IconData icon;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -1844,7 +2529,7 @@ class _ActionPanel extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           FilledButton(
-            onPressed: () {},
+            onPressed: onPressed ?? () {},
             style: FilledButton.styleFrom(
               backgroundColor: SharedAppColors.orange,
               foregroundColor: Colors.white,

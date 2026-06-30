@@ -15,7 +15,7 @@ select
   'owner',
   true
 from public.users
-where users.email = 'troque-pelo-email@exemplo.com'
+where users.email = 'sapodexter@gmail.com'
 on conflict (barber_shop_id, user_id) do update set
   role = excluded.role,
   is_active = true,
