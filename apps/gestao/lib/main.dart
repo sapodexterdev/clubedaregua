@@ -719,16 +719,12 @@ class _ManagementLoginScreenState extends State<ManagementLoginScreen> {
                     decoration: InputDecoration(
                       labelText: 'Senha',
                       prefixIcon: const Icon(Icons.lock_outline_rounded),
-                      suffixIcon: IconButton(
+                      suffixIcon: TextButton(
                         tooltip: _showPassword ? 'Ocultar senha' : 'Mostrar senha',
                         onPressed: () => setState(
                           () => _showPassword = !_showPassword,
                         ),
-                        icon: Icon(
-                          _showPassword
-                              ? Icons.visibility_off_rounded
-                              : Icons.visibility_rounded,
-                        ),
+                        child: Text(_showPassword ? 'Ocultar' : 'Mostrar'),
                       ),
                     ),
                   ),
@@ -958,17 +954,13 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
                       decoration: InputDecoration(
                         labelText: 'Nova senha',
                         prefixIcon: const Icon(Icons.lock_outline_rounded),
-                        suffixIcon: IconButton(
+                        suffixIcon: TextButton(
                           tooltip:
                               _showPassword ? 'Ocultar senha' : 'Mostrar senha',
                           onPressed: () => setState(
                             () => _showPassword = !_showPassword,
                           ),
-                          icon: Icon(
-                            _showPassword
-                                ? Icons.visibility_off_rounded
-                                : Icons.visibility_rounded,
-                          ),
+                          child: Text(_showPassword ? 'Ocultar' : 'Mostrar'),
                         ),
                       ),
                     ),
@@ -979,17 +971,15 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
                       decoration: InputDecoration(
                         labelText: 'Confirmar nova senha',
                         prefixIcon: const Icon(Icons.lock_outline_rounded),
-                        suffixIcon: IconButton(
+                        suffixIcon: TextButton(
                           tooltip: _showConfirmPassword
                               ? 'Ocultar senha'
                               : 'Mostrar senha',
                           onPressed: () => setState(
                             () => _showConfirmPassword = !_showConfirmPassword,
                           ),
-                          icon: Icon(
-                            _showConfirmPassword
-                                ? Icons.visibility_off_rounded
-                                : Icons.visibility_rounded,
+                          child: Text(
+                            _showConfirmPassword ? 'Ocultar' : 'Mostrar',
                           ),
                         ),
                       ),
@@ -1734,7 +1724,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
                 IconButton(
                   tooltip: 'Fechar',
                   onPressed: _isSaving ? null : () => Navigator.pop(context),
-                  icon: const Icon(Icons.close_rounded),
+                  icon: const Icon(Icons.close),
                 ),
               ],
             ),
@@ -1744,7 +1734,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
               textInputAction: TextInputAction.next,
               decoration: const InputDecoration(
                 labelText: 'Nome',
-                prefixIcon: Icon(Icons.person_outline_rounded),
+                prefixIcon: Icon(Icons.person_outline),
               ),
               validator: (value) {
                 if (value == null || value.trim().length < 2) {
@@ -1760,7 +1750,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
               maxLines: 3,
               decoration: const InputDecoration(
                 labelText: 'Bio',
-                prefixIcon: Icon(Icons.notes_rounded),
+                prefixIcon: Icon(Icons.notes),
               ),
             ),
             const SizedBox(height: 12),
@@ -1782,7 +1772,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
                         const TextInputType.numberWithOptions(decimal: true),
                     decoration: const InputDecoration(
                       labelText: 'Preço inicial',
-                      prefixIcon: Icon(Icons.attach_money_rounded),
+                      prefixIcon: Icon(Icons.attach_money),
                     ),
                     validator: _validateMoney,
                   ),
@@ -1795,7 +1785,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
                         const TextInputType.numberWithOptions(decimal: true),
                     decoration: const InputDecoration(
                       labelText: 'Comissão %',
-                      prefixIcon: Icon(Icons.percent_rounded),
+                      prefixIcon: Icon(Icons.percent),
                     ),
                     validator: _validateCommission,
                   ),
@@ -1814,22 +1804,20 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
               subtitle: const Text('Barbeiros inativos deixam de aparecer.'),
             ),
             const SizedBox(height: 12),
-            FilledButton.icon(
+            FilledButton(
               onPressed: _isSaving ? null : _save,
               style: FilledButton.styleFrom(
                 backgroundColor: SharedAppColors.orange,
                 foregroundColor: Colors.white,
                 minimumSize: const Size.fromHeight(52),
               ),
-              icon: Icon(_isEditing ? Icons.save_rounded : Icons.add_rounded),
-              label: Text(_isSaving ? 'Salvando...' : 'Salvar'),
+              child: Text(_isSaving ? 'Salvando...' : 'Salvar'),
             ),
             if (_isEditing) ...[
               const SizedBox(height: 8),
-              TextButton.icon(
+              TextButton(
                 onPressed: _isSaving ? null : _deactivate,
-                icon: const Icon(Icons.person_off_rounded),
-                label: const Text('Desativar barbeiro'),
+                child: const Text('Desativar barbeiro'),
               ),
             ],
           ],
