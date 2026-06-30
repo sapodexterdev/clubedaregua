@@ -21,6 +21,7 @@ class AppointmentRepository {
     required String barberShopId,
     required String customerName,
     required String customerPhone,
+    required String paymentMethodLabel,
   }) async {
     if (!_rest.isConfigured || barberShopId.isEmpty) return false;
 
@@ -34,7 +35,8 @@ class AppointmentRepository {
         'customer_name': customerName.trim(),
         'customer_phone': customerPhone.trim(),
         'total_price': total,
-        'notes': 'Solicitacao criada pelo PWA Cliente',
+        'notes':
+            'Solicitacao criada pelo PWA Cliente. Pagamento: $paymentMethodLabel',
       });
     } catch (_) {
       return false;

@@ -129,6 +129,7 @@ class AppState extends ChangeNotifier {
   Future<bool> createSelectedAppointment({
     required String customerName,
     required String customerPhone,
+    required String paymentMethodLabel,
   }) async {
     final barber = selectedBarber;
     final service = selectedService;
@@ -143,6 +144,7 @@ class AppState extends ChangeNotifier {
       barberShopId: barber.barberShopId,
       customerName: customerName,
       customerPhone: customerPhone,
+      paymentMethodLabel: paymentMethodLabel,
     );
 
     appointments = await _appointmentRepository.fetchAppointments();

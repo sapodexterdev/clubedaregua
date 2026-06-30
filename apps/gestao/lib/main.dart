@@ -109,6 +109,7 @@ class BookingRequest {
     required this.time,
     required this.status,
     required this.total,
+    required this.notes,
   });
 
   final String id;
@@ -120,6 +121,12 @@ class BookingRequest {
   final String time;
   final String status;
   final double total;
+  final String notes;
+
+  String get paymentMethod {
+    final match = RegExp(r'Pagamento:\s*([^.]+)').firstMatch(notes);
+    return match?.group(1)?.trim() ?? 'Não informado';
+  }
 
   BookingRequest copyWith({String? status}) {
     return BookingRequest(
@@ -132,6 +139,7 @@ class BookingRequest {
       time: time,
       status: status ?? this.status,
       total: total,
+      notes: notes,
     );
   }
 
@@ -146,6 +154,7 @@ class BookingRequest {
       time: _timeOnly(map['requested_time']?.toString() ?? ''),
       status: map['status']?.toString() ?? 'new',
       total: (map['total_price'] as num?)?.toDouble() ?? 0,
+      notes: map['notes']?.toString() ?? '',
     );
   }
 
@@ -293,7 +302,7 @@ class ManagementSession extends ChangeNotifier {
         '${GestaoSupabaseConfig.url}/rest/v1/booking_requests',
       ).replace(queryParameters: {
         'select':
-            'id,customer_name,customer_phone,requested_date,requested_time,status,total_price,barbers(name),services(name)',
+            'id,customer_name,customer_phone,requested_date,requested_time,status,total_price,notes,barbers(name),services(name)',
         'order': 'created_at.desc',
         'limit': '20',
       });
@@ -1393,6 +1402,7 @@ class _BookingRequestsPage extends StatelessWidget {
                   client: request.client,
                   phone: request.phone,
                   service: request.service,
+                  paymentMethod: request.paymentMethod,
                   dateTime: '${request.date} - ${request.time}',
                   total: _formatCurrency(request.total),
                   onContacted: () => session.updateBookingRequestStatus(
@@ -2128,6 +2138,7 @@ class _BookingRequestTile extends StatelessWidget {
     required this.client,
     required this.phone,
     required this.service,
+    required this.paymentMethod,
     required this.dateTime,
     required this.total,
     required this.onContacted,
@@ -2139,6 +2150,7 @@ class _BookingRequestTile extends StatelessWidget {
   final String client;
   final String phone;
   final String service;
+  final String paymentMethod;
   final String dateTime;
   final String total;
   final VoidCallback onContacted;
@@ -2186,7 +2198,7 @@ class _BookingRequestTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '$service - $dateTime',
+                      '$service - $dateTime - $paymentMethod',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(color: SharedAppColors.muted),
