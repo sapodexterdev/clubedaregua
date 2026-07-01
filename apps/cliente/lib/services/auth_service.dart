@@ -152,6 +152,7 @@ class AuthService {
       SupabaseConfig.anonKey,
       authOptions: const supabase.AuthClientOptions(
         autoRefreshToken: false,
+        authFlowType: supabase.AuthFlowType.implicit,
       ),
     );
   }
