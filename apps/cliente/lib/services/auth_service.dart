@@ -2,14 +2,12 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase/supabase.dart' as supabase;
 
 import '../config/supabase_config.dart';
 
 class AuthService {
   static const _sessionKey = 'clubedaregua.client.session';
   static AuthSession? _currentSession;
-  static supabase.SupabaseClient? _client;
 
   AuthSession? get currentSession => _currentSession;
   AuthUser? get currentUser => _currentSession?.user;
@@ -38,20 +36,28 @@ class AuthService {
   }
 
   Future<AuthSession> signIn(String email, String password) async {
-    try {
-      final response = await _supabase.auth.signInWithPassword(
-        email: email.trim(),
-        password: password,
-      );
-      final session = AuthSession.fromSupabase(
-        response.session,
-        response.user,
-      );
-      await _saveSession(session);
-      return session;
-    } on supabase.AuthException catch (error) {
-      throw AuthException.friendly(error.message);
-    }
+    _ensureConfigured();
+
+    final uri = Uri.parse(
+      '${SupabaseConfig.url}/auth/v1/token',
+    ).replace(queryParameters: {'grant_type': 'password'});
+
+    final response = await http.post(
+      uri,
+      headers: _authHeaders,
+      body: jsonEncode({
+        'email': email.trim(),
+        'password': password,
+      }),
+    );
+
+    if (!_isSuccess(response)) throw AuthException.fromResponse(response);
+
+    final session = AuthSession.fromMap(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+    await _saveSession(session);
+    return session;
   }
 
   Future<AuthSession?> signUp(
@@ -59,27 +65,29 @@ class AuthService {
     String password,
     String name,
   ) async {
-    try {
-      final response = await _supabase.auth.signUp(
-        email: email.trim(),
-        password: password,
-        data: {
+    _ensureConfigured();
+
+    final response = await http.post(
+      Uri.parse('${SupabaseConfig.url}/auth/v1/signup'),
+      headers: _authHeaders,
+      body: jsonEncode({
+        'email': email.trim(),
+        'password': password,
+        'data': {
           'name': name.trim(),
           'role': 'client',
         },
-      );
+      }),
+    );
 
-      if (response.session == null) return null;
+    if (!_isSuccess(response)) throw AuthException.fromResponse(response);
 
-      final session = AuthSession.fromSupabase(
-        response.session,
-        response.user,
-      );
-      await _saveSession(session);
-      return session;
-    } on supabase.AuthException catch (error) {
-      throw AuthException.friendly(error.message);
-    }
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    if (data['access_token'] == null) return null;
+
+    final session = AuthSession.fromMap(data);
+    await _saveSession(session);
+    return session;
   }
 
   Future<AuthSession> refreshSession() async {
@@ -108,11 +116,15 @@ class AuthService {
   }
 
   Future<void> recoverPassword(String email) async {
-    try {
-      await _supabase.auth.resetPasswordForEmail(email.trim());
-    } on supabase.AuthException catch (error) {
-      throw AuthException.friendly(error.message);
-    }
+    _ensureConfigured();
+
+    final response = await http.post(
+      Uri.parse('${SupabaseConfig.url}/auth/v1/recover'),
+      headers: _authHeaders,
+      body: jsonEncode({'email': email.trim()}),
+    );
+
+    if (!_isSuccess(response)) throw AuthException.fromResponse(response);
   }
 
   Future<void> signOut() async {
@@ -143,18 +155,6 @@ class AuthService {
     if (!SupabaseConfig.isConfigured) {
       throw const AuthException('Configure o Supabase antes de entrar.');
     }
-  }
-
-  supabase.SupabaseClient get _supabase {
-    _ensureConfigured();
-    return _client ??= supabase.SupabaseClient(
-      SupabaseConfig.url,
-      SupabaseConfig.anonKey,
-      authOptions: const supabase.AuthClientOptions(
-        autoRefreshToken: false,
-        authFlowType: supabase.AuthFlowType.implicit,
-      ),
-    );
   }
 
   bool _isSuccess(http.Response response) {
@@ -203,28 +203,6 @@ class AuthSession {
     );
   }
 
-  factory AuthSession.fromSupabase(
-    supabase.Session? session,
-    supabase.User? user,
-  ) {
-    if (session == null) {
-      throw const AuthException('Não foi possível iniciar a sessão.');
-    }
-
-    final authUser = user ?? session.user;
-    final expiresAtSeconds = session.expiresAt;
-    final expiresAt = expiresAtSeconds == null
-        ? DateTime.now().add(const Duration(hours: 1))
-        : DateTime.fromMillisecondsSinceEpoch(expiresAtSeconds * 1000);
-
-    return AuthSession(
-      accessToken: session.accessToken,
-      refreshToken: session.refreshToken ?? '',
-      expiresAt: expiresAt,
-      user: AuthUser.fromSupabase(authUser),
-    );
-  }
-
   Map<String, dynamic> toMap() {
     return {
       'access_token': accessToken,
@@ -258,15 +236,6 @@ class AuthUser {
     );
   }
 
-  factory AuthUser.fromSupabase(supabase.User user) {
-    final metadata = user.userMetadata ?? const <String, dynamic>{};
-    return AuthUser(
-      id: user.id,
-      email: user.email ?? '',
-      name: metadata['name']?.toString() ?? user.email ?? '',
-    );
-  }
-
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -289,10 +258,6 @@ class AuthException implements Exception {
     } catch (_) {
       return const AuthException('Não foi possível concluir a autenticação.');
     }
-  }
-
-  factory AuthException.friendly(String? message) {
-    return AuthException(_friendlyMessage(message));
   }
 
   static String _friendlyMessage(String? message) {
