@@ -5,7 +5,10 @@ class SupabaseConfig {
   static const anonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 
   static bool get isConfigured =>
-      url.startsWith('https://') && anonKey.trim().isNotEmpty;
+      url.startsWith('https://') &&
+      !url.contains('seu-projeto') &&
+      anonKey.trim().isNotEmpty &&
+      anonKey.trim() != 'SUA_ANON_KEY';
 
   static bool get canInitializeAuthSdk =>
       isConfigured && anonKey.trim().startsWith('eyJ');
