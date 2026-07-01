@@ -7,7 +7,7 @@ import '../config/supabase_config.dart';
 class SupabaseRestService {
   const SupabaseRestService();
 
-  static const _requestTimeout = Duration(milliseconds: 1400);
+  static const _requestTimeout = Duration(seconds: 8);
 
   bool get isConfigured => SupabaseConfig.isConfigured;
 
@@ -80,5 +80,20 @@ class SupabaseRestService {
     }
 
     return true;
+  }
+
+  Future<bool> exists(
+    String table, {
+    Map<String, String> filters = const {},
+  }) async {
+    if (!isConfigured) return false;
+
+    final rows = await getRows(
+      table,
+      select: 'id',
+      filters: filters,
+      limit: 1,
+    );
+    return rows.isNotEmpty;
   }
 }

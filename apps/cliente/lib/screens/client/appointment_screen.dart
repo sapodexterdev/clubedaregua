@@ -37,6 +37,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
       builder: (context, state, _) {
         final barber = state.selectedBarber;
         final service = state.selectedService;
+        final services = state.servicesForSelectedBarber;
 
         return Scaffold(
           appBar: AppBar(title: const Text('Agendamento')),
@@ -48,7 +49,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 14),
-              ...state.services.map(
+              ...services.map(
                 (item) => Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: ServiceCard(
@@ -79,7 +80,12 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                       label: 'Data',
                       value: DateFormat('dd/MM').format(state.selectedDate),
                     ),
-                    _SummaryRow(label: 'Horario', value: state.selectedTime),
+                    _SummaryRow(
+                      label: 'Horario',
+                      value: state.selectedTime.isEmpty
+                          ? '-'
+                          : state.selectedTime,
+                    ),
                     const Divider(height: 28),
                     _SummaryRow(
                       label: 'Total',
@@ -146,6 +152,16 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                             const SnackBar(
                               content: Text(
                                 'Informe seu nome e WhatsApp no formato (00)00000-0000.',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+                        if (state.selectedTime.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Selecione um horario disponivel para continuar.',
                               ),
                             ),
                           );

@@ -17,26 +17,40 @@ class BarberRepository {
       final rows = await _rest.getRows(
         'barbers',
         select:
-            'id,barber_shop_id,name,bio,photo_url,rating,starting_price,barber_shops(name),barber_services(services(category_id))',
+            'id,barber_shop_id,name,bio,photo_url,rating,starting_price,barber_shops(name),barber_services(service_id,is_active,services(id,category_id,is_active))',
         filters: const {'is_active': 'eq.true'},
         order: 'name.asc',
       );
 
       final barbers = rows.map<Barber>((row) {
         final links = row['barber_services'] as List<dynamic>? ?? const [];
-        final categoryIds = links
+        final activeLinks = links.where((link) {
+          final service = link['services'];
+          return link['is_active'] != false && service?['is_active'] != false;
+        });
+        final categoryIds = activeLinks
             .map((link) => link['services']?['category_id'])
             .where((id) => id != null)
             .map((id) => id.toString())
             .toSet()
             .toList();
+        final serviceIds = activeLinks
+            .map((link) => link['service_id'] ?? link['services']?['id'])
+            .where((id) => id != null)
+            .map((id) => id.toString())
+            .toSet()
+            .toList();
 
-        return Barber.fromMap({...row, 'category_ids': categoryIds});
+        return Barber.fromMap({
+          ...row,
+          'category_ids': categoryIds,
+          'service_ids': serviceIds,
+        });
       }).toList();
 
-      return barbers.isEmpty ? MockData.barbers : barbers;
+      return barbers;
     } catch (_) {
-      return MockData.barbers;
+      return const [];
     }
   }
 
@@ -54,9 +68,9 @@ class BarberRepository {
       final categories = rows
           .map<ServiceCategory>((row) => ServiceCategory.fromMap(row))
           .toList();
-      return categories.isEmpty ? MockData.categories : categories;
+      return categories;
     } catch (_) {
-      return MockData.categories;
+      return const [];
     }
   }
 
@@ -74,9 +88,9 @@ class BarberRepository {
       final services = rows
           .map<ServiceItem>((row) => ServiceItem.fromMap(row))
           .toList();
-      return services.isEmpty ? MockData.services : services;
+      return services;
     } catch (_) {
-      return MockData.services;
+      return const [];
     }
   }
 }

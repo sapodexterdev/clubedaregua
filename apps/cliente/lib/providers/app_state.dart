@@ -24,6 +24,7 @@ class AppState extends ChangeNotifier {
   List<ServiceCategory> categories = List.of(MockData.categories);
   List<ServiceItem> services = List.of(MockData.services);
   List<Appointment> appointments = List.of(MockData.appointments);
+  List<String> availableTimes = List.of(MockData.times);
   bool lastBookingRequestCreated = false;
 
   List<Barber> get filteredBarbers {
@@ -51,6 +52,14 @@ class AppState extends ChangeNotifier {
     return '$label em destaque';
   }
 
+  List<ServiceItem> get servicesForSelectedBarber {
+    final barber = selectedBarber;
+    if (barber == null || barber.serviceIds.isEmpty) return services;
+    return services
+        .where((service) => barber.serviceIds.contains(service.id))
+        .toList();
+  }
+
   Future<void> loadInitialData() async {
     if (isLoading) return;
 
@@ -73,6 +82,7 @@ class AppState extends ChangeNotifier {
       servicesData: fetchedServices,
       appointmentsData: fetchedAppointments,
     );
+    await refreshAvailableTimes();
 
     isLoading = false;
     notifyListeners();
@@ -91,6 +101,7 @@ class AppState extends ChangeNotifier {
     selectedBarber = _preserveSelectedBarber(selectedBarber);
     selectedService = _preserveSelectedService(selectedService);
     selectedCategoryId = _preserveSelectedCategory(selectedCategoryId);
+    _ensureSelectedServiceMatchesBarber();
   }
 
   Barber? _preserveSelectedBarber(Barber? current) {
@@ -105,14 +116,15 @@ class AppState extends ChangeNotifier {
   }
 
   ServiceItem? _preserveSelectedService(ServiceItem? current) {
-    if (services.isEmpty) return null;
-    if (current == null) return services.first;
+    final availableServices = servicesForSelectedBarber;
+    if (availableServices.isEmpty) return null;
+    if (current == null) return availableServices.first;
 
-    for (final service in services) {
+    for (final service in availableServices) {
       if (service.id == current.id) return service;
     }
 
-    return services.first;
+    return availableServices.first;
   }
 
   String? _preserveSelectedCategory(String? current) {
@@ -134,6 +146,8 @@ class AppState extends ChangeNotifier {
     final barber = selectedBarber;
     final service = selectedService;
     if (barber == null || service == null) return false;
+    await refreshAvailableTimes();
+    if (!availableTimes.contains(selectedTime)) return false;
 
     lastBookingRequestCreated = await _appointmentRepository.createAppointment(
       barberId: barber.id,
@@ -160,12 +174,15 @@ class AppState extends ChangeNotifier {
 
   void selectBarber(Barber barber) {
     selectedBarber = barber;
+    _ensureSelectedServiceMatchesBarber();
     notifyListeners();
+    refreshAvailableTimes();
   }
 
   void selectService(ServiceItem service) {
     selectedService = service;
     notifyListeners();
+    refreshAvailableTimes();
   }
 
   void selectCategory(String categoryId) {
@@ -181,11 +198,48 @@ class AppState extends ChangeNotifier {
   void selectDate(DateTime date) {
     selectedDate = date;
     notifyListeners();
+    refreshAvailableTimes();
   }
 
   void selectTime(String time) {
     selectedTime = time;
     notifyListeners();
+  }
+
+  Future<void> refreshAvailableTimes() async {
+    final barber = selectedBarber;
+    final service = selectedService;
+    if (barber == null || service == null) {
+      availableTimes = const [];
+      notifyListeners();
+      return;
+    }
+
+    final times = await _appointmentRepository.fetchAvailableTimes(
+      barberId: barber.id,
+      barberShopId: barber.barberShopId,
+      date: selectedDate,
+      durationMinutes: service.durationMinutes,
+    );
+    availableTimes = times;
+    if (!availableTimes.contains(selectedTime)) {
+      selectedTime = availableTimes.isEmpty ? '' : availableTimes.first;
+    }
+    notifyListeners();
+  }
+
+  void _ensureSelectedServiceMatchesBarber() {
+    final availableServices = servicesForSelectedBarber;
+    if (availableServices.isEmpty) {
+      selectedService = null;
+      return;
+    }
+
+    final current = selectedService;
+    if (current == null ||
+        !availableServices.any((service) => service.id == current.id)) {
+      selectedService = availableServices.first;
+    }
   }
 
   String _categoryDisplayName(String name) {

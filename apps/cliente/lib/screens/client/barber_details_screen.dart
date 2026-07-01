@@ -272,6 +272,7 @@ class _BookingTab extends StatelessWidget {
         ),
         const SizedBox(height: 18),
         _TimeStrip(
+          times: state.availableTimes,
           selectedTime: state.selectedTime,
           onSelected: state.selectTime,
         ),
@@ -284,10 +285,12 @@ class _BookingTab extends StatelessWidget {
         SizedBox(
           height: 74,
           child: ElevatedButton(
-            onPressed: () => Navigator.pushNamed(
-              context,
-              AppointmentScreen.route,
-            ),
+            onPressed: state.availableTimes.isEmpty
+                ? null
+                : () => Navigator.pushNamed(
+                      context,
+                      AppointmentScreen.route,
+                    ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.orange,
               foregroundColor: Colors.white,
@@ -420,16 +423,23 @@ class _CalendarStrip extends StatelessWidget {
 
 class _TimeStrip extends StatelessWidget {
   const _TimeStrip({
+    required this.times,
     required this.selectedTime,
     required this.onSelected,
   });
 
+  final List<String> times;
   final String selectedTime;
   final ValueChanged<String> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    const times = ['09:00', '10:30', '11:30', '12:30', '14:30', '16:00'];
+    if (times.isEmpty) {
+      return const Text(
+        'Nenhum horario disponivel para esta data.',
+        style: TextStyle(color: AppColors.muted, fontWeight: FontWeight.w700),
+      );
+    }
 
     return SizedBox(
       height: 52,
@@ -497,7 +507,7 @@ class _BookingSummary extends StatelessWidget {
             ),
           ),
           Text(
-            '$time - ${_endTime(time)}',
+            time.isEmpty ? '-' : '$time - ${_endTime(time)}',
             style: const TextStyle(color: AppColors.muted),
           ),
         ],
@@ -535,6 +545,7 @@ class _BookingSummary extends StatelessWidget {
   }
 
   String _endTime(String value) {
+    if (value.length < 5) return '';
     final parts = value.split(':');
     final hour = int.parse(parts[0]);
     final minute = int.parse(parts[1]);

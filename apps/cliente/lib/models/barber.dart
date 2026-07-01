@@ -9,6 +9,7 @@ class Barber {
     required this.startingPrice,
     required this.bio,
     this.categoryIds = const [],
+    this.serviceIds = const [],
   });
 
   final String id;
@@ -20,6 +21,7 @@ class Barber {
   final double startingPrice;
   final String bio;
   final List<String> categoryIds;
+  final List<String> serviceIds;
 
   factory Barber.fromMap(Map<String, dynamic> map) {
     return Barber(
@@ -32,6 +34,9 @@ class Barber {
       startingPrice: (map['starting_price'] ?? 0).toDouble(),
       bio: map['bio'] ?? '',
       categoryIds: (map['category_ids'] as List<dynamic>? ?? const [])
+          .map((item) => item.toString())
+          .toList(),
+      serviceIds: (map['service_ids'] as List<dynamic>? ?? const [])
           .map((item) => item.toString())
           .toList(),
     );
