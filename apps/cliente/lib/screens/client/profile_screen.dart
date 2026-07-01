@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_constants.dart';
+import '../../screens/auth/login_screen.dart';
+import '../../services/auth_service.dart';
 import '../../services/mock_data.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/metric_card.dart';
@@ -100,6 +102,20 @@ class ProfileScreen extends StatelessWidget {
                 subtitle: Text(item.message),
               ),
             ),
+          ),
+          const SizedBox(height: 12),
+          TextButton(
+            onPressed: () async {
+              await AuthService().signOut();
+              if (context.mounted) {
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  LoginScreen.route,
+                  (_) => false,
+                );
+              }
+            },
+            child: const Text('Sair da conta'),
           ),
         ],
       ),

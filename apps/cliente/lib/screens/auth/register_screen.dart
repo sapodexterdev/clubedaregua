@@ -21,6 +21,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final authService = AuthService();
+  bool isLoading = false;
 
   @override
   void dispose() {
@@ -31,17 +32,48 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _register() async {
+    final appState = context.read<AppState>();
+    final navigator = Navigator.of(context);
+
+    setState(() => isLoading = true);
     try {
-      await authService.signUp(
-        emailController.text,
-        passwordController.text,
-        nameController.text,
-      );
-      if (mounted) {
-        await context.read<AppState>().loadInitialData();
+      final name = nameController.text.trim();
+      final email = emailController.text.trim();
+      final password = passwordController.text;
+      if (name.length < 3 || email.isEmpty || password.length < 6) {
+        throw const AuthException(
+          'Informe nome, e-mail e uma senha com pelo menos 6 caracteres.',
+        );
       }
-    } catch (_) {}
-    if (mounted) Navigator.pushReplacementNamed(context, HomeScreen.route);
+
+      final session = await authService.signUp(
+        email,
+        password,
+        name,
+      );
+      if (session == null) {
+        if (mounted) {
+          _showMessage('Cadastro criado. Confirme seu e-mail para entrar.');
+        }
+        return;
+      }
+
+      if (mounted) {
+        await appState.loadInitialData();
+        if (!mounted) return;
+        navigator.pushReplacementNamed(HomeScreen.route);
+      }
+    } catch (error) {
+      if (mounted) _showMessage(error.toString());
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override
@@ -77,7 +109,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
             decoration: const InputDecoration(hintText: 'Senha'),
           ),
           const SizedBox(height: 24),
-          PrimaryButton(label: 'Cadastrar', onPressed: _register),
+          PrimaryButton(
+            label: isLoading ? 'Cadastrando...' : 'Cadastrar',
+            onPressed: isLoading ? null : _register,
+          ),
         ],
       ),
     );

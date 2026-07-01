@@ -30,21 +30,49 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _login() async {
+  Future<void> _loginReal() async {
     setState(() => isLoading = true);
     try {
-      if (emailController.text.isNotEmpty && passwordController.text.isNotEmpty) {
-        await authService.signIn(emailController.text, passwordController.text);
-        if (mounted) {
-          await context.read<AppState>().loadInitialData();
-        }
+      final email = emailController.text.trim();
+      final password = passwordController.text;
+      if (email.isEmpty || password.isEmpty) {
+        throw const AuthException('Informe e-mail e senha.');
       }
-    } catch (_) {
-      // Mantém o app navegável com dados mockados durante o desenvolvimento.
-    }
-    setState(() => isLoading = false);
 
-    if (mounted) Navigator.pushReplacementNamed(context, HomeScreen.route);
+      await authService.signIn(email, password);
+      if (mounted) await context.read<AppState>().loadInitialData();
+      if (mounted) Navigator.pushReplacementNamed(context, HomeScreen.route);
+    } catch (error) {
+      if (mounted) _showMessage(error.toString());
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _recoverPassword() async {
+    final email = emailController.text.trim();
+    if (email.isEmpty) {
+      _showMessage('Informe seu e-mail para recuperar a senha.');
+      return;
+    }
+
+    setState(() => isLoading = true);
+    try {
+      await authService.recoverPassword(email);
+      if (mounted) {
+        _showMessage('Enviamos as instruções de recuperação para seu e-mail.');
+      }
+    } catch (error) {
+      if (mounted) _showMessage(error.toString());
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override
@@ -79,12 +107,16 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 24),
             PrimaryButton(
               label: isLoading ? 'Entrando...' : 'Entrar',
-              onPressed: isLoading ? null : _login,
+              onPressed: isLoading ? null : _loginReal,
             ),
             const SizedBox(height: 14),
             TextButton(
               onPressed: () => Navigator.pushNamed(context, RegisterScreen.route),
               child: const Text('Criar conta'),
+            ),
+            TextButton(
+              onPressed: isLoading ? null : _recoverPassword,
+              child: const Text('Esqueci minha senha'),
             ),
           ],
         ),
