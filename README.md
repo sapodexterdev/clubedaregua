@@ -2,6 +2,21 @@
 
 SaaS para barbearias feito em Flutter, Dart e Supabase. A plataforma agora está organizada como monorepo com dois apps: um app rápido para clientes agendarem em poucos cliques e um app de gestão para barbeiros, donos e equipes administrarem agenda, serviços, clientes, caixa e operação.
 
+## Identidade Visual
+
+A identidade visual oficial do Clube da Régua está documentada em `docs/brand/`.
+
+Qualquer alteração visual deve seguir obrigatoriamente:
+
+- `docs/brand/Brand_Kit_v1.png`
+- `docs/brand/BRAND_GUIDELINES.md`
+- `docs/brand/UI_PRINCIPLES.md`
+- demais documentos em `docs/brand/`
+
+Toda UI deve ser dark first, com paleta preto/grafite/dourado, botões principais em dourado e cards escuros com borda discreta. Cliente e Gestão devem parecer parte do mesmo produto.
+
+É proibido criar nova paleta, novos estilos visuais ou nova linguagem de UI sem atualizar a documentação oficial da marca.
+
 ## Apps
 
 ### App Cliente
