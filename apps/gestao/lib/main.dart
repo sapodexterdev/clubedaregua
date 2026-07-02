@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 
+import 'utils/logo_file.dart';
+import 'utils/logo_picker.dart';
+
 void main() {
   runApp(
     ChangeNotifierProvider(
@@ -20,7 +23,7 @@ class ClubeDaReguaGestaoApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Clube da Régua Gestão',
+      title: 'Clube da R�gua Gest�o',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -129,7 +132,7 @@ class BookingRequest {
 
   String get paymentMethod {
     final match = RegExp(r'Pagamento:\s*([^.]+)').firstMatch(notes);
-    return match?.group(1)?.trim() ?? 'Não informado';
+    return match?.group(1)?.trim() ?? 'N�o informado';
   }
 
   String get formattedDate {
@@ -140,7 +143,7 @@ class BookingRequest {
     return '${parts[2]}/${parts[1]}/$year';
   }
 
-  String get formattedDateTime => '$formattedDate às $time';
+  String get formattedDateTime => '$formattedDate �s $time';
 
   String get observation {
     final value = notes
@@ -223,7 +226,7 @@ class TeamBarber {
   String get detail {
     final commission = commissionPercent.toStringAsFixed(0);
     final status = isActive ? 'agenda ativa' : 'inativo';
-    return '$commission% comissão - $status';
+    return '$commission% comiss�o - $status';
   }
 
   factory TeamBarber.fromMap(Map<String, dynamic> map) {
@@ -607,6 +610,210 @@ class CustomerAppointment {
   }
 }
 
+class ShopBusinessDay {
+  const ShopBusinessDay({
+    required this.key,
+    required this.label,
+    required this.isOpen,
+    required this.openTime,
+    required this.closeTime,
+  });
+
+  final String key;
+  final String label;
+  final bool isOpen;
+  final String openTime;
+  final String closeTime;
+
+  ShopBusinessDay copyWith({
+    bool? isOpen,
+    String? openTime,
+    String? closeTime,
+  }) {
+    return ShopBusinessDay(
+      key: key,
+      label: label,
+      isOpen: isOpen ?? this.isOpen,
+      openTime: openTime ?? this.openTime,
+      closeTime: closeTime ?? this.closeTime,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'is_open': isOpen,
+        'open_time': openTime,
+        'close_time': closeTime,
+      };
+}
+
+class ShopConfiguration {
+  const ShopConfiguration({
+    required this.shopId,
+    required this.settingsId,
+    required this.name,
+    required this.logoUrl,
+    required this.document,
+    required this.phone,
+    required this.whatsapp,
+    required this.email,
+    required this.instagram,
+    required this.address,
+    required this.zipCode,
+    required this.city,
+    required this.state,
+    required this.days,
+    required this.lunchEnabled,
+    required this.lunchStart,
+    required this.lunchEnd,
+    required this.bookingIntervalMinutes,
+    required this.bookingDaysAhead,
+    required this.minNoticeMinutes,
+    required this.minCancelHours,
+  });
+
+  final String shopId;
+  final String settingsId;
+  final String name;
+  final String logoUrl;
+  final String document;
+  final String phone;
+  final String whatsapp;
+  final String email;
+  final String instagram;
+  final String address;
+  final String zipCode;
+  final String city;
+  final String state;
+  final List<ShopBusinessDay> days;
+  final bool lunchEnabled;
+  final String lunchStart;
+  final String lunchEnd;
+  final int bookingIntervalMinutes;
+  final int bookingDaysAhead;
+  final int minNoticeMinutes;
+  final int minCancelHours;
+
+  factory ShopConfiguration.fromRows({
+    required Map<String, dynamic> shop,
+    required Map<String, dynamic>? settings,
+  }) {
+    final extra = settings?['settings'];
+    final settingsJson =
+        extra is Map ? Map<String, dynamic>.from(extra) : <String, dynamic>{};
+    final weekly = settingsJson['weekly_hours'];
+    final weeklyJson =
+        weekly is Map ? Map<String, dynamic>.from(weekly) : <String, dynamic>{};
+
+    return ShopConfiguration(
+      shopId: shop['id']?.toString() ?? '',
+      settingsId: settings?['id']?.toString() ?? '',
+      name: shop['name']?.toString() ?? '',
+      logoUrl: shop['logo_url']?.toString() ?? '',
+      document: shop['document']?.toString() ?? '',
+      phone: shop['phone']?.toString() ?? '',
+      whatsapp: shop['whatsapp']?.toString() ?? '',
+      email: settingsJson['email']?.toString() ?? '',
+      instagram: settingsJson['instagram']?.toString() ?? '',
+      address: shop['address']?.toString() ?? '',
+      zipCode: settingsJson['zip_code']?.toString() ?? '',
+      city: shop['city']?.toString() ?? '',
+      state: shop['state']?.toString() ?? '',
+      days: _defaultDays.map((day) {
+        final row = weeklyJson[day.key];
+        final rowJson =
+            row is Map ? Map<String, dynamic>.from(row) : <String, dynamic>{};
+        return day.copyWith(
+          isOpen: rowJson['is_open'] is bool
+              ? rowJson['is_open'] as bool
+              : day.isOpen,
+          openTime: rowJson['open_time']?.toString() ?? day.openTime,
+          closeTime: rowJson['close_time']?.toString() ?? day.closeTime,
+        );
+      }).toList(),
+      lunchEnabled: settingsJson['lunch_enabled'] == true,
+      lunchStart: settingsJson['lunch_start']?.toString() ?? '12:00',
+      lunchEnd: settingsJson['lunch_end']?.toString() ?? '13:00',
+      bookingIntervalMinutes: int.tryParse(
+              settings?['booking_interval_minutes']?.toString() ?? '') ??
+          30,
+      bookingDaysAhead:
+          int.tryParse(settingsJson['booking_days_ahead']?.toString() ?? '') ??
+              30,
+      minNoticeMinutes:
+          int.tryParse(settingsJson['min_notice_minutes']?.toString() ?? '') ??
+              60,
+      minCancelHours:
+          int.tryParse(settings?['min_cancel_hours']?.toString() ?? '') ?? 2,
+    );
+  }
+
+  Map<String, dynamic> settingsJson() => {
+        'email': email,
+        'instagram': instagram,
+        'zip_code': zipCode,
+        'lunch_enabled': lunchEnabled,
+        'lunch_start': lunchStart,
+        'lunch_end': lunchEnd,
+        'booking_days_ahead': bookingDaysAhead,
+        'min_notice_minutes': minNoticeMinutes,
+        'weekly_hours': {
+          for (final day in days) day.key: day.toJson(),
+        },
+      };
+
+  static const _defaultDays = [
+    ShopBusinessDay(
+      key: 'monday',
+      label: 'Segunda',
+      isOpen: true,
+      openTime: '09:00',
+      closeTime: '18:00',
+    ),
+    ShopBusinessDay(
+      key: 'tuesday',
+      label: 'Ter�a',
+      isOpen: true,
+      openTime: '09:00',
+      closeTime: '18:00',
+    ),
+    ShopBusinessDay(
+      key: 'wednesday',
+      label: 'Quarta',
+      isOpen: true,
+      openTime: '09:00',
+      closeTime: '18:00',
+    ),
+    ShopBusinessDay(
+      key: 'thursday',
+      label: 'Quinta',
+      isOpen: true,
+      openTime: '09:00',
+      closeTime: '18:00',
+    ),
+    ShopBusinessDay(
+      key: 'friday',
+      label: 'Sexta',
+      isOpen: true,
+      openTime: '09:00',
+      closeTime: '18:00',
+    ),
+    ShopBusinessDay(
+      key: 'saturday',
+      label: 'S�bado',
+      isOpen: true,
+      openTime: '09:00',
+      closeTime: '14:00',
+    ),
+    ShopBusinessDay(
+      key: 'sunday',
+      label: 'Domingo',
+      isOpen: false,
+      openTime: '09:00',
+      closeTime: '14:00',
+    ),
+  ];
+}
+
 class ManagementSession extends ChangeNotifier {
   String? _accessToken;
   String? _userId;
@@ -624,12 +831,15 @@ class ManagementSession extends ChangeNotifier {
   List<ServiceCategory> serviceCategories = [];
   List<ManagedCustomer> customers = [];
   List<CustomerAppointment> customerAppointments = [];
+  ShopConfiguration? shopConfiguration;
   bool isScheduleLoading = false;
   bool isServicesLoading = false;
   bool isCustomersLoading = false;
+  bool isSettingsLoading = false;
   String? scheduleError;
   String? servicesError;
   String? customersError;
+  String? settingsError;
   DateTime selectedScheduleDate = DateTime.now();
   String? selectedScheduleBarberId;
   bool scheduleAdminView = false;
@@ -731,7 +941,7 @@ class ManagementSession extends ChangeNotifier {
       );
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw StateError('Login inválido ou usuário sem acesso.');
+        throw StateError('Login inv�lido ou usu�rio sem acesso.');
       }
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -754,6 +964,7 @@ class ManagementSession extends ChangeNotifier {
     await fetchTeamBarbers();
     await fetchServiceCatalog();
     await fetchCustomers();
+    await fetchShopConfiguration();
     await fetchScheduleEntries();
   }
 
@@ -784,7 +995,7 @@ class ManagementSession extends ChangeNotifier {
       );
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw StateError('Não foi possível carregar os pedidos.');
+        throw StateError('N�o foi poss�vel carregar os pedidos.');
       }
 
       final rows = jsonDecode(response.body) as List<dynamic>;
@@ -1133,6 +1344,162 @@ class ManagementSession extends ChangeNotifier {
     final entries = counts.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     return entries.first.key;
+  }
+
+  Future<void> fetchShopConfiguration() async {
+    final token = _accessToken;
+    if (token == null) return;
+
+    isSettingsLoading = true;
+    settingsError = null;
+    notifyListeners();
+
+    try {
+      final shopId = await _ensureBarberShopId(token);
+      final shops = await _getRestRows(
+        token,
+        'barber_shops',
+        query: {
+          'select':
+              'id,name,document,phone,whatsapp,address,city,state,logo_url,opening_time,closing_time',
+          'id': 'eq.$shopId',
+          'limit': '1',
+        },
+      );
+      if (shops.isEmpty) {
+        throw StateError('Barbearia nao encontrada.');
+      }
+
+      final settingsRows = await _getRestRows(
+        token,
+        'shop_settings',
+        query: {
+          'select': 'id,booking_interval_minutes,min_cancel_hours,settings',
+          'barber_shop_id': 'eq.$shopId',
+          'limit': '1',
+        },
+      );
+
+      shopConfiguration = ShopConfiguration.fromRows(
+        shop: shops.first,
+        settings: settingsRows.isEmpty ? null : settingsRows.first,
+      );
+      barberShopName = shopConfiguration?.name;
+      settingsError = null;
+    } catch (error) {
+      settingsError = _cleanErrorMessage(error);
+    } finally {
+      isSettingsLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> saveShopConfiguration(ShopConfiguration config) async {
+    final token = _accessToken;
+    if (token == null) return;
+
+    isSettingsLoading = true;
+    settingsError = null;
+    notifyListeners();
+
+    try {
+      await _patchRestRows(
+        token,
+        'barber_shops',
+        query: {'id': 'eq.${config.shopId}'},
+        data: {
+          'name': config.name.trim(),
+          'document':
+              config.document.trim().isEmpty ? null : config.document.trim(),
+          'phone': config.phone.trim().isEmpty ? null : config.phone.trim(),
+          'whatsapp':
+              config.whatsapp.trim().isEmpty ? null : config.whatsapp.trim(),
+          'address':
+              config.address.trim().isEmpty ? null : config.address.trim(),
+          'city': config.city.trim().isEmpty ? null : config.city.trim(),
+          'state': config.state.trim().isEmpty ? null : config.state.trim(),
+          'logo_url':
+              config.logoUrl.trim().isEmpty ? null : config.logoUrl.trim(),
+          'opening_time': _firstOpenTime(config.days),
+          'closing_time': _lastCloseTime(config.days),
+        },
+      );
+
+      final settingsData = {
+        'barber_shop_id': config.shopId,
+        'booking_interval_minutes': config.bookingIntervalMinutes,
+        'min_cancel_hours': config.minCancelHours,
+        'settings': config.settingsJson(),
+      };
+      if (config.settingsId.isEmpty) {
+        await _postRestRows(token, 'shop_settings', data: settingsData);
+      } else {
+        await _patchRestRows(
+          token,
+          'shop_settings',
+          query: {'id': 'eq.${config.settingsId}'},
+          data: settingsData,
+        );
+      }
+
+      shopConfiguration = config;
+      barberShopName = config.name;
+      settingsError = null;
+    } catch (error) {
+      settingsError = _cleanErrorMessage(error);
+      rethrow;
+    } finally {
+      isSettingsLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String> uploadShopLogo(LogoFile file) async {
+    final token = _accessToken;
+    if (token == null) return '';
+
+    final shopId = await _ensureBarberShopId(token);
+    final safeName = file.name
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9._-]+'), '-')
+        .replaceAll(RegExp(r'-+'), '-');
+    final objectPath =
+        '$shopId/${DateTime.now().millisecondsSinceEpoch}-$safeName';
+    final uri = Uri.parse(
+      '${GestaoSupabaseConfig.url}/storage/v1/object/shop-logos/$objectPath',
+    );
+
+    final response = await http.post(
+      uri,
+      headers: {
+        'apikey': GestaoSupabaseConfig.anonKey,
+        'authorization': 'Bearer $token',
+        'content-type': file.contentType,
+        'x-upsert': 'true',
+      },
+      body: file.bytes,
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw StateError(
+          'Supabase Storage ${response.statusCode}: ${response.body}');
+    }
+
+    return '${GestaoSupabaseConfig.url}/storage/v1/object/public/shop-logos/$objectPath';
+  }
+
+  String? _firstOpenTime(List<ShopBusinessDay> days) {
+    for (final day in days) {
+      if (day.isOpen) return day.openTime;
+    }
+    return null;
+  }
+
+  String? _lastCloseTime(List<ShopBusinessDay> days) {
+    for (final day in days.reversed) {
+      if (day.isOpen) return day.closeTime;
+    }
+    return null;
   }
 
   Future<void> fetchServiceCatalog() async {
@@ -1529,6 +1896,9 @@ class ManagementSession extends ChangeNotifier {
     isCustomersLoading = false;
     customerStatusFilter = CustomerStatusFilter.all;
     customerSearchQuery = '';
+    shopConfiguration = null;
+    settingsError = null;
+    isSettingsLoading = false;
     teamBarbers = [];
     errorMessage = null;
     notifyListeners();
@@ -1576,14 +1946,14 @@ class ManagementSession extends ChangeNotifier {
     );
 
     if (shops.isEmpty) {
-      throw StateError('Nenhuma barbearia disponível para este usuário.');
+      throw StateError('Nenhuma barbearia dispon�vel para este usu�rio.');
     }
 
     final shop = shops.first;
     _barberShopId = shop['id']?.toString();
     barberShopName = shop['name']?.toString();
     if (_barberShopId == null || _barberShopId!.isEmpty) {
-      throw StateError('Barbearia sem identificador válido.');
+      throw StateError('Barbearia sem identificador v�lido.');
     }
 
     return _barberShopId!;
@@ -1707,7 +2077,7 @@ class ManagementSession extends ChangeNotifier {
         message.contains('XMLHttpRequest') ||
         message.contains('SocketException') ||
         message.contains('ClientException')) {
-      return 'Sem internet ou Supabase indisponível. Verifique sua conexão.';
+      return 'Sem internet ou Supabase indispon�vel. Verifique sua conex�o.';
     }
 
     if (message.contains('management_clients') ||
@@ -1718,17 +2088,17 @@ class ManagementSession extends ChangeNotifier {
 
     return switch (message) {
       'Login invalido ou usuario sem acesso.' =>
-        'Login inválido ou usuário sem acesso.',
-      'Login inválido ou usuário sem acesso.' =>
-        'Login inválido ou usuário sem acesso.',
+        'Login inv�lido ou usu�rio sem acesso.',
+      'Login inv�lido ou usu�rio sem acesso.' =>
+        'Login inv�lido ou usu�rio sem acesso.',
       'Nao foi possivel carregar pedidos.' =>
-        'Não foi possível carregar os pedidos.',
-      'Não foi possível carregar os pedidos.' =>
-        'Não foi possível carregar os pedidos.',
+        'N�o foi poss�vel carregar os pedidos.',
+      'N�o foi poss�vel carregar os pedidos.' =>
+        'N�o foi poss�vel carregar os pedidos.',
       'Nao foi possivel atualizar o pedido.' =>
-        'Não foi possível atualizar o pedido.',
-      'Não foi possível atualizar o pedido.' =>
-        'Não foi possível atualizar o pedido.',
+        'N�o foi poss�vel atualizar o pedido.',
+      'N�o foi poss�vel atualizar o pedido.' =>
+        'N�o foi poss�vel atualizar o pedido.',
       _ => message,
     };
   }
@@ -1790,13 +2160,13 @@ class _ManagementLoginScreenState extends State<ManagementLoginScreen> {
                   ),
                   const SizedBox(height: 18),
                   const Text(
-                    'Clube da Régua Gestão',
+                    'Clube da R�gua Gest�o',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Entre para ver pedidos, agenda e operação da barbearia.',
+                    'Entre para ver pedidos, agenda e opera��o da barbearia.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: SharedAppColors.muted),
                   ),
@@ -1901,7 +2271,7 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
     }
 
     if (password != confirmPassword) {
-      setState(() => _message = 'As senhas digitadas não conferem.');
+      setState(() => _message = 'As senhas digitadas n�o conferem.');
       return;
     }
 
@@ -2007,7 +2377,7 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
       // Keep the fallback below when Supabase returns an empty or non-JSON body.
     }
 
-    return 'Não foi possível redefinir a senha. Gere um novo link e tente novamente.';
+    return 'N�o foi poss�vel redefinir a senha. Gere um novo link e tente novamente.';
   }
 
   @override
@@ -2047,8 +2417,8 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
                   const SizedBox(height: 8),
                   Text(
                     _isDone
-                        ? 'Agora você já pode entrar com sua nova senha.'
-                        : 'Digite sua nova senha para acessar a gestão.',
+                        ? 'Agora voc� j� pode entrar com sua nova senha.'
+                        : 'Digite sua nova senha para acessar a gest�o.',
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: SharedAppColors.muted),
                   ),
@@ -2157,7 +2527,7 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
             icon: const Icon(Icons.refresh_rounded),
           ),
           IconButton(
-            tooltip: 'Notificações',
+            tooltip: 'Notifica��es',
             onPressed: () {},
             icon: const Icon(Icons.notifications_none_rounded),
           ),
@@ -2232,7 +2602,7 @@ class _ManagementTab {
 const _barberTabs = [
   _ManagementTab(
     label: 'Pedidos',
-    title: 'Solicitações recebidas',
+    title: 'Solicita��es recebidas',
     icon: Icons.inbox_outlined,
     selectedIcon: Icons.inbox_rounded,
     child: _BookingRequestsPage(),
@@ -2245,7 +2615,7 @@ const _barberTabs = [
     child: _BarberAgendaPage(),
   ),
   _ManagementTab(
-    label: 'Horários',
+    label: 'Hor�rios',
     title: 'Disponibilidade',
     icon: Icons.schedule_outlined,
     selectedIcon: Icons.schedule_rounded,
@@ -2259,8 +2629,8 @@ const _barberTabs = [
     child: _ClientsPage(),
   ),
   _ManagementTab(
-    label: 'Comissão',
-    title: 'Comissão e faturamento',
+    label: 'Comiss�o',
+    title: 'Comiss�o e faturamento',
     icon: Icons.payments_outlined,
     selectedIcon: Icons.payments_rounded,
     child: _CommissionPage(),
@@ -2270,7 +2640,7 @@ const _barberTabs = [
 const _adminTabs = [
   _ManagementTab(
     label: 'Pedidos',
-    title: 'Solicitações recebidas',
+    title: 'Solicita��es recebidas',
     icon: Icons.inbox_outlined,
     selectedIcon: Icons.inbox_rounded,
     child: _BookingRequestsPage(),
@@ -2290,8 +2660,8 @@ const _adminTabs = [
     child: _BarberAgendaPage(adminView: true),
   ),
   _ManagementTab(
-    label: 'Serviços',
-    title: 'Cadastro de serviços',
+    label: 'Servi�os',
+    title: 'Cadastro de servi�os',
     icon: Icons.design_services_outlined,
     selectedIcon: Icons.design_services_rounded,
     child: _ServicesPage(),
@@ -2309,6 +2679,13 @@ const _adminTabs = [
     icon: Icons.point_of_sale_outlined,
     selectedIcon: Icons.point_of_sale_rounded,
     child: _CashPage(),
+  ),
+  _ManagementTab(
+    label: 'Config',
+    title: 'Configura��o da barbearia',
+    icon: Icons.settings_outlined,
+    selectedIcon: Icons.settings_rounded,
+    child: _SettingsPage(),
   ),
 ];
 
@@ -2386,8 +2763,8 @@ class _Header extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             isAdmin
-                ? 'Controle equipe, serviços, caixa e desempenho da unidade.'
-                : 'Confirme atendimentos, bloqueie horários e acompanhe sua comissão.',
+                ? 'Controle equipe, servi�os, caixa e desempenho da unidade.'
+                : 'Confirme atendimentos, bloqueie hor�rios e acompanhe sua comiss�o.',
             style: const TextStyle(color: Colors.white70, height: 1.35),
           ),
         ],
@@ -2648,7 +3025,7 @@ class _BookingRequestsPage extends StatelessWidget {
             if (session.bookingRequestsError != null)
               _InlineNotice(
                 icon: Icons.warning_amber_rounded,
-                title: 'Não foi possível carregar',
+                title: 'N�o foi poss�vel carregar',
                 subtitle: session.bookingRequestsError!,
               )
             else if (requests.isEmpty)
@@ -2756,25 +3133,25 @@ class _AvailabilityPage extends StatelessWidget {
     return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionTitle('Horários disponíveis'),
+        _SectionTitle('Hor�rios dispon�veis'),
         SizedBox(height: 12),
         _ScheduleTile(day: 'Segunda a sexta', hours: '09:00 - 18:00'),
-        _ScheduleTile(day: 'Sábado', hours: '09:00 - 14:00'),
+        _ScheduleTile(day: 'S�bado', hours: '09:00 - 14:00'),
         SizedBox(height: 22),
         _SectionTitle('Bloqueios'),
         SizedBox(height: 12),
         _BlockedTile(
-          title: 'Almoço estendido',
+          title: 'Almo�o estendido',
           detail: 'Hoje, 12:00 - 13:30',
         ),
         _BlockedTile(
-          title: 'Férias programadas',
-          detail: '12/08 até 18/08',
+          title: 'F�rias programadas',
+          detail: '12/08 at� 18/08',
         ),
         SizedBox(height: 22),
         _ActionPanel(
           title: 'Ajustar disponibilidade',
-          subtitle: 'Crie horários fixos, folgas ou bloqueios rápidos.',
+          subtitle: 'Crie hor�rios fixos, folgas ou bloqueios r�pidos.',
           buttonLabel: 'Novo bloqueio',
           icon: Icons.event_busy_rounded,
         ),
@@ -3157,21 +3534,21 @@ class _CommissionPage extends StatelessWidget {
           cards: [
             _MetricData('Semana', 'R\$ 1.780', Icons.trending_up_rounded),
             _MetricData(
-                'Comissão', 'R\$ 712', Icons.account_balance_wallet_rounded),
+                'Comiss�o', 'R\$ 712', Icons.account_balance_wallet_rounded),
           ],
         ),
         SizedBox(height: 22),
         _SectionTitle('Resumo'),
         SizedBox(height: 12),
         _InsightTile(
-          title: 'Atendimentos concluídos',
+          title: 'Atendimentos conclu�dos',
           value: '31',
-          subtitle: 'Ticket médio de R\$ 57',
+          subtitle: 'Ticket m�dio de R\$ 57',
         ),
         _InsightTile(
-          title: 'Serviço mais feito',
+          title: 'Servi�o mais feito',
           value: 'Corte + barba',
-          subtitle: '14 atendimentos no período',
+          subtitle: '14 atendimentos no per�odo',
         ),
       ],
     );
@@ -3201,14 +3578,14 @@ class _AdminDashboardPage extends StatelessWidget {
           subtitle: '18 atendimentos esta semana',
         ),
         _InsightTile(
-          title: 'Serviço mais vendido',
+          title: 'Servi�o mais vendido',
           value: 'Corte + barba',
           subtitle: '34% dos agendamentos',
         ),
         _InsightTile(
           title: 'Caixa do dia',
           value: 'R\$ 1.240',
-          subtitle: 'PIX, dinheiro e cartão',
+          subtitle: 'PIX, dinheiro e cart�o',
         ),
       ],
     );
@@ -3307,9 +3684,9 @@ class _UnusedLegacyServicesPageSnapshot extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _ActionPanel(
-          title: 'Catálogo de serviços',
-          subtitle: 'Cadastre preços, duração e comissão por serviço.',
-          buttonLabel: 'Novo serviço',
+          title: 'Cat�logo de servi�os',
+          subtitle: 'Cadastre pre�os, dura��o e comiss�o por servi�o.',
+          buttonLabel: 'Novo servi�o',
           icon: Icons.add_circle_rounded,
         ),
         SizedBox(height: 18),
@@ -3832,7 +4209,7 @@ class _TeamPage extends StatelessWidget {
             if (session.errorMessage != null)
               _InlineNotice(
                 icon: Icons.warning_amber_rounded,
-                title: 'Não foi possível carregar a equipe',
+                title: 'N�o foi poss�vel carregar a equipe',
                 subtitle: session.errorMessage!,
               )
             else if (session.teamBarbers.isEmpty)
@@ -3880,7 +4257,7 @@ class LegacyTeamPage extends StatelessWidget {
       children: [
         _ActionPanel(
           title: 'Equipe da unidade',
-          subtitle: 'Gerencie barbeiros, permissões e percentuais.',
+          subtitle: 'Gerencie barbeiros, permiss�es e percentuais.',
           buttonLabel: 'Novo barbeiro',
           icon: Icons.person_add_alt_1_rounded,
         ),
@@ -3888,16 +4265,16 @@ class LegacyTeamPage extends StatelessWidget {
         _TeamTile(
           name: 'Barbeiro demo',
           role: 'Barbeiro principal',
-          detail: '40% comissão - agenda ativa',
+          detail: '40% comiss�o - agenda ativa',
         ),
         _TeamTile(
           name: 'Ricardo Anderson',
           role: 'Barbeiro',
-          detail: '35% comissão - agenda ativa',
+          detail: '35% comiss�o - agenda ativa',
         ),
         _TeamTile(
           name: 'Camila Rocha',
-          role: 'Recepção',
+          role: 'Recep��o',
           detail: 'Acesso a agenda e caixa',
         ),
       ],
@@ -4025,7 +4402,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     decoration: const InputDecoration(
-                      labelText: 'Preço inicial',
+                      labelText: 'Pre�o inicial',
                       prefixIcon: Icon(Icons.attach_money),
                     ),
                     validator: _validateMoney,
@@ -4038,7 +4415,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     decoration: const InputDecoration(
-                      labelText: 'Comissão %',
+                      labelText: 'Comiss�o %',
                       prefixIcon: Icon(Icons.percent),
                     ),
                     validator: _validateCommission,
@@ -4082,7 +4459,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
 
   String? _validateMoney(String? value) {
     final parsed = _parseNumber(value);
-    if (parsed == null || parsed < 0) return 'Valor inválido.';
+    if (parsed == null || parsed < 0) return 'Valor inv�lido.';
     return null;
   }
 
@@ -4156,6 +4533,577 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
   }
 }
 
+class _SettingsPage extends StatelessWidget {
+  const _SettingsPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<ManagementSession>(
+      builder: (context, session, _) {
+        final config = session.shopConfiguration;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _ActionPanel(
+              title: 'Configura��o da barbearia',
+              subtitle: 'Defina dados p�blicos, hor�rios e regras de agenda.',
+              buttonLabel: 'Atualizar',
+              icon: Icons.refresh_rounded,
+              onPressed: session.fetchShopConfiguration,
+            ),
+            const SizedBox(height: 18),
+            if (session.isSettingsLoading) ...[
+              const LinearProgressIndicator(color: SharedAppColors.orange),
+              const SizedBox(height: 12),
+            ],
+            if (session.settingsError != null)
+              _InlineNotice(
+                icon: Icons.warning_amber_rounded,
+                title: 'N�o foi poss�vel carregar as configura��es',
+                subtitle: session.settingsError!,
+              )
+            else if (config == null)
+              const _InlineNotice(
+                icon: Icons.settings_outlined,
+                title: 'Configura��o n�o carregada',
+                subtitle: 'Toque em Atualizar para buscar os dados.',
+              )
+            else
+              _SettingsForm(config: config),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _SettingsForm extends StatefulWidget {
+  const _SettingsForm({required this.config});
+
+  final ShopConfiguration config;
+
+  @override
+  State<_SettingsForm> createState() => _SettingsFormState();
+}
+
+class _SettingsFormState extends State<_SettingsForm> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameController;
+  late final TextEditingController _logoController;
+  late final TextEditingController _documentController;
+  late final TextEditingController _phoneController;
+  late final TextEditingController _whatsappController;
+  late final TextEditingController _emailController;
+  late final TextEditingController _instagramController;
+  late final TextEditingController _addressController;
+  late final TextEditingController _zipController;
+  late final TextEditingController _cityController;
+  late final TextEditingController _stateController;
+  late final TextEditingController _lunchStartController;
+  late final TextEditingController _lunchEndController;
+  late final TextEditingController _bookingDaysController;
+  late final TextEditingController _minNoticeController;
+  late final TextEditingController _cancelHoursController;
+  late List<ShopBusinessDay> _days;
+  late bool _lunchEnabled;
+  late int _bookingInterval;
+  var _isSaving = false;
+  var _isUploadingLogo = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final config = widget.config;
+    _nameController = TextEditingController(text: config.name);
+    _logoController = TextEditingController(text: config.logoUrl);
+    _documentController = TextEditingController(text: config.document);
+    _phoneController = TextEditingController(text: config.phone);
+    _whatsappController = TextEditingController(text: config.whatsapp);
+    _emailController = TextEditingController(text: config.email);
+    _instagramController = TextEditingController(text: config.instagram);
+    _addressController = TextEditingController(text: config.address);
+    _zipController = TextEditingController(text: config.zipCode);
+    _cityController = TextEditingController(text: config.city);
+    _stateController = TextEditingController(text: config.state);
+    _lunchStartController = TextEditingController(text: config.lunchStart);
+    _lunchEndController = TextEditingController(text: config.lunchEnd);
+    _bookingDaysController =
+        TextEditingController(text: config.bookingDaysAhead.toString());
+    _minNoticeController =
+        TextEditingController(text: config.minNoticeMinutes.toString());
+    _cancelHoursController =
+        TextEditingController(text: config.minCancelHours.toString());
+    _days = List.of(config.days);
+    _lunchEnabled = config.lunchEnabled;
+    _bookingInterval = config.bookingIntervalMinutes;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _logoController.dispose();
+    _documentController.dispose();
+    _phoneController.dispose();
+    _whatsappController.dispose();
+    _emailController.dispose();
+    _instagramController.dispose();
+    _addressController.dispose();
+    _zipController.dispose();
+    _cityController.dispose();
+    _stateController.dispose();
+    _lunchStartController.dispose();
+    _lunchEndController.dispose();
+    _bookingDaysController.dispose();
+    _minNoticeController.dispose();
+    _cancelHoursController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _SectionTitle('Informa��es gerais'),
+          const SizedBox(height: 12),
+          _SettingsCard(
+            children: [
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Nome da barbearia',
+                  prefixIcon: Icon(Icons.storefront_outlined),
+                ),
+                validator: _required,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _logoController,
+                      decoration: const InputDecoration(
+                        labelText: 'URL da logo',
+                        helperText:
+                            'Fa�a upload pelo Storage ou cole uma URL p�blica.',
+                        prefixIcon: Icon(Icons.image_outlined),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  IconButton.filled(
+                    onPressed: _isUploadingLogo ? null : _pickAndUploadLogo,
+                    style: IconButton.styleFrom(
+                      backgroundColor: SharedAppColors.orange,
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: _isUploadingLogo
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.upload_rounded),
+                    tooltip: 'Enviar logo',
+                  ),
+                ],
+              ),
+              if (_logoController.text.trim().isNotEmpty) ...[
+                const SizedBox(height: 12),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: Image.network(
+                    _logoController.text.trim(),
+                    height: 88,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _documentController,
+                decoration: const InputDecoration(
+                  labelText: 'CNPJ',
+                  prefixIcon: Icon(Icons.badge_outlined),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _phoneController,
+                      decoration: const InputDecoration(
+                        labelText: 'Telefone',
+                        prefixIcon: Icon(Icons.phone_outlined),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _whatsappController,
+                      decoration: const InputDecoration(
+                        labelText: 'WhatsApp',
+                        prefixIcon: Icon(Icons.chat_outlined),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  prefixIcon: Icon(Icons.mail_outline_rounded),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _instagramController,
+                decoration: const InputDecoration(
+                  labelText: 'Instagram',
+                  prefixIcon: Icon(Icons.alternate_email_rounded),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _addressController,
+                decoration: const InputDecoration(
+                  labelText: 'Endere�o completo',
+                  prefixIcon: Icon(Icons.location_on_outlined),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _zipController,
+                      decoration: const InputDecoration(labelText: 'CEP'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _cityController,
+                      decoration: const InputDecoration(labelText: 'Cidade'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 82,
+                    child: TextFormField(
+                      controller: _stateController,
+                      decoration: const InputDecoration(labelText: 'UF'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 22),
+          const _SectionTitle('Hor�rio de funcionamento'),
+          const SizedBox(height: 12),
+          _SettingsCard(
+            children: [
+              for (var index = 0; index < _days.length; index++)
+                _BusinessDayEditor(
+                  day: _days[index],
+                  onChanged: (day) => setState(() => _days[index] = day),
+                ),
+            ],
+          ),
+          const SizedBox(height: 22),
+          const _SectionTitle('Intervalo'),
+          const SizedBox(height: 12),
+          _SettingsCard(
+            children: [
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _lunchEnabled,
+                activeColor: SharedAppColors.orange,
+                title: const Text('Almo�o'),
+                subtitle: const Text('Bloqueia intervalo recorrente.'),
+                onChanged: (value) => setState(() => _lunchEnabled = value),
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      enabled: _lunchEnabled,
+                      controller: _lunchStartController,
+                      decoration: const InputDecoration(labelText: 'In�cio'),
+                      validator: _validateTime,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      enabled: _lunchEnabled,
+                      controller: _lunchEndController,
+                      decoration: const InputDecoration(labelText: 'Fim'),
+                      validator: _validateTime,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 22),
+          const _SectionTitle('Configura��o de agendamento'),
+          const SizedBox(height: 12),
+          _SettingsCard(
+            children: [
+              DropdownButtonFormField<int>(
+                value: _bookingInterval,
+                decoration: const InputDecoration(
+                  labelText: 'Tempo entre atendimentos',
+                  prefixIcon: Icon(Icons.timer_outlined),
+                ),
+                items: const [5, 10, 15, 20, 30]
+                    .map(
+                      (value) => DropdownMenuItem<int>(
+                        value: value,
+                        child: Text('$value minutos'),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) setState(() => _bookingInterval = value);
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _bookingDaysController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Dias no futuro para agendar',
+                  prefixIcon: Icon(Icons.event_available_outlined),
+                ),
+                validator: _positiveInt,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _minNoticeController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Anteced�ncia m�nima em minutos',
+                  prefixIcon: Icon(Icons.schedule_outlined),
+                ),
+                validator: _positiveInt,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _cancelHoursController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Cancelamento permitido at� X horas antes',
+                  prefixIcon: Icon(Icons.event_busy_outlined),
+                ),
+                validator: _positiveInt,
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          FilledButton(
+            onPressed: _isSaving ? null : _save,
+            style: FilledButton.styleFrom(
+              backgroundColor: SharedAppColors.orange,
+              foregroundColor: Colors.white,
+              minimumSize: const Size.fromHeight(52),
+            ),
+            child: Text(_isSaving ? 'Salvando...' : 'Salvar configura��es'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String? _required(String? value) {
+    if (value == null || value.trim().isEmpty) return 'Campo obrigat�rio.';
+    return null;
+  }
+
+  String? _positiveInt(String? value) {
+    final parsed = int.tryParse(value?.trim() ?? '');
+    if (parsed == null || parsed <= 0) return 'Informe um n�mero v�lido.';
+    return null;
+  }
+
+  String? _validateTime(String? value) {
+    if (value == null || value.trim().isEmpty) return 'Informe o hor�rio.';
+    if (!RegExp(r'^\d{2}:\d{2}$').hasMatch(value.trim())) {
+      return 'Use HH:mm.';
+    }
+    return null;
+  }
+
+  Future<void> _pickAndUploadLogo() async {
+    final session = context.read<ManagementSession>();
+    setState(() => _isUploadingLogo = true);
+    try {
+      final file = await pickLogoFile();
+      if (file == null) return;
+      final url = await session.uploadShopLogo(file);
+      if (!mounted || url.isEmpty) return;
+      setState(() => _logoController.text = url);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Logo enviada com sucesso.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _isUploadingLogo = false);
+    }
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSaving = true);
+    try {
+      final current = widget.config;
+      final config = ShopConfiguration(
+        shopId: current.shopId,
+        settingsId: current.settingsId,
+        name: _nameController.text,
+        logoUrl: _logoController.text,
+        document: _documentController.text,
+        phone: _phoneController.text,
+        whatsapp: _whatsappController.text,
+        email: _emailController.text,
+        instagram: _instagramController.text,
+        address: _addressController.text,
+        zipCode: _zipController.text,
+        city: _cityController.text,
+        state: _stateController.text,
+        days: _days,
+        lunchEnabled: _lunchEnabled,
+        lunchStart: _lunchStartController.text,
+        lunchEnd: _lunchEndController.text,
+        bookingIntervalMinutes: _bookingInterval,
+        bookingDaysAhead: int.parse(_bookingDaysController.text.trim()),
+        minNoticeMinutes: int.parse(_minNoticeController.text.trim()),
+        minCancelHours: int.parse(_cancelHoursController.text.trim()),
+      );
+      await context.read<ManagementSession>().saveShopConfiguration(config);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Configura��es salvas com sucesso.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+}
+
+class _SettingsCard extends StatelessWidget {
+  const _SettingsCard({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      ),
+    );
+  }
+}
+
+class _BusinessDayEditor extends StatelessWidget {
+  const _BusinessDayEditor({
+    required this.day,
+    required this.onChanged,
+  });
+
+  final ShopBusinessDay day;
+  final ValueChanged<ShopBusinessDay> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        children: [
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: day.isOpen,
+            activeColor: SharedAppColors.orange,
+            title: Text(day.label),
+            subtitle: Text(day.isOpen ? 'Aberto' : 'Fechado'),
+            onChanged: (value) => onChanged(day.copyWith(isOpen: value)),
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  enabled: day.isOpen,
+                  initialValue: day.openTime,
+                  decoration: const InputDecoration(labelText: 'Abertura'),
+                  validator: (value) {
+                    if (!day.isOpen) return null;
+                    if (value == null ||
+                        !RegExp(r'^\d{2}:\d{2}$').hasMatch(value.trim())) {
+                      return 'HH:mm';
+                    }
+                    return null;
+                  },
+                  onChanged: (value) =>
+                      onChanged(day.copyWith(openTime: value.trim())),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextFormField(
+                  enabled: day.isOpen,
+                  initialValue: day.closeTime,
+                  decoration: const InputDecoration(labelText: 'Fechamento'),
+                  validator: (value) {
+                    if (!day.isOpen) return null;
+                    if (value == null ||
+                        !RegExp(r'^\d{2}:\d{2}$').hasMatch(value.trim())) {
+                      return 'HH:mm';
+                    }
+                    return null;
+                  },
+                  onChanged: (value) =>
+                      onChanged(day.copyWith(closeTime: value.trim())),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _CashPage extends StatelessWidget {
   const _CashPage();
 
@@ -4167,20 +5115,20 @@ class _CashPage extends StatelessWidget {
         _MetricsGrid(
           cards: [
             _MetricData('Entradas', 'R\$ 1.240', Icons.south_west_rounded),
-            _MetricData('Saídas', 'R\$ 180', Icons.north_east_rounded),
+            _MetricData('Sa�das', 'R\$ 180', Icons.north_east_rounded),
           ],
         ),
         SizedBox(height: 22),
         _SectionTitle('Movimentos de caixa'),
         SizedBox(height: 12),
         _CashMovementTile(title: 'PIX - Marcos Lima', value: '+ R\$ 85'),
-        _CashMovementTile(title: 'Dinheiro - João Pedro', value: '+ R\$ 55'),
+        _CashMovementTile(title: 'Dinheiro - Jo�o Pedro', value: '+ R\$ 55'),
         _CashMovementTile(title: 'Compra de pomada', value: '- R\$ 180'),
         SizedBox(height: 22),
-        _SectionTitle('Estoque crítico'),
+        _SectionTitle('Estoque cr�tico'),
         SizedBox(height: 12),
         _StockTile(name: 'Pomada modeladora', quantity: '3 un'),
-        _StockTile(name: 'Lâmina descartável', quantity: '18 un'),
+        _StockTile(name: 'L�mina descart�vel', quantity: '18 un'),
       ],
     );
   }
@@ -4779,7 +5727,7 @@ class _TeamTile extends StatelessWidget {
         child: Icon(Icons.person_rounded, color: Colors.white),
       ),
       title: name,
-      subtitle: '$role • $detail',
+      subtitle: '$role � $detail',
       trailing: const Icon(Icons.chevron_right_rounded),
     );
   }
@@ -4832,7 +5780,7 @@ class _CashMovementTile extends StatelessWidget {
         isPositive ? Icons.south_west_rounded : Icons.north_east_rounded,
       ),
       title: title,
-      subtitle: isPositive ? 'Entrada' : 'Saída',
+      subtitle: isPositive ? 'Entrada' : 'Sa�da',
       trailing: Text(
         value,
         style: TextStyle(
@@ -4855,7 +5803,7 @@ class _StockTile extends StatelessWidget {
     return _SurfaceTile(
       leading: const _IconBadge(Icons.inventory_2_rounded),
       title: name,
-      subtitle: 'Reposição recomendada',
+      subtitle: 'Reposi��o recomendada',
       trailing: Text(
         quantity,
         style: const TextStyle(fontWeight: FontWeight.w900),
@@ -4880,7 +5828,7 @@ class _InsightTile extends StatelessWidget {
     return _SurfaceTile(
       leading: const _IconBadge(Icons.insights_rounded),
       title: value,
-      subtitle: '$title • $subtitle',
+      subtitle: '$title � $subtitle',
     );
   }
 }
