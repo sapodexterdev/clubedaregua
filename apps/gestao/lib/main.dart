@@ -241,6 +241,75 @@ class TeamBarber {
   }
 }
 
+class ScheduleEntry {
+  const ScheduleEntry({
+    required this.id,
+    required this.time,
+    required this.client,
+    required this.service,
+    required this.barber,
+    required this.status,
+    required this.notes,
+  });
+
+  final String id;
+  final String time;
+  final String client;
+  final String service;
+  final String barber;
+  final String status;
+  final String notes;
+
+  factory ScheduleEntry.fromBookingRequest(Map<String, dynamic> map) {
+    return ScheduleEntry(
+      id: 'request-${map['id']}',
+      time: _timeOnly(map['requested_time']?.toString() ?? ''),
+      client: map['customer_name']?.toString() ?? 'Cliente',
+      service: map['services']?['name']?.toString() ?? 'Servico',
+      barber: map['barbers']?['name']?.toString() ?? 'Barbeiro',
+      status: 'Aceito',
+      notes: _cleanNotes(map['notes']?.toString() ?? ''),
+    );
+  }
+
+  factory ScheduleEntry.fromAppointment(Map<String, dynamic> map) {
+    final startsAt = map['starts_at']?.toString() ?? '';
+    return ScheduleEntry(
+      id: 'appointment-${map['id']}',
+      time: startsAt.length >= 16 ? startsAt.substring(11, 16) : '',
+      client: 'Cliente agendado',
+      service: map['services']?['name']?.toString() ?? 'Servico',
+      barber: map['barbers']?['name']?.toString() ?? 'Barbeiro',
+      status: _statusLabel(map['status']?.toString() ?? ''),
+      notes: map['notes']?.toString().trim().isEmpty == false
+          ? map['notes'].toString()
+          : 'Sem observacoes.',
+    );
+  }
+
+  static String _timeOnly(String value) {
+    if (value.length >= 5) return value.substring(0, 5);
+    return value;
+  }
+
+  static String _statusLabel(String status) {
+    return switch (status) {
+      'pending' => 'Pendente',
+      'confirmed' => 'Confirmado',
+      'completed' => 'Concluido',
+      'cancelled' => 'Cancelado',
+      _ => status.isEmpty ? 'Agendado' : status,
+    };
+  }
+
+  static String _cleanNotes(String notes) {
+    final clean = notes
+        .replaceAll(RegExp(r'Solicitacao criada pelo PWA Cliente\.\s*'), '')
+        .trim();
+    return clean.isEmpty ? 'Sem observacoes.' : clean;
+  }
+}
+
 class ManagementSession extends ChangeNotifier {
   String? _accessToken;
   String? _userId;
@@ -253,6 +322,12 @@ class ManagementSession extends ChangeNotifier {
   String? bookingRequestsError;
   List<BookingRequest> bookingRequests = [];
   List<TeamBarber> teamBarbers = [];
+  List<ScheduleEntry> scheduleEntries = [];
+  bool isScheduleLoading = false;
+  String? scheduleError;
+  DateTime selectedScheduleDate = DateTime.now();
+  String? selectedScheduleBarberId;
+  bool scheduleAdminView = false;
 
   bool get isSignedIn => _accessToken != null;
 
@@ -269,6 +344,15 @@ class ManagementSession extends ChangeNotifier {
 
   String get barberHeaderName =>
       currentBarber?.name ?? barberShopName ?? 'Agenda do barbeiro';
+
+  TeamBarber? get selectedScheduleBarber {
+    final id = selectedScheduleBarberId;
+    if (id == null || id.isEmpty) return null;
+    for (final barber in teamBarbers) {
+      if (barber.id == id) return barber;
+    }
+    return null;
+  }
 
   Future<void> signIn(String emailValue, String password) async {
     if (!GestaoSupabaseConfig.isConfigured) {
@@ -320,6 +404,7 @@ class ManagementSession extends ChangeNotifier {
   Future<void> refreshManagementData() async {
     await fetchBookingRequests();
     await fetchTeamBarbers();
+    await fetchScheduleEntries();
   }
 
   Future<void> fetchBookingRequests() async {
@@ -392,6 +477,94 @@ class ManagementSession extends ChangeNotifier {
       errorMessage = _cleanErrorMessage(error);
     } finally {
       isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> setScheduleAdminView(bool value) async {
+    if (scheduleAdminView == value) return;
+    scheduleAdminView = value;
+    if (!value) selectedScheduleBarberId = null;
+    notifyListeners();
+    await fetchScheduleEntries();
+  }
+
+  Future<void> selectScheduleDate(DateTime date) async {
+    selectedScheduleDate = DateTime(date.year, date.month, date.day);
+    notifyListeners();
+    await fetchScheduleEntries();
+  }
+
+  Future<void> selectScheduleBarber(String? barberId) async {
+    selectedScheduleBarberId = barberId;
+    notifyListeners();
+    await fetchScheduleEntries();
+  }
+
+  Future<void> fetchScheduleEntries() async {
+    final token = _accessToken;
+    if (token == null) return;
+
+    isScheduleLoading = true;
+    scheduleError = null;
+    notifyListeners();
+
+    try {
+      final shopId = await _ensureBarberShopId(token);
+      final barberId = scheduleAdminView
+          ? selectedScheduleBarberId
+          : currentBarber?.id ?? selectedScheduleBarberId;
+      final date = _dateOnly(selectedScheduleDate);
+      final start = DateTime(
+        selectedScheduleDate.year,
+        selectedScheduleDate.month,
+        selectedScheduleDate.day,
+      );
+      final end = start.add(const Duration(days: 1));
+
+      final requestQuery = <String, String>{
+        'select':
+            'id,customer_name,requested_date,requested_time,status,notes,barbers(name),services(name)',
+        'barber_shop_id': 'eq.$shopId',
+        'requested_date': 'eq.$date',
+        'status': 'eq.converted',
+        'order': 'requested_time.asc',
+      };
+      if (barberId != null && barberId.isNotEmpty) {
+        requestQuery['barber_id'] = 'eq.$barberId';
+      }
+
+      final appointmentQuery = <String, String>{
+        'select': 'id,starts_at,status,notes,barbers(name),services(name)',
+        'barber_shop_id': 'eq.$shopId',
+        'starts_at': 'gte.${start.toIso8601String()}',
+        'ends_at': 'lt.${end.toIso8601String()}',
+        'order': 'starts_at.asc',
+      };
+      if (barberId != null && barberId.isNotEmpty) {
+        appointmentQuery['barber_id'] = 'eq.$barberId';
+      }
+
+      final requests = await _getRestRows(
+        token,
+        'booking_requests',
+        query: requestQuery,
+      );
+      final appointments = await _getRestRows(
+        token,
+        'appointments',
+        query: appointmentQuery,
+      );
+
+      scheduleEntries = [
+        ...requests.map(ScheduleEntry.fromBookingRequest),
+        ...appointments.map(ScheduleEntry.fromAppointment),
+      ]..sort((a, b) => a.time.compareTo(b.time));
+      scheduleError = null;
+    } catch (error) {
+      scheduleError = _cleanErrorMessage(error);
+    } finally {
+      isScheduleLoading = false;
       notifyListeners();
     }
   }
@@ -544,6 +717,7 @@ class ManagementSession extends ChangeNotifier {
             request,
       ];
       bookingRequestsError = null;
+      await fetchScheduleEntries();
     } catch (error) {
       bookingRequestsError = _cleanErrorMessage(error);
       rethrow;
@@ -562,6 +736,11 @@ class ManagementSession extends ChangeNotifier {
     bookingRequests = [];
     bookingRequestsError = null;
     isBookingRequestsLoading = false;
+    scheduleEntries = [];
+    scheduleError = null;
+    isScheduleLoading = false;
+    selectedScheduleBarberId = null;
+    scheduleAdminView = false;
     teamBarbers = [];
     errorMessage = null;
     notifyListeners();
@@ -739,6 +918,12 @@ class ManagementSession extends ChangeNotifier {
         'Não foi possível atualizar o pedido.',
       _ => message,
     };
+  }
+
+  String _dateOnly(DateTime value) {
+    final month = value.month.toString().padLeft(2, '0');
+    final day = value.day.toString().padLeft(2, '0');
+    return '${value.year}-$month-$day';
   }
 
   String _notesWithReason(String notes, String? reason) {
@@ -1283,6 +1468,13 @@ const _adminTabs = [
     child: _AdminDashboardPage(),
   ),
   _ManagementTab(
+    label: 'Agenda',
+    title: 'Agenda por barbeiro',
+    icon: Icons.calendar_month_outlined,
+    selectedIcon: Icons.calendar_month_rounded,
+    child: _BarberAgendaPage(adminView: true),
+  ),
+  _ManagementTab(
     label: 'Serviços',
     title: 'Cadastro de serviços',
     icon: Icons.design_services_outlined,
@@ -1390,42 +1582,201 @@ class _Header extends StatelessWidget {
 }
 
 class _BarberAgendaPage extends StatelessWidget {
-  const _BarberAgendaPage();
+  const _BarberAgendaPage({this.adminView = false});
+
+  final bool adminView;
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _MetricsGrid(
-          cards: [
-            _MetricData('Hoje', '8', Icons.calendar_today_rounded),
-            _MetricData('Comissão', 'R\$ 312', Icons.payments_rounded),
+    return Consumer<ManagementSession>(
+      builder: (context, session, _) {
+        if (session.scheduleAdminView != adminView) {
+          Future.microtask(() => session.setScheduleAdminView(adminView));
+        }
+        final entries = session.scheduleEntries;
+        final confirmedCount = entries
+            .where((entry) => entry.status == 'Aceito' || entry.status == 'Confirmado')
+            .length;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _MetricsGrid(
+              cards: [
+                _MetricData(
+                  'Hoje',
+                  '${entries.length}',
+                  Icons.calendar_today_rounded,
+                ),
+                _MetricData(
+                  'Confirmados',
+                  '$confirmedCount',
+                  Icons.event_available_rounded,
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            _ScheduleFilters(adminView: adminView),
+            const SizedBox(height: 22),
+            const _SectionTitle('Proximos horarios'),
+            const SizedBox(height: 12),
+            if (session.isScheduleLoading) ...[
+              const LinearProgressIndicator(color: SharedAppColors.orange),
+              const SizedBox(height: 12),
+            ],
+            if (session.scheduleError != null)
+              _InlineNotice(
+                icon: Icons.warning_amber_rounded,
+                title: 'Nao foi possivel carregar a agenda',
+                subtitle: session.scheduleError!,
+              )
+            else if (entries.isEmpty)
+              const _InlineNotice(
+                icon: Icons.event_busy_rounded,
+                title: 'Agenda vazia',
+                subtitle: 'Nenhum agendamento encontrado para esta data.',
+              )
+            else
+              for (final entry in entries)
+                _AppointmentTile(
+                  entry: entry,
+                  showBarber: adminView,
+                  onTap: () => _showScheduleDetails(context, entry),
+                ),
           ],
-        ),
-        SizedBox(height: 22),
-        _SectionTitle('Próximos horários'),
-        SizedBox(height: 12),
-        _AppointmentTile(
-          time: '09:00',
-          client: 'Marcos Lima',
-          service: 'Corte + barba',
-          status: 'Confirmado',
-        ),
-        _AppointmentTile(
-          time: '10:30',
-          client: 'João Pedro',
-          service: 'Corte premium',
-          status: 'Pendente',
-        ),
-        _AppointmentTile(
-          time: '13:00',
-          client: 'Lucas Almeida',
-          service: 'Barba completa',
-          status: 'Pago',
-        ),
-      ],
+        );
+      },
     );
+  }
+
+  void _showScheduleDetails(BuildContext context, ScheduleEntry entry) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                entry.client,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _RequestInfoRow(
+                icon: Icons.schedule_rounded,
+                label: 'Horario',
+                value: entry.time,
+              ),
+              _RequestInfoRow(
+                icon: Icons.content_cut_rounded,
+                label: 'Servico',
+                value: entry.service,
+              ),
+              _RequestInfoRow(
+                icon: Icons.badge_outlined,
+                label: 'Barbeiro',
+                value: entry.barber,
+              ),
+              _RequestInfoRow(
+                icon: Icons.info_outline_rounded,
+                label: 'Status',
+                value: entry.status,
+              ),
+              _RequestInfoRow(
+                icon: Icons.notes_rounded,
+                label: 'Obs.',
+                value: entry.notes,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ScheduleFilters extends StatelessWidget {
+  const _ScheduleFilters({required this.adminView});
+
+  final bool adminView;
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<ManagementSession>(
+      builder: (context, session, _) {
+        final date = session.selectedScheduleDate;
+        final days = List.generate(7, (index) {
+          final now = DateTime.now();
+          return DateTime(now.year, now.month, now.day + index);
+        });
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (adminView) ...[
+              DropdownButtonFormField<String?>(
+                value: session.selectedScheduleBarberId,
+                decoration: const InputDecoration(
+                  labelText: 'Barbeiro',
+                  prefixIcon: Icon(Icons.badge_outlined),
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+                items: [
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('Todos os barbeiros'),
+                  ),
+                  for (final barber in session.teamBarbers)
+                    DropdownMenuItem<String?>(
+                      value: barber.id,
+                      child: Text(barber.name),
+                    ),
+                ],
+                onChanged: (value) => session.selectScheduleBarber(value),
+              ),
+              const SizedBox(height: 12),
+            ],
+            SizedBox(
+              height: 46,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: days.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  final day = days[index];
+                  final selected = DateUtils.isSameDay(day, date);
+                  return ChoiceChip(
+                    label: Text(_dayLabel(day)),
+                    selected: selected,
+                    onSelected: (_) => session.selectScheduleDate(day),
+                    selectedColor: SharedAppColors.orange,
+                    backgroundColor: Colors.white,
+                    side: BorderSide.none,
+                    labelStyle: TextStyle(
+                      color: selected ? Colors.white : SharedAppColors.text,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  String _dayLabel(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return '$day/$month';
   }
 }
 
@@ -2239,27 +2590,33 @@ class _InlineNotice extends StatelessWidget {
 
 class _AppointmentTile extends StatelessWidget {
   const _AppointmentTile({
-    required this.time,
-    required this.client,
-    required this.service,
-    required this.status,
+    required this.entry,
+    required this.showBarber,
+    required this.onTap,
   });
 
-  final String time;
-  final String client;
-  final String service;
-  final String status;
+  final ScheduleEntry entry;
+  final bool showBarber;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return _SurfaceTile(
-      leading: _TimeBadge(time),
-      title: client,
-      subtitle: service,
-      trailing: Chip(
-        label: Text(status),
-        side: BorderSide.none,
-        backgroundColor: SharedAppColors.background,
+    final subtitle = showBarber
+        ? '${entry.service} - ${entry.barber}'
+        : entry.service;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: onTap,
+      child: _SurfaceTile(
+        leading: _TimeBadge(entry.time),
+        title: entry.client,
+        subtitle: subtitle,
+        trailing: Chip(
+          label: Text(entry.status),
+          side: BorderSide.none,
+          backgroundColor: SharedAppColors.background,
+        ),
       ),
     );
   }
