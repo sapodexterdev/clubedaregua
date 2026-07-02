@@ -735,7 +735,7 @@ class ManagementSession extends ChangeNotifier {
           .where((category) => category.id.isNotEmpty)
           .toList();
 
-      final countRows = await _getRestRows(
+      final appointmentRows = await _getRestRows(
         token,
         'appointments',
         query: {
@@ -743,11 +743,19 @@ class ManagementSession extends ChangeNotifier {
           'barber_shop_id': 'eq.$shopId',
         },
       );
-      final appointmentCounts = <String, int>{};
-      for (final row in countRows) {
+      final bookingRequestRows = await _getRestRows(
+        token,
+        'booking_requests',
+        query: {
+          'select': 'service_id',
+          'barber_shop_id': 'eq.$shopId',
+        },
+      );
+      final serviceUsageCounts = <String, int>{};
+      for (final row in [...appointmentRows, ...bookingRequestRows]) {
         final id = row['service_id']?.toString();
         if (id == null || id.isEmpty) continue;
-        appointmentCounts[id] = (appointmentCounts[id] ?? 0) + 1;
+        serviceUsageCounts[id] = (serviceUsageCounts[id] ?? 0) + 1;
       }
 
       final rows = await _getRestRows(
@@ -764,7 +772,7 @@ class ManagementSession extends ChangeNotifier {
           .map(
             (row) => ManagedService.fromMap(
               row,
-              appointmentCount: appointmentCounts[row['id']?.toString()] ?? 0,
+              appointmentCount: serviceUsageCounts[row['id']?.toString()] ?? 0,
             ),
           )
           .where((service) => service.id.isNotEmpty)
@@ -877,6 +885,39 @@ class ManagementSession extends ChangeNotifier {
       imageUrl: service.imageUrl,
       isActive: false,
     );
+  }
+
+  Future<void> deleteOrDeactivateService(ManagedService service) async {
+    if (service.appointmentCount > 0) {
+      await deactivateService(service);
+      return;
+    }
+
+    final token = _accessToken;
+    if (token == null) return;
+
+    isServicesLoading = true;
+    servicesError = null;
+    notifyListeners();
+
+    try {
+      await _deleteRestRows(
+        token,
+        'services',
+        query: {'id': 'eq.${service.id}'},
+      );
+      services = [
+        for (final item in services)
+          if (item.id != service.id) item,
+      ];
+      await fetchServiceCatalog();
+    } catch (error) {
+      servicesError = _cleanErrorMessage(error);
+      rethrow;
+    } finally {
+      isServicesLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> createTeamBarber({
@@ -1193,6 +1234,21 @@ class ManagementSession extends ChangeNotifier {
         .whereType<Map>()
         .map((row) => Map<String, dynamic>.from(row))
         .toList();
+  }
+
+  Future<void> _deleteRestRows(
+    String token,
+    String table, {
+    required Map<String, String> query,
+  }) async {
+    final uri = Uri.parse('${GestaoSupabaseConfig.url}/rest/v1/$table')
+        .replace(queryParameters: query);
+
+    final response = await http.delete(uri, headers: _restHeaders(token));
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw StateError('Supabase REST ${response.statusCode}: ${response.body}');
+    }
   }
 
   Map<String, String> _restHeaders(
@@ -2822,8 +2878,12 @@ class _ServiceFormState extends State<_ServiceForm> {
             if (_isEditing) ...[
               const SizedBox(height: 8),
               TextButton(
-                onPressed: _isSaving ? null : _confirmDeactivate,
-                child: const Text('Excluir servico'),
+                onPressed: _isSaving ? null : _confirmDeleteOrDeactivate,
+                child: Text(
+                  widget.service?.appointmentCount == 0
+                      ? 'Excluir servico'
+                      : 'Inativar servico',
+                ),
               ),
             ],
           ],
@@ -2909,17 +2969,20 @@ class _ServiceFormState extends State<_ServiceForm> {
     }
   }
 
-  Future<void> _confirmDeactivate() async {
+  Future<void> _confirmDeleteOrDeactivate() async {
     final service = widget.service;
     if (service == null) return;
     final session = context.read<ManagementSession>();
+    final canDelete = service.appointmentCount == 0;
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Excluir servico?'),
-        content: const Text(
-          'O servico sera inativado e podera ser reativado depois.',
+        title: Text(canDelete ? 'Excluir servico?' : 'Inativar servico?'),
+        content: Text(
+          canDelete
+              ? 'Este servico nao possui agendamentos e sera removido do banco.'
+              : 'Nao e possivel excluir este servico porque existem agendamentos feitos nele. Para preservar o historico, ele sera apenas inativado.',
         ),
         actions: [
           TextButton(
@@ -2932,7 +2995,7 @@ class _ServiceFormState extends State<_ServiceForm> {
               backgroundColor: SharedAppColors.orange,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Excluir'),
+            child: Text(canDelete ? 'Excluir' : 'Inativar'),
           ),
         ],
       ),
@@ -2942,11 +3005,13 @@ class _ServiceFormState extends State<_ServiceForm> {
 
     setState(() => _isSaving = true);
     try {
-      await session.deactivateService(service);
+      await session.deleteOrDeactivateService(service);
       if (!mounted) return;
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Servico inativado.')),
+        SnackBar(
+          content: Text(canDelete ? 'Servico excluido.' : 'Servico inativado.'),
+        ),
       );
     } catch (error) {
       if (!mounted) return;
