@@ -20,7 +20,7 @@ class ClubeDaReguaGestaoApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Clube da Régua Gestão',
+      title: 'Clube da RÃ©gua GestÃ£o',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -129,7 +129,7 @@ class BookingRequest {
 
   String get paymentMethod {
     final match = RegExp(r'Pagamento:\s*([^.]+)').firstMatch(notes);
-    return match?.group(1)?.trim() ?? 'Não informado';
+    return match?.group(1)?.trim() ?? 'NÃ£o informado';
   }
 
   String get formattedDate {
@@ -140,7 +140,7 @@ class BookingRequest {
     return '${parts[2]}/${parts[1]}/$year';
   }
 
-  String get formattedDateTime => '$formattedDate às $time';
+  String get formattedDateTime => '$formattedDate Ã s $time';
 
   String get observation {
     final value = notes
@@ -217,12 +217,13 @@ class TeamBarber {
   final double commissionPercent;
   final bool isActive;
 
-  String get role => commissionPercent >= 40 ? 'Barbeiro principal' : 'Barbeiro';
+  String get role =>
+      commissionPercent >= 40 ? 'Barbeiro principal' : 'Barbeiro';
 
   String get detail {
     final commission = commissionPercent.toStringAsFixed(0);
     final status = isActive ? 'agenda ativa' : 'inativo';
-    return '$commission% comissão - $status';
+    return '$commission% comissÃ£o - $status';
   }
 
   factory TeamBarber.fromMap(Map<String, dynamic> map) {
@@ -234,8 +235,7 @@ class TeamBarber {
       bio: map['bio']?.toString() ?? '',
       photoUrl: map['photo_url']?.toString() ?? '',
       startingPrice: (map['starting_price'] as num?)?.toDouble() ?? 0,
-      commissionPercent:
-          (map['commission_percent'] as num?)?.toDouble() ?? 0,
+      commissionPercent: (map['commission_percent'] as num?)?.toDouble() ?? 0,
       isActive: map['is_active'] != false,
     );
   }
@@ -358,7 +358,8 @@ class ManagedService {
   final bool isActive;
   final int appointmentCount;
 
-  String get formattedPrice => 'R\$ ${price.toStringAsFixed(2).replaceAll('.', ',')}';
+  String get formattedPrice =>
+      'R\$ ${price.toStringAsFixed(2).replaceAll('.', ',')}';
   String get durationLabel => '$durationMinutes min';
   String get statusLabel => isActive ? 'Ativo' : 'Inativo';
 
@@ -404,9 +405,151 @@ class ManagedService {
 
 enum ServiceStatusFilter { all, active, inactive }
 
+enum CustomerStatusFilter { all, active, inactive, recent }
+
 const _allBarbersDropdownValue = '__all_barbers__';
 const _allCategoriesDropdownValue = '__all_categories__';
 const _noCategoryDropdownValue = '__no_category__';
+
+class ManagedCustomer {
+  const ManagedCustomer({
+    required this.relationshipId,
+    required this.clientId,
+    required this.name,
+    required this.phone,
+    required this.email,
+    required this.avatarUrl,
+    required this.createdAt,
+    required this.firstSeenAt,
+    required this.lastAppointmentAt,
+    required this.notes,
+    required this.isBlocked,
+    required this.appointmentCount,
+    required this.favoriteBarber,
+  });
+
+  final String relationshipId;
+  final String clientId;
+  final String name;
+  final String phone;
+  final String email;
+  final String avatarUrl;
+  final DateTime? createdAt;
+  final DateTime? firstSeenAt;
+  final DateTime? lastAppointmentAt;
+  final String notes;
+  final bool isBlocked;
+  final int appointmentCount;
+  final String favoriteBarber;
+
+  bool get isActive => !isBlocked;
+  String get statusLabel => isActive ? 'Ativo' : 'Inativo';
+  String get lastAppointmentLabel => lastAppointmentAt == null
+      ? 'Sem atendimento'
+      : _formatDate(lastAppointmentAt!);
+  bool get isRecent {
+    final base = firstSeenAt ?? createdAt;
+    if (base == null) return false;
+    return base.isAfter(DateTime.now().subtract(const Duration(days: 30)));
+  }
+
+  factory ManagedCustomer.fromMap(
+    Map<String, dynamic> map, {
+    required int appointmentCount,
+    required String favoriteBarber,
+    DateTime? computedLastAppointmentAt,
+  }) {
+    return ManagedCustomer(
+      relationshipId: map['relationship_id']?.toString() ?? '',
+      clientId: map['client_id']?.toString() ?? '',
+      name: (map['full_name']?.toString().trim().isNotEmpty == true
+              ? map['full_name']?.toString()
+              : map['email']?.toString()) ??
+          'Cliente',
+      phone: map['phone']?.toString() ?? '',
+      email: map['email']?.toString() ?? '',
+      avatarUrl: map['avatar_url']?.toString() ?? '',
+      createdAt: _parseDateTime(map['profile_created_at']?.toString()),
+      firstSeenAt: _parseDateTime(map['first_seen_at']?.toString()),
+      lastAppointmentAt: computedLastAppointmentAt ??
+          _parseDateTime(map['last_appointment_at']?.toString()),
+      notes: map['notes']?.toString() ?? '',
+      isBlocked: map['is_blocked'] == true,
+      appointmentCount: appointmentCount,
+      favoriteBarber: favoriteBarber,
+    );
+  }
+
+  ManagedCustomer copyWith({
+    String? name,
+    String? phone,
+    String? notes,
+    bool? isBlocked,
+  }) {
+    return ManagedCustomer(
+      relationshipId: relationshipId,
+      clientId: clientId,
+      name: name ?? this.name,
+      phone: phone ?? this.phone,
+      email: email,
+      avatarUrl: avatarUrl,
+      createdAt: createdAt,
+      firstSeenAt: firstSeenAt,
+      lastAppointmentAt: lastAppointmentAt,
+      notes: notes ?? this.notes,
+      isBlocked: isBlocked ?? this.isBlocked,
+      appointmentCount: appointmentCount,
+      favoriteBarber: favoriteBarber,
+    );
+  }
+
+  static DateTime? _parseDateTime(String? value) {
+    if (value == null || value.isEmpty) return null;
+    return DateTime.tryParse(value);
+  }
+
+  static String _formatDate(DateTime value) {
+    final day = value.day.toString().padLeft(2, '0');
+    final month = value.month.toString().padLeft(2, '0');
+    final year = value.year.toString().padLeft(4, '0');
+    return '$day/$month/$year';
+  }
+}
+
+class CustomerAppointment {
+  const CustomerAppointment({
+    required this.id,
+    required this.clientId,
+    required this.date,
+    required this.service,
+    required this.barber,
+    required this.status,
+    required this.notes,
+  });
+
+  final String id;
+  final String clientId;
+  final DateTime? date;
+  final String service;
+  final String barber;
+  final String status;
+  final String notes;
+
+  String get dateLabel =>
+      date == null ? '-' : ManagedCustomer._formatDate(date!);
+
+  factory CustomerAppointment.fromMap(Map<String, dynamic> map) {
+    return CustomerAppointment(
+      id: map['id']?.toString() ?? '',
+      clientId: map['client_id']?.toString() ?? '',
+      date: ManagedCustomer._parseDateTime(map['starts_at']?.toString()),
+      service: map['service_name']?.toString() ?? 'Servico',
+      barber: map['barber_name']?.toString() ?? 'Barbeiro',
+      status: ScheduleEntry._statusLabel(map['status']?.toString() ?? ''),
+      notes: map['notes']?.toString() ?? '',
+    );
+  }
+}
 
 class ManagementSession extends ChangeNotifier {
   String? _accessToken;
@@ -423,16 +566,22 @@ class ManagementSession extends ChangeNotifier {
   List<ScheduleEntry> scheduleEntries = [];
   List<ManagedService> services = [];
   List<ServiceCategory> serviceCategories = [];
+  List<ManagedCustomer> customers = [];
+  List<CustomerAppointment> customerAppointments = [];
   bool isScheduleLoading = false;
   bool isServicesLoading = false;
+  bool isCustomersLoading = false;
   String? scheduleError;
   String? servicesError;
+  String? customersError;
   DateTime selectedScheduleDate = DateTime.now();
   String? selectedScheduleBarberId;
   bool scheduleAdminView = false;
   ServiceStatusFilter serviceStatusFilter = ServiceStatusFilter.all;
+  CustomerStatusFilter customerStatusFilter = CustomerStatusFilter.all;
   String? selectedServiceCategoryId;
   String serviceSearchQuery = '';
+  String customerSearchQuery = '';
 
   bool get isSignedIn => _accessToken != null;
 
@@ -480,6 +629,23 @@ class ManagementSession extends ChangeNotifier {
       });
   }
 
+  List<ManagedCustomer> get filteredCustomers {
+    final query = customerSearchQuery.trim().toLowerCase();
+    return customers.where((customer) {
+      final matchesStatus = switch (customerStatusFilter) {
+        CustomerStatusFilter.all => true,
+        CustomerStatusFilter.active => customer.isActive,
+        CustomerStatusFilter.inactive => !customer.isActive,
+        CustomerStatusFilter.recent => customer.isRecent,
+      };
+      final matchesSearch = query.isEmpty ||
+          customer.name.toLowerCase().contains(query) ||
+          customer.phone.toLowerCase().contains(query);
+      return matchesStatus && matchesSearch;
+    }).toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+  }
+
   Future<void> signIn(String emailValue, String password) async {
     if (!GestaoSupabaseConfig.isConfigured) {
       errorMessage = 'Configure SUPABASE_URL e SUPABASE_ANON_KEY.';
@@ -509,7 +675,7 @@ class ManagementSession extends ChangeNotifier {
       );
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw StateError('Login inválido ou usuário sem acesso.');
+        throw StateError('Login invÃ¡lido ou usuÃ¡rio sem acesso.');
       }
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -531,6 +697,7 @@ class ManagementSession extends ChangeNotifier {
     await fetchBookingRequests();
     await fetchTeamBarbers();
     await fetchServiceCatalog();
+    await fetchCustomers();
     await fetchScheduleEntries();
   }
 
@@ -561,7 +728,7 @@ class ManagementSession extends ChangeNotifier {
       );
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw StateError('Não foi possível carregar os pedidos.');
+        throw StateError('NÃ£o foi possÃ­vel carregar os pedidos.');
       }
 
       final rows = jsonDecode(response.body) as List<dynamic>;
@@ -709,6 +876,163 @@ class ManagementSession extends ChangeNotifier {
   void setServiceSearchQuery(String value) {
     serviceSearchQuery = value;
     notifyListeners();
+  }
+
+  void setCustomerStatusFilter(CustomerStatusFilter filter) {
+    customerStatusFilter = filter;
+    notifyListeners();
+  }
+
+  void setCustomerSearchQuery(String value) {
+    customerSearchQuery = value;
+    notifyListeners();
+  }
+
+  List<CustomerAppointment> appointmentsForCustomer(String clientId) {
+    return customerAppointments
+        .where((appointment) => appointment.clientId == clientId)
+        .toList()
+      ..sort((a, b) {
+        final aDate = a.date ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final bDate = b.date ?? DateTime.fromMillisecondsSinceEpoch(0);
+        return bDate.compareTo(aDate);
+      });
+  }
+
+  Future<void> fetchCustomers() async {
+    final token = _accessToken;
+    if (token == null) return;
+
+    isCustomersLoading = true;
+    customersError = null;
+    notifyListeners();
+
+    try {
+      final shopId = await _ensureBarberShopId(token);
+      final rows = await _getRestRows(
+        token,
+        'management_clients',
+        query: {
+          'select':
+              'relationship_id,barber_shop_id,client_id,first_seen_at,last_appointment_at,notes,is_blocked,email,user_is_active,full_name,phone,avatar_url,profile_created_at',
+          'barber_shop_id': 'eq.$shopId',
+          'order': 'full_name.asc',
+        },
+      );
+      final appointmentRows = await _getRestRows(
+        token,
+        'management_client_appointments',
+        query: {
+          'select':
+              'id,client_id,starts_at,status,notes,service_name,barber_name',
+          'barber_shop_id': 'eq.$shopId',
+          'order': 'starts_at.desc',
+        },
+      );
+      customerAppointments =
+          appointmentRows.map(CustomerAppointment.fromMap).toList();
+
+      final appointmentCounts = <String, int>{};
+      final barberCounts = <String, Map<String, int>>{};
+      final lastAppointments = <String, DateTime>{};
+      for (final appointment in customerAppointments) {
+        appointmentCounts[appointment.clientId] =
+            (appointmentCounts[appointment.clientId] ?? 0) + 1;
+        final byBarber =
+            barberCounts.putIfAbsent(appointment.clientId, () => {});
+        byBarber[appointment.barber] = (byBarber[appointment.barber] ?? 0) + 1;
+        final date = appointment.date;
+        if (date != null) {
+          final current = lastAppointments[appointment.clientId];
+          if (current == null || date.isAfter(current)) {
+            lastAppointments[appointment.clientId] = date;
+          }
+        }
+      }
+
+      customers = rows
+          .map((row) {
+            final clientId = row['client_id']?.toString() ?? '';
+            final favoriteBarber = _favoriteBarber(barberCounts[clientId]);
+            return ManagedCustomer.fromMap(
+              row,
+              appointmentCount: appointmentCounts[clientId] ?? 0,
+              favoriteBarber: favoriteBarber,
+              computedLastAppointmentAt: lastAppointments[clientId],
+            );
+          })
+          .where((customer) => customer.clientId.isNotEmpty)
+          .toList();
+      customersError = null;
+    } catch (error) {
+      customersError = _cleanErrorMessage(error);
+    } finally {
+      isCustomersLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> updateCustomer(
+    ManagedCustomer customer, {
+    required String name,
+    required String phone,
+    required String notes,
+    required bool isActive,
+  }) async {
+    final token = _accessToken;
+    if (token == null) return;
+
+    isCustomersLoading = true;
+    customersError = null;
+    notifyListeners();
+
+    try {
+      await _patchRestRows(
+        token,
+        'profiles',
+        query: {'user_id': 'eq.${customer.clientId}'},
+        data: {
+          'full_name': name.trim(),
+          'phone': phone.trim().isEmpty ? null : phone.trim(),
+        },
+      );
+      await _patchRestRows(
+        token,
+        'client_shop_relationships',
+        query: {'id': 'eq.${customer.relationshipId}'},
+        data: {
+          'notes': notes.trim().isEmpty ? null : notes.trim(),
+          'is_blocked': !isActive,
+        },
+      );
+
+      customers = [
+        for (final item in customers)
+          if (item.clientId == customer.clientId)
+            item.copyWith(
+              name: name.trim(),
+              phone: phone.trim(),
+              notes: notes.trim(),
+              isBlocked: !isActive,
+            )
+          else
+            item,
+      ];
+      customersError = null;
+    } catch (error) {
+      customersError = _cleanErrorMessage(error);
+      rethrow;
+    } finally {
+      isCustomersLoading = false;
+      notifyListeners();
+    }
+  }
+
+  String _favoriteBarber(Map<String, int>? counts) {
+    if (counts == null || counts.isEmpty) return 'Nao definido';
+    final entries = counts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return entries.first.key;
   }
 
   Future<void> fetchServiceCatalog() async {
@@ -1099,6 +1423,12 @@ class ManagementSession extends ChangeNotifier {
     serviceStatusFilter = ServiceStatusFilter.all;
     selectedServiceCategoryId = null;
     serviceSearchQuery = '';
+    customers = [];
+    customerAppointments = [];
+    customersError = null;
+    isCustomersLoading = false;
+    customerStatusFilter = CustomerStatusFilter.all;
+    customerSearchQuery = '';
     teamBarbers = [];
     errorMessage = null;
     notifyListeners();
@@ -1146,14 +1476,14 @@ class ManagementSession extends ChangeNotifier {
     );
 
     if (shops.isEmpty) {
-      throw StateError('Nenhuma barbearia disponível para este usuário.');
+      throw StateError('Nenhuma barbearia disponÃ­vel para este usuÃ¡rio.');
     }
 
     final shop = shops.first;
     _barberShopId = shop['id']?.toString();
     barberShopName = shop['name']?.toString();
     if (_barberShopId == null || _barberShopId!.isEmpty) {
-      throw StateError('Barbearia sem identificador válido.');
+      throw StateError('Barbearia sem identificador vÃ¡lido.');
     }
 
     return _barberShopId!;
@@ -1170,7 +1500,8 @@ class ManagementSession extends ChangeNotifier {
     final response = await http.get(uri, headers: _restHeaders(token));
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw StateError('Supabase REST ${response.statusCode}: ${response.body}');
+      throw StateError(
+          'Supabase REST ${response.statusCode}: ${response.body}');
     }
 
     final decoded = jsonDecode(response.body);
@@ -1196,7 +1527,8 @@ class ManagementSession extends ChangeNotifier {
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw StateError('Supabase REST ${response.statusCode}: ${response.body}');
+      throw StateError(
+          'Supabase REST ${response.statusCode}: ${response.body}');
     }
 
     final decoded = jsonDecode(response.body);
@@ -1224,7 +1556,8 @@ class ManagementSession extends ChangeNotifier {
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw StateError('Supabase REST ${response.statusCode}: ${response.body}');
+      throw StateError(
+          'Supabase REST ${response.statusCode}: ${response.body}');
     }
 
     final decoded = jsonDecode(response.body);
@@ -1247,7 +1580,8 @@ class ManagementSession extends ChangeNotifier {
     final response = await http.delete(uri, headers: _restHeaders(token));
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw StateError('Supabase REST ${response.statusCode}: ${response.body}');
+      throw StateError(
+          'Supabase REST ${response.statusCode}: ${response.body}');
     }
   }
 
@@ -1273,22 +1607,22 @@ class ManagementSession extends ChangeNotifier {
         message.contains('XMLHttpRequest') ||
         message.contains('SocketException') ||
         message.contains('ClientException')) {
-      return 'Sem internet ou Supabase indisponÃ­vel. Verifique sua conexÃ£o.';
+      return 'Sem internet ou Supabase indisponÃƒÂ­vel. Verifique sua conexÃƒÂ£o.';
     }
 
     return switch (message) {
       'Login invalido ou usuario sem acesso.' =>
-        'Login inválido ou usuário sem acesso.',
-      'Login inválido ou usuário sem acesso.' =>
-        'Login inválido ou usuário sem acesso.',
+        'Login invÃ¡lido ou usuÃ¡rio sem acesso.',
+      'Login invÃ¡lido ou usuÃ¡rio sem acesso.' =>
+        'Login invÃ¡lido ou usuÃ¡rio sem acesso.',
       'Nao foi possivel carregar pedidos.' =>
-        'Não foi possível carregar os pedidos.',
-      'Não foi possível carregar os pedidos.' =>
-        'Não foi possível carregar os pedidos.',
+        'NÃ£o foi possÃ­vel carregar os pedidos.',
+      'NÃ£o foi possÃ­vel carregar os pedidos.' =>
+        'NÃ£o foi possÃ­vel carregar os pedidos.',
       'Nao foi possivel atualizar o pedido.' =>
-        'Não foi possível atualizar o pedido.',
-      'Não foi possível atualizar o pedido.' =>
-        'Não foi possível atualizar o pedido.',
+        'NÃ£o foi possÃ­vel atualizar o pedido.',
+      'NÃ£o foi possÃ­vel atualizar o pedido.' =>
+        'NÃ£o foi possÃ­vel atualizar o pedido.',
       _ => message,
     };
   }
@@ -1350,13 +1684,13 @@ class _ManagementLoginScreenState extends State<ManagementLoginScreen> {
                   ),
                   const SizedBox(height: 18),
                   const Text(
-                    'Clube da Régua Gestão',
+                    'Clube da RÃ©gua GestÃ£o',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Entre para ver pedidos, agenda e operação da barbearia.',
+                    'Entre para ver pedidos, agenda e operaÃ§Ã£o da barbearia.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: SharedAppColors.muted),
                   ),
@@ -1461,7 +1795,7 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
     }
 
     if (password != confirmPassword) {
-      setState(() => _message = 'As senhas digitadas não conferem.');
+      setState(() => _message = 'As senhas digitadas nÃ£o conferem.');
       return;
     }
 
@@ -1558,7 +1892,8 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
   String _supabaseErrorMessage(http.Response response) {
     try {
       final body = jsonDecode(response.body) as Map<String, dynamic>;
-      final message = body['msg'] ?? body['message'] ?? body['error_description'];
+      final message =
+          body['msg'] ?? body['message'] ?? body['error_description'];
       if (message != null && message.toString().trim().isNotEmpty) {
         return message.toString();
       }
@@ -1566,7 +1901,7 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
       // Keep the fallback below when Supabase returns an empty or non-JSON body.
     }
 
-    return 'Não foi possível redefinir a senha. Gere um novo link e tente novamente.';
+    return 'NÃ£o foi possÃ­vel redefinir a senha. Gere um novo link e tente novamente.';
   }
 
   @override
@@ -1589,8 +1924,9 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
                     _isDone
                         ? Icons.check_circle_rounded
                         : Icons.lock_reset_rounded,
-                    color:
-                        _isDone ? Colors.green.shade700 : SharedAppColors.orange,
+                    color: _isDone
+                        ? Colors.green.shade700
+                        : SharedAppColors.orange,
                     size: 58,
                   ),
                   const SizedBox(height: 18),
@@ -1605,8 +1941,8 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
                   const SizedBox(height: 8),
                   Text(
                     _isDone
-                        ? 'Agora você já pode entrar com sua nova senha.'
-                        : 'Digite sua nova senha para acessar a gestão.',
+                        ? 'Agora vocÃª jÃ¡ pode entrar com sua nova senha.'
+                        : 'Digite sua nova senha para acessar a gestÃ£o.',
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: SharedAppColors.muted),
                   ),
@@ -1715,7 +2051,7 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
             icon: const Icon(Icons.refresh_rounded),
           ),
           IconButton(
-            tooltip: 'Notificações',
+            tooltip: 'NotificaÃ§Ãµes',
             onPressed: () {},
             icon: const Icon(Icons.notifications_none_rounded),
           ),
@@ -1790,7 +2126,7 @@ class _ManagementTab {
 const _barberTabs = [
   _ManagementTab(
     label: 'Pedidos',
-    title: 'Solicitações recebidas',
+    title: 'SolicitaÃ§Ãµes recebidas',
     icon: Icons.inbox_outlined,
     selectedIcon: Icons.inbox_rounded,
     child: _BookingRequestsPage(),
@@ -1803,7 +2139,7 @@ const _barberTabs = [
     child: _BarberAgendaPage(),
   ),
   _ManagementTab(
-    label: 'Horários',
+    label: 'HorÃ¡rios',
     title: 'Disponibilidade',
     icon: Icons.schedule_outlined,
     selectedIcon: Icons.schedule_rounded,
@@ -1817,8 +2153,8 @@ const _barberTabs = [
     child: _ClientsPage(),
   ),
   _ManagementTab(
-    label: 'Comissão',
-    title: 'Comissão e faturamento',
+    label: 'ComissÃ£o',
+    title: 'ComissÃ£o e faturamento',
     icon: Icons.payments_outlined,
     selectedIcon: Icons.payments_rounded,
     child: _CommissionPage(),
@@ -1828,7 +2164,7 @@ const _barberTabs = [
 const _adminTabs = [
   _ManagementTab(
     label: 'Pedidos',
-    title: 'Solicitações recebidas',
+    title: 'SolicitaÃ§Ãµes recebidas',
     icon: Icons.inbox_outlined,
     selectedIcon: Icons.inbox_rounded,
     child: _BookingRequestsPage(),
@@ -1848,8 +2184,8 @@ const _adminTabs = [
     child: _BarberAgendaPage(adminView: true),
   ),
   _ManagementTab(
-    label: 'Serviços',
-    title: 'Cadastro de serviços',
+    label: 'ServiÃ§os',
+    title: 'Cadastro de serviÃ§os',
     icon: Icons.design_services_outlined,
     selectedIcon: Icons.design_services_rounded,
     child: _ServicesPage(),
@@ -1944,8 +2280,8 @@ class _Header extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             isAdmin
-                ? 'Controle equipe, serviços, caixa e desempenho da unidade.'
-                : 'Confirme atendimentos, bloqueie horários e acompanhe sua comissão.',
+                ? 'Controle equipe, serviÃ§os, caixa e desempenho da unidade.'
+                : 'Confirme atendimentos, bloqueie horÃ¡rios e acompanhe sua comissÃ£o.',
             style: const TextStyle(color: Colors.white70, height: 1.35),
           ),
         ],
@@ -1968,7 +2304,8 @@ class _BarberAgendaPage extends StatelessWidget {
         }
         final entries = session.scheduleEntries;
         final confirmedCount = entries
-            .where((entry) => entry.status == 'Aceito' || entry.status == 'Confirmado')
+            .where((entry) =>
+                entry.status == 'Aceito' || entry.status == 'Confirmado')
             .length;
 
         return Column(
@@ -2191,7 +2528,8 @@ class _BookingRequestsPage extends StatelessWidget {
                   '$newCount',
                   Icons.mark_email_unread_rounded,
                 ),
-                _MetricData('Pedidos', '${requests.length}', Icons.today_rounded),
+                _MetricData(
+                    'Pedidos', '${requests.length}', Icons.today_rounded),
               ],
             ),
             const SizedBox(height: 22),
@@ -2204,7 +2542,7 @@ class _BookingRequestsPage extends StatelessWidget {
             if (session.bookingRequestsError != null)
               _InlineNotice(
                 icon: Icons.warning_amber_rounded,
-                title: 'Não foi possível carregar',
+                title: 'NÃ£o foi possÃ­vel carregar',
                 subtitle: session.bookingRequestsError!,
               )
             else if (requests.isEmpty)
@@ -2312,25 +2650,25 @@ class _AvailabilityPage extends StatelessWidget {
     return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionTitle('Horários disponíveis'),
+        _SectionTitle('HorÃ¡rios disponÃ­veis'),
         SizedBox(height: 12),
         _ScheduleTile(day: 'Segunda a sexta', hours: '09:00 - 18:00'),
-        _ScheduleTile(day: 'Sábado', hours: '09:00 - 14:00'),
+        _ScheduleTile(day: 'SÃ¡bado', hours: '09:00 - 14:00'),
         SizedBox(height: 22),
         _SectionTitle('Bloqueios'),
         SizedBox(height: 12),
         _BlockedTile(
-          title: 'Almoço estendido',
+          title: 'AlmoÃ§o estendido',
           detail: 'Hoje, 12:00 - 13:30',
         ),
         _BlockedTile(
-          title: 'Férias programadas',
-          detail: '12/08 até 18/08',
+          title: 'FÃ©rias programadas',
+          detail: '12/08 atÃ© 18/08',
         ),
         SizedBox(height: 22),
         _ActionPanel(
           title: 'Ajustar disponibilidade',
-          subtitle: 'Crie horários fixos, folgas ou bloqueios rápidos.',
+          subtitle: 'Crie horÃ¡rios fixos, folgas ou bloqueios rÃ¡pidos.',
           buttonLabel: 'Novo bloqueio',
           icon: Icons.event_busy_rounded,
         ),
@@ -2344,27 +2682,348 @@ class _ClientsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Consumer<ManagementSession>(
+      builder: (context, session, _) {
+        final customers = session.filteredCustomers;
+        final activeCount =
+            session.customers.where((customer) => customer.isActive).length;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _ActionPanel(
+              title: 'Clientes atendidos',
+              subtitle: '$activeCount cliente(s) ativo(s) na barbearia.',
+              buttonLabel: 'Atualizar',
+              icon: Icons.refresh_rounded,
+              onPressed: session.fetchCustomers,
+            ),
+            const SizedBox(height: 18),
+            _CustomerFilters(session: session),
+            const SizedBox(height: 18),
+            if (session.isCustomersLoading) ...[
+              const LinearProgressIndicator(color: SharedAppColors.orange),
+              const SizedBox(height: 12),
+            ],
+            if (session.customersError != null)
+              _InlineNotice(
+                icon: Icons.warning_amber_rounded,
+                title: 'Nao foi possivel carregar os clientes',
+                subtitle: session.customersError!,
+              )
+            else if (customers.isEmpty)
+              const _InlineNotice(
+                icon: Icons.people_alt_rounded,
+                title: 'Nenhum cliente encontrado',
+                subtitle: 'Ajuste os filtros ou aguarde novos agendamentos.',
+              )
+            else
+              for (final customer in customers)
+                _ClientTile(
+                  customer: customer,
+                  onTap: () => _openCustomerDetails(context, customer),
+                ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _openCustomerDetails(
+    BuildContext context,
+    ManagedCustomer customer,
+  ) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.white,
+      builder: (_) => ChangeNotifierProvider.value(
+        value: context.read<ManagementSession>(),
+        child: _CustomerDetailsSheet(customer: customer),
+      ),
+    );
+  }
+}
+
+// ignore: unused_element
+class _UnusedLegacyClientsPage extends StatelessWidget {
+  const _UnusedLegacyClientsPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox.shrink();
+  }
+}
+
+class _CustomerFilters extends StatelessWidget {
+  const _CustomerFilters({required this.session});
+
+  final ManagementSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
       children: [
-        _SearchBox(hint: 'Buscar cliente'),
-        SizedBox(height: 18),
-        _ClientTile(
-          name: 'Marcos Lima',
-          detail: '12 visitas - último corte hoje',
-          points: '920 pts',
+        TextField(
+          onChanged: session.setCustomerSearchQuery,
+          decoration: InputDecoration(
+            hintText: 'Buscar por nome ou telefone',
+            prefixIcon: const Icon(Icons.search_rounded),
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(18),
+              borderSide: BorderSide.none,
+            ),
+          ),
         ),
-        _ClientTile(
-          name: 'João Pedro',
-          detail: '5 visitas - prefere corte baixo',
-          points: '410 pts',
-        ),
-        _ClientTile(
-          name: 'Lucas Almeida',
-          detail: '8 visitas - barba quinzenal',
-          points: '680 pts',
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 44,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              _FilterChipButton(
+                label: 'Todos',
+                selected:
+                    session.customerStatusFilter == CustomerStatusFilter.all,
+                onSelected: () =>
+                    session.setCustomerStatusFilter(CustomerStatusFilter.all),
+              ),
+              _FilterChipButton(
+                label: 'Ativos',
+                selected:
+                    session.customerStatusFilter == CustomerStatusFilter.active,
+                onSelected: () => session
+                    .setCustomerStatusFilter(CustomerStatusFilter.active),
+              ),
+              _FilterChipButton(
+                label: 'Inativos',
+                selected: session.customerStatusFilter ==
+                    CustomerStatusFilter.inactive,
+                onSelected: () => session
+                    .setCustomerStatusFilter(CustomerStatusFilter.inactive),
+              ),
+              _FilterChipButton(
+                label: 'Novos 30 dias',
+                selected:
+                    session.customerStatusFilter == CustomerStatusFilter.recent,
+                onSelected: () => session
+                    .setCustomerStatusFilter(CustomerStatusFilter.recent),
+              ),
+            ],
+          ),
         ),
       ],
+    );
+  }
+}
+
+class _CustomerDetailsSheet extends StatefulWidget {
+  const _CustomerDetailsSheet({required this.customer});
+
+  final ManagedCustomer customer;
+
+  @override
+  State<_CustomerDetailsSheet> createState() => _CustomerDetailsSheetState();
+}
+
+class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameController;
+  late final TextEditingController _phoneController;
+  late final TextEditingController _notesController;
+  late bool _isActive;
+  var _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.customer.name);
+    _phoneController = TextEditingController(text: widget.customer.phone);
+    _notesController = TextEditingController(text: widget.customer.notes);
+    _isActive = widget.customer.isActive;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final session = context.watch<ManagementSession>();
+    final customer = session.customers.firstWhere(
+      (item) => item.clientId == widget.customer.clientId,
+      orElse: () => widget.customer,
+    );
+    final appointments = session.appointmentsForCustomer(customer.clientId);
+    final bottomPadding = MediaQuery.viewInsetsOf(context).bottom + 20;
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(20, 20, 20, bottomPadding),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    customer.name,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: _isSaving ? null : () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Center(child: _CustomerAvatar(customer: customer, radius: 34)),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                labelText: 'Nome',
+                prefixIcon: Icon(Icons.person_outline_rounded),
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Informe o nome do cliente.';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                labelText: 'Telefone',
+                prefixIcon: Icon(Icons.phone_outlined),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _RequestInfoRow(
+              icon: Icons.mail_outline_rounded,
+              label: 'Email',
+              value: customer.email,
+            ),
+            _RequestInfoRow(
+              icon: Icons.event_available_rounded,
+              label: 'Cadastro',
+              value: customer.firstSeenAt == null
+                  ? '-'
+                  : ManagedCustomer._formatDate(customer.firstSeenAt!),
+            ),
+            _RequestInfoRow(
+              icon: Icons.content_cut_rounded,
+              label: 'Favorito',
+              value: customer.favoriteBarber,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _notesController,
+              minLines: 2,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                labelText: 'Observacoes internas',
+                prefixIcon: Icon(Icons.notes_rounded),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _isActive,
+              activeColor: SharedAppColors.orange,
+              onChanged: _isSaving
+                  ? null
+                  : (value) => setState(() => _isActive = value),
+              title: const Text('Cliente ativo'),
+              subtitle: const Text('Clientes inativos ficam filtraveis.'),
+            ),
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: _isSaving ? null : () => _save(customer),
+              style: FilledButton.styleFrom(
+                backgroundColor: SharedAppColors.orange,
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(52),
+              ),
+              child: Text(_isSaving ? 'Salvando...' : 'Salvar'),
+            ),
+            const SizedBox(height: 22),
+            const _SectionTitle('Historico de agendamentos'),
+            const SizedBox(height: 12),
+            if (appointments.isEmpty)
+              const _InlineNotice(
+                icon: Icons.event_busy_rounded,
+                title: 'Sem historico',
+                subtitle: 'Nenhum atendimento registrado para este cliente.',
+              )
+            else
+              for (final appointment in appointments)
+                _CustomerAppointmentTile(appointment: appointment),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _save(ManagedCustomer customer) async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSaving = true);
+    try {
+      await context.read<ManagementSession>().updateCustomer(
+            customer,
+            name: _nameController.text,
+            phone: _phoneController.text,
+            notes: _notesController.text,
+            isActive: _isActive,
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cliente salvo com sucesso.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+}
+
+class _CustomerAppointmentTile extends StatelessWidget {
+  const _CustomerAppointmentTile({required this.appointment});
+
+  final CustomerAppointment appointment;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SurfaceTile(
+      leading: const _IconBadge(Icons.event_available_rounded),
+      title: appointment.service,
+      subtitle: '${appointment.barber} - ${appointment.dateLabel}',
+      trailing: Chip(
+        label: Text(appointment.status),
+        side: BorderSide.none,
+        backgroundColor: SharedAppColors.background,
+      ),
     );
   }
 }
@@ -2380,21 +3039,22 @@ class _CommissionPage extends StatelessWidget {
         _MetricsGrid(
           cards: [
             _MetricData('Semana', 'R\$ 1.780', Icons.trending_up_rounded),
-            _MetricData('Comissão', 'R\$ 712', Icons.account_balance_wallet_rounded),
+            _MetricData(
+                'ComissÃ£o', 'R\$ 712', Icons.account_balance_wallet_rounded),
           ],
         ),
         SizedBox(height: 22),
         _SectionTitle('Resumo'),
         SizedBox(height: 12),
         _InsightTile(
-          title: 'Atendimentos concluídos',
+          title: 'Atendimentos concluÃ­dos',
           value: '31',
-          subtitle: 'Ticket médio de R\$ 57',
+          subtitle: 'Ticket mÃ©dio de R\$ 57',
         ),
         _InsightTile(
-          title: 'Serviço mais feito',
+          title: 'ServiÃ§o mais feito',
           value: 'Corte + barba',
-          subtitle: '14 atendimentos no período',
+          subtitle: '14 atendimentos no perÃ­odo',
         ),
       ],
     );
@@ -2424,14 +3084,14 @@ class _AdminDashboardPage extends StatelessWidget {
           subtitle: '18 atendimentos esta semana',
         ),
         _InsightTile(
-          title: 'Serviço mais vendido',
+          title: 'ServiÃ§o mais vendido',
           value: 'Corte + barba',
           subtitle: '34% dos agendamentos',
         ),
         _InsightTile(
           title: 'Caixa do dia',
           value: 'R\$ 1.240',
-          subtitle: 'PIX, dinheiro e cartão',
+          subtitle: 'PIX, dinheiro e cartÃ£o',
         ),
       ],
     );
@@ -2530,9 +3190,9 @@ class _UnusedLegacyServicesPageSnapshot extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _ActionPanel(
-          title: 'Catálogo de serviços',
-          subtitle: 'Cadastre preços, duração e comissão por serviço.',
-          buttonLabel: 'Novo serviço',
+          title: 'CatÃ¡logo de serviÃ§os',
+          subtitle: 'Cadastre preÃ§os, duraÃ§Ã£o e comissÃ£o por serviÃ§o.',
+          buttonLabel: 'Novo serviÃ§o',
           icon: Icons.add_circle_rounded,
         ),
         SizedBox(height: 18),
@@ -2591,8 +3251,8 @@ class _ServiceFilters extends StatelessWidget {
                 label: 'Inativos',
                 selected:
                     session.serviceStatusFilter == ServiceStatusFilter.inactive,
-                onSelected: () =>
-                    session.setServiceStatusFilter(ServiceStatusFilter.inactive),
+                onSelected: () => session
+                    .setServiceStatusFilter(ServiceStatusFilter.inactive),
               ),
             ],
           ),
@@ -2627,7 +3287,9 @@ class _ServiceFilters extends StatelessWidget {
 
   String _validCategoryFilterValue(ManagementSession session) {
     final selected = session.selectedServiceCategoryId;
-    if (selected == null || selected.isEmpty) return _allCategoriesDropdownValue;
+    if (selected == null || selected.isEmpty) {
+      return _allCategoriesDropdownValue;
+    }
     final exists =
         session.serviceCategories.any((category) => category.id == selected);
     return exists ? selected : _allCategoriesDropdownValue;
@@ -2850,7 +3512,8 @@ class _ServiceFormState extends State<_ServiceForm> {
               enabled: false,
               decoration: const InputDecoration(
                 labelText: 'Cor de identificacao',
-                helperText: 'Preparado para integrar quando houver coluna no banco.',
+                helperText:
+                    'Preparado para integrar quando houver coluna no banco.',
                 prefixIcon: Icon(Icons.palette_outlined),
               ),
             ),
@@ -2890,7 +3553,9 @@ class _ServiceFormState extends State<_ServiceForm> {
 
   String? _validatePrice(String? value) {
     final parsed = _parseMoney(value);
-    if (parsed == null || parsed <= 0) return 'Informe um preco maior que zero.';
+    if (parsed == null || parsed <= 0) {
+      return 'Informe um preco maior que zero.';
+    }
     return null;
   }
 
@@ -2912,7 +3577,8 @@ class _ServiceFormState extends State<_ServiceForm> {
     return exists ? selected : _noCategoryDropdownValue;
   }
 
-  List<ServiceCategory> _uniqueFormCategories(List<ServiceCategory> categories) {
+  List<ServiceCategory> _uniqueFormCategories(
+      List<ServiceCategory> categories) {
     final seen = <String>{};
     return [
       for (final category in categories)
@@ -3049,7 +3715,7 @@ class _TeamPage extends StatelessWidget {
             if (session.errorMessage != null)
               _InlineNotice(
                 icon: Icons.warning_amber_rounded,
-                title: 'Não foi possível carregar a equipe',
+                title: 'NÃ£o foi possÃ­vel carregar a equipe',
                 subtitle: session.errorMessage!,
               )
             else if (session.teamBarbers.isEmpty)
@@ -3097,7 +3763,7 @@ class LegacyTeamPage extends StatelessWidget {
       children: [
         _ActionPanel(
           title: 'Equipe da unidade',
-          subtitle: 'Gerencie barbeiros, permissões e percentuais.',
+          subtitle: 'Gerencie barbeiros, permissÃµes e percentuais.',
           buttonLabel: 'Novo barbeiro',
           icon: Icons.person_add_alt_1_rounded,
         ),
@@ -3105,16 +3771,16 @@ class LegacyTeamPage extends StatelessWidget {
         _TeamTile(
           name: 'Barbeiro demo',
           role: 'Barbeiro principal',
-          detail: '40% comissão - agenda ativa',
+          detail: '40% comissÃ£o - agenda ativa',
         ),
         _TeamTile(
           name: 'Ricardo Anderson',
           role: 'Barbeiro',
-          detail: '35% comissão - agenda ativa',
+          detail: '35% comissÃ£o - agenda ativa',
         ),
         _TeamTile(
           name: 'Camila Rocha',
-          role: 'Recepção',
+          role: 'RecepÃ§Ã£o',
           detail: 'Acesso a agenda e caixa',
         ),
       ],
@@ -3242,7 +3908,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     decoration: const InputDecoration(
-                      labelText: 'Preço inicial',
+                      labelText: 'PreÃ§o inicial',
                       prefixIcon: Icon(Icons.attach_money),
                     ),
                     validator: _validateMoney,
@@ -3255,7 +3921,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     decoration: const InputDecoration(
-                      labelText: 'Comissão %',
+                      labelText: 'ComissÃ£o %',
                       prefixIcon: Icon(Icons.percent),
                     ),
                     validator: _validateCommission,
@@ -3299,7 +3965,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
 
   String? _validateMoney(String? value) {
     final parsed = _parseNumber(value);
-    if (parsed == null || parsed < 0) return 'Valor inválido.';
+    if (parsed == null || parsed < 0) return 'Valor invÃ¡lido.';
     return null;
   }
 
@@ -3384,20 +4050,20 @@ class _CashPage extends StatelessWidget {
         _MetricsGrid(
           cards: [
             _MetricData('Entradas', 'R\$ 1.240', Icons.south_west_rounded),
-            _MetricData('Saídas', 'R\$ 180', Icons.north_east_rounded),
+            _MetricData('SaÃ­das', 'R\$ 180', Icons.north_east_rounded),
           ],
         ),
         SizedBox(height: 22),
         _SectionTitle('Movimentos de caixa'),
         SizedBox(height: 12),
         _CashMovementTile(title: 'PIX - Marcos Lima', value: '+ R\$ 85'),
-        _CashMovementTile(title: 'Dinheiro - João Pedro', value: '+ R\$ 55'),
+        _CashMovementTile(title: 'Dinheiro - JoÃ£o Pedro', value: '+ R\$ 55'),
         _CashMovementTile(title: 'Compra de pomada', value: '- R\$ 180'),
         SizedBox(height: 22),
-        _SectionTitle('Estoque crítico'),
+        _SectionTitle('Estoque crÃ­tico'),
         SizedBox(height: 12),
         _StockTile(name: 'Pomada modeladora', quantity: '3 un'),
-        _StockTile(name: 'Lâmina descartável', quantity: '18 un'),
+        _StockTile(name: 'LÃ¢mina descartÃ¡vel', quantity: '18 un'),
       ],
     );
   }
@@ -3452,7 +4118,8 @@ class _MetricCard extends StatelessWidget {
             style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 4),
-          Text(data.label, style: const TextStyle(color: SharedAppColors.muted)),
+          Text(data.label,
+              style: const TextStyle(color: SharedAppColors.muted)),
         ],
       ),
     );
@@ -3473,6 +4140,7 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _SearchBox extends StatelessWidget {
   const _SearchBox({required this.hint});
 
@@ -3522,7 +4190,8 @@ class _InlineNotice extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
+                Text(title,
+                    style: const TextStyle(fontWeight: FontWeight.w900)),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
@@ -3550,9 +4219,8 @@ class _AppointmentTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final subtitle = showBarber
-        ? '${entry.service} - ${entry.barber}'
-        : entry.service;
+    final subtitle =
+        showBarber ? '${entry.service} - ${entry.barber}' : entry.service;
 
     return InkWell(
       borderRadius: BorderRadius.circular(20),
@@ -3590,7 +4258,8 @@ class _BookingRequestTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final status = request.status;
     final isClosed = status == 'converted' || status == 'cancelled';
-    final wasDeclined = status == 'cancelled' && request.notes.contains('Motivo:');
+    final wasDeclined =
+        status == 'cancelled' && request.notes.contains('Motivo:');
     final statusLabel = switch (status) {
       'contacted' => 'Contatado',
       'converted' => 'Aceito',
@@ -3844,39 +4513,80 @@ class _BlockedTile extends StatelessWidget {
       leading: const _IconBadge(Icons.block_rounded),
       title: title,
       subtitle: detail,
-      trailing: const Icon(Icons.more_horiz_rounded, color: SharedAppColors.muted),
+      trailing:
+          const Icon(Icons.more_horiz_rounded, color: SharedAppColors.muted),
     );
   }
 }
 
 class _ClientTile extends StatelessWidget {
   const _ClientTile({
-    required this.name,
-    required this.detail,
-    required this.points,
+    required this.customer,
+    required this.onTap,
   });
 
-  final String name;
-  final String detail;
-  final String points;
+  final ManagedCustomer customer;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return _SurfaceTile(
-      leading: const CircleAvatar(
-        radius: 25,
-        backgroundColor: SharedAppColors.orange,
-        child: Icon(Icons.person_rounded, color: Colors.white),
-      ),
-      title: name,
-      subtitle: detail,
-      trailing: Text(
-        points,
-        style: const TextStyle(
-          color: SharedAppColors.orange,
-          fontWeight: FontWeight.w900,
+    final statusColor =
+        customer.isActive ? Colors.green.shade700 : Colors.red.shade700;
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: onTap,
+      child: _SurfaceTile(
+        leading: _CustomerAvatar(customer: customer),
+        title: customer.name,
+        subtitle:
+            '${customer.phone.isEmpty ? 'Sem telefone' : customer.phone} - Ultimo: ${customer.lastAppointmentLabel}',
+        trailing: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              '${customer.appointmentCount} ag.',
+              style: const TextStyle(
+                color: SharedAppColors.orange,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              customer.statusLabel,
+              style: TextStyle(
+                color: statusColor,
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+              ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+}
+
+class _CustomerAvatar extends StatelessWidget {
+  const _CustomerAvatar({
+    required this.customer,
+    this.radius = 25,
+  });
+
+  final ManagedCustomer customer;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor:
+          customer.isActive ? SharedAppColors.orange : SharedAppColors.muted,
+      backgroundImage:
+          customer.avatarUrl.isEmpty ? null : NetworkImage(customer.avatarUrl),
+      child: customer.avatarUrl.isEmpty
+          ? const Icon(Icons.person_rounded, color: Colors.white)
+          : null,
     );
   }
 }
@@ -3952,7 +4662,7 @@ class _TeamTile extends StatelessWidget {
         child: Icon(Icons.person_rounded, color: Colors.white),
       ),
       title: name,
-      subtitle: '$role • $detail',
+      subtitle: '$role â€¢ $detail',
       trailing: const Icon(Icons.chevron_right_rounded),
     );
   }
@@ -4005,7 +4715,7 @@ class _CashMovementTile extends StatelessWidget {
         isPositive ? Icons.south_west_rounded : Icons.north_east_rounded,
       ),
       title: title,
-      subtitle: isPositive ? 'Entrada' : 'Saída',
+      subtitle: isPositive ? 'Entrada' : 'SaÃ­da',
       trailing: Text(
         value,
         style: TextStyle(
@@ -4028,7 +4738,7 @@ class _StockTile extends StatelessWidget {
     return _SurfaceTile(
       leading: const _IconBadge(Icons.inventory_2_rounded),
       title: name,
-      subtitle: 'Reposição recomendada',
+      subtitle: 'ReposiÃ§Ã£o recomendada',
       trailing: Text(
         quantity,
         style: const TextStyle(fontWeight: FontWeight.w900),
@@ -4053,7 +4763,7 @@ class _InsightTile extends StatelessWidget {
     return _SurfaceTile(
       leading: const _IconBadge(Icons.insights_rounded),
       title: value,
-      subtitle: '$title • $subtitle',
+      subtitle: '$title â€¢ $subtitle',
     );
   }
 }
@@ -4089,7 +4799,8 @@ class _ActionPanel extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
+                Text(title,
+                    style: const TextStyle(fontWeight: FontWeight.w900)),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
@@ -4144,7 +4855,8 @@ class _SurfaceTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
+                Text(title,
+                    style: const TextStyle(fontWeight: FontWeight.w900)),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
