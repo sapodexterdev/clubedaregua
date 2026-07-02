@@ -806,31 +806,26 @@ class _ManagementLoginScreenState extends State<ManagementLoginScreen> {
                   TextField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
-                    cursorColor: SharedAppColors.orange,
-                    style: const TextStyle(color: SharedAppColors.text),
+                    cursorColor: Colors.white,
+                    style: const TextStyle(color: Colors.white),
                     decoration: const InputDecoration(
                       labelText: 'E-mail',
-                      labelStyle: TextStyle(color: SharedAppColors.muted),
+                      labelStyle: TextStyle(color: Colors.white70),
                       prefixIcon: Icon(Icons.mail_outline_rounded),
-                      prefixIconColor: SharedAppColors.muted,
-                      filled: true,
-                      fillColor: Colors.white,
+                      prefixIconColor: Colors.white70,
                     ),
                   ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: _passwordController,
                     obscureText: !_showPassword,
-                    cursorColor: SharedAppColors.orange,
-                    style: const TextStyle(color: SharedAppColors.text),
+                    cursorColor: Colors.white,
+                    style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: 'Senha',
-                      labelStyle:
-                          const TextStyle(color: SharedAppColors.muted),
+                      labelStyle: const TextStyle(color: Colors.white70),
                       prefixIcon: const Icon(Icons.lock_outline_rounded),
-                      prefixIconColor: SharedAppColors.muted,
-                      filled: true,
-                      fillColor: Colors.white,
+                      prefixIconColor: Colors.white70,
                       suffixIcon: TextButton(
                         onPressed: () => setState(
                           () => _showPassword = !_showPassword,
