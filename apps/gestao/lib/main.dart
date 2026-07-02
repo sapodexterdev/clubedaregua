@@ -310,6 +310,100 @@ class ScheduleEntry {
   }
 }
 
+class ServiceCategory {
+  const ServiceCategory({
+    required this.id,
+    required this.name,
+    required this.isActive,
+    required this.sortOrder,
+  });
+
+  final String id;
+  final String name;
+  final bool isActive;
+  final int sortOrder;
+
+  factory ServiceCategory.fromMap(Map<String, dynamic> map) {
+    return ServiceCategory(
+      id: map['id']?.toString() ?? '',
+      name: map['name']?.toString() ?? 'Categoria',
+      isActive: map['is_active'] == true,
+      sortOrder: int.tryParse(map['sort_order']?.toString() ?? '') ?? 0,
+    );
+  }
+}
+
+class ManagedService {
+  const ManagedService({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.categoryId,
+    required this.categoryName,
+    required this.price,
+    required this.durationMinutes,
+    required this.imageUrl,
+    required this.isActive,
+    required this.appointmentCount,
+  });
+
+  final String id;
+  final String name;
+  final String description;
+  final String? categoryId;
+  final String categoryName;
+  final double price;
+  final int durationMinutes;
+  final String imageUrl;
+  final bool isActive;
+  final int appointmentCount;
+
+  String get formattedPrice => 'R\$ ${price.toStringAsFixed(2).replaceAll('.', ',')}';
+  String get durationLabel => '$durationMinutes min';
+  String get statusLabel => isActive ? 'Ativo' : 'Inativo';
+
+  factory ManagedService.fromMap(
+    Map<String, dynamic> map, {
+    int appointmentCount = 0,
+  }) {
+    final category = map['service_categories'];
+    return ManagedService(
+      id: map['id']?.toString() ?? '',
+      name: map['name']?.toString() ?? 'Servico',
+      description: map['description']?.toString() ?? '',
+      categoryId: map['category_id']?.toString(),
+      categoryName: category is Map
+          ? category['name']?.toString() ?? 'Sem categoria'
+          : 'Sem categoria',
+      price: double.tryParse(map['price']?.toString() ?? '') ?? 0,
+      durationMinutes:
+          int.tryParse(map['duration_minutes']?.toString() ?? '') ?? 30,
+      imageUrl: map['image_url']?.toString() ?? '',
+      isActive: map['is_active'] == true,
+      appointmentCount: appointmentCount,
+    );
+  }
+
+  ManagedService copyWith({
+    int? appointmentCount,
+  }) {
+    return ManagedService(
+      id: id,
+      name: name,
+      description: description,
+      categoryId: categoryId,
+      categoryName: categoryName,
+      price: price,
+      durationMinutes: durationMinutes,
+      imageUrl: imageUrl,
+      isActive: isActive,
+      appointmentCount: appointmentCount ?? this.appointmentCount,
+    );
+  }
+}
+
+enum ServiceStatusFilter { all, active, inactive }
+
 class ManagementSession extends ChangeNotifier {
   String? _accessToken;
   String? _userId;
@@ -323,11 +417,18 @@ class ManagementSession extends ChangeNotifier {
   List<BookingRequest> bookingRequests = [];
   List<TeamBarber> teamBarbers = [];
   List<ScheduleEntry> scheduleEntries = [];
+  List<ManagedService> services = [];
+  List<ServiceCategory> serviceCategories = [];
   bool isScheduleLoading = false;
+  bool isServicesLoading = false;
   String? scheduleError;
+  String? servicesError;
   DateTime selectedScheduleDate = DateTime.now();
   String? selectedScheduleBarberId;
   bool scheduleAdminView = false;
+  ServiceStatusFilter serviceStatusFilter = ServiceStatusFilter.all;
+  String? selectedServiceCategoryId;
+  String serviceSearchQuery = '';
 
   bool get isSignedIn => _accessToken != null;
 
@@ -352,6 +453,27 @@ class ManagementSession extends ChangeNotifier {
       if (barber.id == id) return barber;
     }
     return null;
+  }
+
+  List<ManagedService> get filteredServices {
+    final query = serviceSearchQuery.trim().toLowerCase();
+    return services.where((service) {
+      final matchesStatus = switch (serviceStatusFilter) {
+        ServiceStatusFilter.all => true,
+        ServiceStatusFilter.active => service.isActive,
+        ServiceStatusFilter.inactive => !service.isActive,
+      };
+      final matchesCategory = selectedServiceCategoryId == null ||
+          selectedServiceCategoryId == service.categoryId;
+      final matchesSearch =
+          query.isEmpty || service.name.toLowerCase().contains(query);
+      return matchesStatus && matchesCategory && matchesSearch;
+    }).toList()
+      ..sort((a, b) {
+        final status = b.isActive.toString().compareTo(a.isActive.toString());
+        if (status != 0) return status;
+        return a.name.compareTo(b.name);
+      });
   }
 
   Future<void> signIn(String emailValue, String password) async {
@@ -404,6 +526,7 @@ class ManagementSession extends ChangeNotifier {
   Future<void> refreshManagementData() async {
     await fetchBookingRequests();
     await fetchTeamBarbers();
+    await fetchServiceCatalog();
     await fetchScheduleEntries();
   }
 
@@ -567,6 +690,189 @@ class ManagementSession extends ChangeNotifier {
       isScheduleLoading = false;
       notifyListeners();
     }
+  }
+
+  void setServiceStatusFilter(ServiceStatusFilter filter) {
+    serviceStatusFilter = filter;
+    notifyListeners();
+  }
+
+  void setServiceCategoryFilter(String? categoryId) {
+    selectedServiceCategoryId = categoryId;
+    notifyListeners();
+  }
+
+  void setServiceSearchQuery(String value) {
+    serviceSearchQuery = value;
+    notifyListeners();
+  }
+
+  Future<void> fetchServiceCatalog() async {
+    final token = _accessToken;
+    if (token == null) return;
+
+    isServicesLoading = true;
+    servicesError = null;
+    notifyListeners();
+
+    try {
+      final shopId = await _ensureBarberShopId(token);
+      final categories = await _getRestRows(
+        token,
+        'service_categories',
+        query: {
+          'select': 'id,name,is_active,sort_order',
+          'barber_shop_id': 'eq.$shopId',
+          'order': 'sort_order.asc,name.asc',
+        },
+      );
+      serviceCategories = categories
+          .map(ServiceCategory.fromMap)
+          .where((category) => category.id.isNotEmpty)
+          .toList();
+
+      final countRows = await _getRestRows(
+        token,
+        'appointments',
+        query: {
+          'select': 'service_id',
+          'barber_shop_id': 'eq.$shopId',
+        },
+      );
+      final appointmentCounts = <String, int>{};
+      for (final row in countRows) {
+        final id = row['service_id']?.toString();
+        if (id == null || id.isEmpty) continue;
+        appointmentCounts[id] = (appointmentCounts[id] ?? 0) + 1;
+      }
+
+      final rows = await _getRestRows(
+        token,
+        'services',
+        query: {
+          'select':
+              'id,category_id,name,description,duration_minutes,price,image_url,is_active,service_categories(name)',
+          'barber_shop_id': 'eq.$shopId',
+          'order': 'name.asc',
+        },
+      );
+      services = rows
+          .map(
+            (row) => ManagedService.fromMap(
+              row,
+              appointmentCount: appointmentCounts[row['id']?.toString()] ?? 0,
+            ),
+          )
+          .where((service) => service.id.isNotEmpty)
+          .toList();
+      servicesError = null;
+    } catch (error) {
+      servicesError = _cleanErrorMessage(error);
+    } finally {
+      isServicesLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> createService({
+    required String name,
+    required String description,
+    required String? categoryId,
+    required double price,
+    required int durationMinutes,
+    required String imageUrl,
+    required bool isActive,
+  }) async {
+    final token = _accessToken;
+    if (token == null) return;
+
+    isServicesLoading = true;
+    servicesError = null;
+    notifyListeners();
+
+    try {
+      final shopId = await _ensureBarberShopId(token);
+      await _postRestRows(
+        token,
+        'services',
+        data: {
+          'barber_shop_id': shopId,
+          'category_id':
+              categoryId == null || categoryId.isEmpty ? null : categoryId,
+          'name': name.trim(),
+          'description': description.trim().isEmpty ? null : description.trim(),
+          'duration_minutes': durationMinutes,
+          'price': price,
+          'image_url': imageUrl.trim().isEmpty ? null : imageUrl.trim(),
+          'is_active': isActive,
+        },
+      );
+
+      await fetchServiceCatalog();
+    } catch (error) {
+      servicesError = _cleanErrorMessage(error);
+      rethrow;
+    } finally {
+      isServicesLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> updateService(
+    ManagedService service, {
+    required String name,
+    required String description,
+    required String? categoryId,
+    required double price,
+    required int durationMinutes,
+    required String imageUrl,
+    required bool isActive,
+  }) async {
+    final token = _accessToken;
+    if (token == null) return;
+
+    isServicesLoading = true;
+    servicesError = null;
+    notifyListeners();
+
+    try {
+      await _patchRestRows(
+        token,
+        'services',
+        query: {'id': 'eq.${service.id}'},
+        data: {
+          'category_id':
+              categoryId == null || categoryId.isEmpty ? null : categoryId,
+          'name': name.trim(),
+          'description': description.trim().isEmpty ? null : description.trim(),
+          'duration_minutes': durationMinutes,
+          'price': price,
+          'image_url': imageUrl.trim().isEmpty ? null : imageUrl.trim(),
+          'is_active': isActive,
+        },
+      );
+
+      await fetchServiceCatalog();
+    } catch (error) {
+      servicesError = _cleanErrorMessage(error);
+      rethrow;
+    } finally {
+      isServicesLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> deactivateService(ManagedService service) async {
+    await updateService(
+      service,
+      name: service.name,
+      description: service.description,
+      categoryId: service.categoryId,
+      price: service.price,
+      durationMinutes: service.durationMinutes,
+      imageUrl: service.imageUrl,
+      isActive: false,
+    );
   }
 
   Future<void> createTeamBarber({
@@ -741,6 +1047,13 @@ class ManagementSession extends ChangeNotifier {
     isScheduleLoading = false;
     selectedScheduleBarberId = null;
     scheduleAdminView = false;
+    services = [];
+    serviceCategories = [];
+    servicesError = null;
+    isServicesLoading = false;
+    serviceStatusFilter = ServiceStatusFilter.all;
+    selectedServiceCategoryId = null;
+    serviceSearchQuery = '';
     teamBarbers = [];
     errorMessage = null;
     notifyListeners();
@@ -2053,6 +2366,89 @@ class _ServicesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return Consumer<ManagementSession>(
+      builder: (context, session, _) {
+        final services = session.filteredServices;
+        final activeCount =
+            session.services.where((service) => service.isActive).length;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _ActionPanel(
+              title: 'Catalogo de servicos',
+              subtitle:
+                  '$activeCount servico(s) ativo(s). Gerencie precos e duracao.',
+              buttonLabel: 'Novo servico',
+              icon: Icons.add_circle_rounded,
+              onPressed: () => _openServiceForm(context),
+            ),
+            const SizedBox(height: 18),
+            _ServiceFilters(session: session),
+            const SizedBox(height: 18),
+            if (session.isServicesLoading) ...[
+              const LinearProgressIndicator(color: SharedAppColors.orange),
+              const SizedBox(height: 12),
+            ],
+            if (session.servicesError != null)
+              _InlineNotice(
+                icon: Icons.warning_amber_rounded,
+                title: 'Nao foi possivel carregar os servicos',
+                subtitle: session.servicesError!,
+              )
+            else if (services.isEmpty)
+              const _InlineNotice(
+                icon: Icons.content_cut_rounded,
+                title: 'Nenhum servico encontrado',
+                subtitle: 'Ajuste os filtros ou cadastre um novo servico.',
+              )
+            else
+              for (final service in services)
+                _ServiceTile(
+                  service: service,
+                  onTap: () => _openServiceForm(context, service: service),
+                ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _openServiceForm(
+    BuildContext context, {
+    ManagedService? service,
+  }) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.white,
+      builder: (_) => ChangeNotifierProvider.value(
+        value: context.read<ManagementSession>(),
+        child: _ServiceForm(service: service),
+      ),
+    );
+  }
+}
+
+// ignore: unused_element
+class _UnusedServicesPageSnapshot extends StatelessWidget {
+  const _UnusedServicesPageSnapshot();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox.shrink();
+  }
+}
+
+// ignore: unused_element
+class _UnusedLegacyServicesPageSnapshot extends StatelessWidget {
+  const _UnusedLegacyServicesPageSnapshot();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox.shrink();
+    /*
     return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2063,11 +2459,445 @@ class _ServicesPage extends StatelessWidget {
           icon: Icons.add_circle_rounded,
         ),
         SizedBox(height: 18),
-        _ServiceTile(name: 'Corte premium', price: 'R\$ 55', duration: '45 min'),
-        _ServiceTile(name: 'Barba completa', price: 'R\$ 40', duration: '35 min'),
-        _ServiceTile(name: 'Corte + barba', price: 'R\$ 85', duration: '70 min'),
       ],
     );
+  }
+}
+
+    */
+  }
+}
+
+class _ServiceFilters extends StatelessWidget {
+  const _ServiceFilters({required this.session});
+
+  final ManagementSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        TextField(
+          onChanged: session.setServiceSearchQuery,
+          decoration: InputDecoration(
+            hintText: 'Buscar servico por nome',
+            prefixIcon: const Icon(Icons.search_rounded),
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(18),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 44,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              _FilterChipButton(
+                label: 'Todos',
+                selected:
+                    session.serviceStatusFilter == ServiceStatusFilter.all,
+                onSelected: () =>
+                    session.setServiceStatusFilter(ServiceStatusFilter.all),
+              ),
+              _FilterChipButton(
+                label: 'Ativos',
+                selected:
+                    session.serviceStatusFilter == ServiceStatusFilter.active,
+                onSelected: () =>
+                    session.setServiceStatusFilter(ServiceStatusFilter.active),
+              ),
+              _FilterChipButton(
+                label: 'Inativos',
+                selected:
+                    session.serviceStatusFilter == ServiceStatusFilter.inactive,
+                onSelected: () =>
+                    session.setServiceStatusFilter(ServiceStatusFilter.inactive),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String?>(
+          value: session.selectedServiceCategoryId,
+          decoration: const InputDecoration(
+            labelText: 'Categoria',
+            prefixIcon: Icon(Icons.category_outlined),
+            filled: true,
+            fillColor: Colors.white,
+          ),
+          items: [
+            const DropdownMenuItem<String?>(
+              value: null,
+              child: Text('Todas as categorias'),
+            ),
+            for (final category in session.serviceCategories)
+              DropdownMenuItem<String?>(
+                value: category.id,
+                child: Text(category.name),
+              ),
+          ],
+          onChanged: session.setServiceCategoryFilter,
+        ),
+      ],
+    );
+  }
+}
+
+class _FilterChipButton extends StatelessWidget {
+  const _FilterChipButton({
+    required this.label,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ChoiceChip(
+        label: Text(label),
+        selected: selected,
+        onSelected: (_) => onSelected(),
+        selectedColor: SharedAppColors.orange,
+        backgroundColor: Colors.white,
+        side: BorderSide.none,
+        labelStyle: TextStyle(
+          color: selected ? Colors.white : SharedAppColors.text,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _ServiceForm extends StatefulWidget {
+  const _ServiceForm({this.service});
+
+  final ManagedService? service;
+
+  @override
+  State<_ServiceForm> createState() => _ServiceFormState();
+}
+
+class _ServiceFormState extends State<_ServiceForm> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameController;
+  late final TextEditingController _descriptionController;
+  late final TextEditingController _priceController;
+  late final TextEditingController _durationController;
+  late final TextEditingController _imageUrlController;
+  late final TextEditingController _colorController;
+  late bool _isActive;
+  String? _categoryId;
+  var _isSaving = false;
+
+  bool get _isEditing => widget.service != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final service = widget.service;
+    _nameController = TextEditingController(text: service?.name ?? '');
+    _descriptionController =
+        TextEditingController(text: service?.description ?? '');
+    _priceController = TextEditingController(
+      text: service == null ? '' : service.price.toStringAsFixed(2),
+    );
+    _durationController = TextEditingController(
+      text: service == null ? '' : service.durationMinutes.toString(),
+    );
+    _imageUrlController = TextEditingController(text: service?.imageUrl ?? '');
+    _colorController = TextEditingController();
+    _isActive = service?.isActive ?? true;
+    _categoryId = service?.categoryId;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descriptionController.dispose();
+    _priceController.dispose();
+    _durationController.dispose();
+    _imageUrlController.dispose();
+    _colorController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.viewInsetsOf(context).bottom + 20;
+    final categories = context.watch<ManagementSession>().serviceCategories;
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(20, 20, 20, bottomPadding),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _isEditing ? 'Editar servico' : 'Novo servico',
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: _isSaving ? null : () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _nameController,
+              textInputAction: TextInputAction.next,
+              decoration: const InputDecoration(
+                labelText: 'Nome',
+                prefixIcon: Icon(Icons.content_cut_rounded),
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Informe o nome do servico.';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String?>(
+              value: _categoryId,
+              decoration: const InputDecoration(
+                labelText: 'Categoria',
+                prefixIcon: Icon(Icons.category_outlined),
+              ),
+              items: [
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('Sem categoria'),
+                ),
+                for (final category in categories)
+                  DropdownMenuItem<String?>(
+                    value: category.id,
+                    child: Text(category.name),
+                  ),
+              ],
+              onChanged:
+                  _isSaving ? null : (value) => setState(() => _categoryId = value),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _descriptionController,
+              minLines: 2,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Descricao',
+                prefixIcon: Icon(Icons.notes_rounded),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _priceController,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(
+                      labelText: 'Preco',
+                      prefixIcon: Icon(Icons.attach_money),
+                    ),
+                    validator: _validatePrice,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextFormField(
+                    controller: _durationController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Duracao min',
+                      prefixIcon: Icon(Icons.schedule_rounded),
+                    ),
+                    validator: _validateDuration,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _imageUrlController,
+              textInputAction: TextInputAction.next,
+              decoration: const InputDecoration(
+                labelText: 'URL da imagem',
+                prefixIcon: Icon(Icons.image_outlined),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _colorController,
+              enabled: false,
+              decoration: const InputDecoration(
+                labelText: 'Cor de identificacao',
+                helperText: 'Preparado para integrar quando houver coluna no banco.',
+                prefixIcon: Icon(Icons.palette_outlined),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _isActive,
+              activeColor: SharedAppColors.orange,
+              onChanged: _isSaving
+                  ? null
+                  : (value) => setState(() => _isActive = value),
+              title: const Text('Servico ativo'),
+              subtitle: const Text('Servicos inativos deixam de aparecer.'),
+            ),
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: _isSaving ? null : _save,
+              style: FilledButton.styleFrom(
+                backgroundColor: SharedAppColors.orange,
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(52),
+              ),
+              child: Text(_isSaving ? 'Salvando...' : 'Salvar'),
+            ),
+            if (_isEditing) ...[
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: _isSaving ? null : _confirmDeactivate,
+                child: const Text('Excluir servico'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  String? _validatePrice(String? value) {
+    final parsed = _parseMoney(value);
+    if (parsed == null || parsed <= 0) return 'Informe um preco maior que zero.';
+    return null;
+  }
+
+  String? _validateDuration(String? value) {
+    final parsed = int.tryParse(value?.trim() ?? '');
+    if (parsed == null || parsed <= 0) return 'Informe a duracao.';
+    return null;
+  }
+
+  double? _parseMoney(String? value) {
+    if (value == null) return null;
+    return double.tryParse(value.trim().replaceAll(',', '.'));
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSaving = true);
+    try {
+      final session = context.read<ManagementSession>();
+      final service = widget.service;
+      if (service == null) {
+        await session.createService(
+          name: _nameController.text,
+          description: _descriptionController.text,
+          categoryId: _categoryId,
+          price: _parseMoney(_priceController.text)!,
+          durationMinutes: int.parse(_durationController.text.trim()),
+          imageUrl: _imageUrlController.text,
+          isActive: _isActive,
+        );
+      } else {
+        await session.updateService(
+          service,
+          name: _nameController.text,
+          description: _descriptionController.text,
+          categoryId: _categoryId,
+          price: _parseMoney(_priceController.text)!,
+          durationMinutes: int.parse(_durationController.text.trim()),
+          imageUrl: _imageUrlController.text,
+          isActive: _isActive,
+        );
+      }
+
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Servico salvo com sucesso.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _confirmDeactivate() async {
+    final service = widget.service;
+    if (service == null) return;
+    final session = context.read<ManagementSession>();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir servico?'),
+        content: const Text(
+          'O servico sera inativado e podera ser reativado depois.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: SharedAppColors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || confirmed != true) return;
+
+    setState(() => _isSaving = true);
+    try {
+      await session.deactivateService(service);
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Servico inativado.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 }
 
@@ -2934,24 +3764,50 @@ class _ClientTile extends StatelessWidget {
 
 class _ServiceTile extends StatelessWidget {
   const _ServiceTile({
-    required this.name,
-    required this.price,
-    required this.duration,
+    required this.service,
+    required this.onTap,
   });
 
-  final String name;
-  final String price;
-  final String duration;
+  final ManagedService service;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return _SurfaceTile(
-      leading: const _IconBadge(Icons.content_cut_rounded),
-      title: name,
-      subtitle: duration,
-      trailing: Text(
-        price,
-        style: const TextStyle(fontWeight: FontWeight.w900),
+    final statusColor =
+        service.isActive ? Colors.green.shade700 : Colors.red.shade700;
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: onTap,
+      child: _SurfaceTile(
+        leading: service.imageUrl.isEmpty
+            ? const _IconBadge(Icons.content_cut_rounded)
+            : CircleAvatar(
+                radius: 25,
+                backgroundColor: SharedAppColors.orange.withOpacity(0.12),
+                backgroundImage: NetworkImage(service.imageUrl),
+              ),
+        title: service.name,
+        subtitle:
+            '${service.categoryName} - ${service.durationLabel} - ${service.appointmentCount} agendamento(s)',
+        trailing: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              service.formattedPrice,
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              service.statusLabel,
+              style: TextStyle(
+                color: statusColor,
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
