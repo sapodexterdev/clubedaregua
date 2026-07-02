@@ -404,6 +404,10 @@ class ManagedService {
 
 enum ServiceStatusFilter { all, active, inactive }
 
+const _allBarbersDropdownValue = '__all_barbers__';
+const _allCategoriesDropdownValue = '__all_categories__';
+const _noCategoryDropdownValue = '__no_category__';
+
 class ManagementSession extends ChangeNotifier {
   String? _accessToken;
   String? _userId;
@@ -2033,8 +2037,8 @@ class _ScheduleFilters extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (adminView) ...[
-              DropdownButtonFormField<String?>(
-                value: session.selectedScheduleBarberId,
+              DropdownButtonFormField<String>(
+                value: _validBarberDropdownValue(session),
                 decoration: const InputDecoration(
                   labelText: 'Barbeiro',
                   prefixIcon: Icon(Icons.badge_outlined),
@@ -2042,17 +2046,19 @@ class _ScheduleFilters extends StatelessWidget {
                   fillColor: Colors.white,
                 ),
                 items: [
-                  const DropdownMenuItem<String?>(
-                    value: null,
+                  const DropdownMenuItem<String>(
+                    value: _allBarbersDropdownValue,
                     child: Text('Todos os barbeiros'),
                   ),
-                  for (final barber in session.teamBarbers)
-                    DropdownMenuItem<String?>(
+                  for (final barber in _uniqueBarbers(session.teamBarbers))
+                    DropdownMenuItem<String>(
                       value: barber.id,
                       child: Text(barber.name),
                     ),
                 ],
-                onChanged: (value) => session.selectScheduleBarber(value),
+                onChanged: (value) => session.selectScheduleBarber(
+                  value == _allBarbersDropdownValue ? null : value,
+                ),
               ),
               const SizedBox(height: 12),
             ],
@@ -2090,6 +2096,21 @@ class _ScheduleFilters extends StatelessWidget {
     final day = date.day.toString().padLeft(2, '0');
     final month = date.month.toString().padLeft(2, '0');
     return '$day/$month';
+  }
+
+  String _validBarberDropdownValue(ManagementSession session) {
+    final selected = session.selectedScheduleBarberId;
+    if (selected == null || selected.isEmpty) return _allBarbersDropdownValue;
+    final exists = session.teamBarbers.any((barber) => barber.id == selected);
+    return exists ? selected : _allBarbersDropdownValue;
+  }
+
+  List<TeamBarber> _uniqueBarbers(List<TeamBarber> barbers) {
+    final seen = <String>{};
+    return [
+      for (final barber in barbers)
+        if (barber.id.isNotEmpty && seen.add(barber.id)) barber,
+    ];
   }
 }
 
@@ -2521,8 +2542,8 @@ class _ServiceFilters extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        DropdownButtonFormField<String?>(
-          value: session.selectedServiceCategoryId,
+        DropdownButtonFormField<String>(
+          value: _validCategoryFilterValue(session),
           decoration: const InputDecoration(
             labelText: 'Categoria',
             prefixIcon: Icon(Icons.category_outlined),
@@ -2530,20 +2551,38 @@ class _ServiceFilters extends StatelessWidget {
             fillColor: Colors.white,
           ),
           items: [
-            const DropdownMenuItem<String?>(
-              value: null,
+            const DropdownMenuItem<String>(
+              value: _allCategoriesDropdownValue,
               child: Text('Todas as categorias'),
             ),
-            for (final category in session.serviceCategories)
-              DropdownMenuItem<String?>(
+            for (final category in _uniqueCategories(session.serviceCategories))
+              DropdownMenuItem<String>(
                 value: category.id,
                 child: Text(category.name),
               ),
           ],
-          onChanged: session.setServiceCategoryFilter,
+          onChanged: (value) => session.setServiceCategoryFilter(
+            value == _allCategoriesDropdownValue ? null : value,
+          ),
         ),
       ],
     );
+  }
+
+  String _validCategoryFilterValue(ManagementSession session) {
+    final selected = session.selectedServiceCategoryId;
+    if (selected == null || selected.isEmpty) return _allCategoriesDropdownValue;
+    final exists =
+        session.serviceCategories.any((category) => category.id == selected);
+    return exists ? selected : _allCategoriesDropdownValue;
+  }
+
+  List<ServiceCategory> _uniqueCategories(List<ServiceCategory> categories) {
+    final seen = <String>{};
+    return [
+      for (final category in categories)
+        if (category.id.isNotEmpty && seen.add(category.id)) category,
+    ];
   }
 }
 
@@ -2677,25 +2716,29 @@ class _ServiceFormState extends State<_ServiceForm> {
               },
             ),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String?>(
-              value: _categoryId,
+            DropdownButtonFormField<String>(
+              value: _validFormCategoryValue(categories),
               decoration: const InputDecoration(
                 labelText: 'Categoria',
                 prefixIcon: Icon(Icons.category_outlined),
               ),
               items: [
-                const DropdownMenuItem<String?>(
-                  value: null,
+                const DropdownMenuItem<String>(
+                  value: _noCategoryDropdownValue,
                   child: Text('Sem categoria'),
                 ),
-                for (final category in categories)
-                  DropdownMenuItem<String?>(
+                for (final category in _uniqueFormCategories(categories))
+                  DropdownMenuItem<String>(
                     value: category.id,
                     child: Text(category.name),
                   ),
               ],
-              onChanged:
-                  _isSaving ? null : (value) => setState(() => _categoryId = value),
+              onChanged: _isSaving
+                  ? null
+                  : (value) => setState(() {
+                        _categoryId =
+                            value == _noCategoryDropdownValue ? null : value;
+                      }),
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -2804,6 +2847,21 @@ class _ServiceFormState extends State<_ServiceForm> {
   double? _parseMoney(String? value) {
     if (value == null) return null;
     return double.tryParse(value.trim().replaceAll(',', '.'));
+  }
+
+  String _validFormCategoryValue(List<ServiceCategory> categories) {
+    final selected = _categoryId;
+    if (selected == null || selected.isEmpty) return _noCategoryDropdownValue;
+    final exists = categories.any((category) => category.id == selected);
+    return exists ? selected : _noCategoryDropdownValue;
+  }
+
+  List<ServiceCategory> _uniqueFormCategories(List<ServiceCategory> categories) {
+    final seen = <String>{};
+    return [
+      for (final category in categories)
+        if (category.id.isNotEmpty && seen.add(category.id)) category,
+    ];
   }
 
   Future<void> _save() async {
