@@ -103,6 +103,7 @@ class BookingRequest {
     required this.id,
     required this.client,
     required this.phone,
+    required this.clientPhotoUrl,
     required this.service,
     required this.barber,
     required this.date,
@@ -110,11 +111,13 @@ class BookingRequest {
     required this.status,
     required this.total,
     required this.notes,
+    required this.updatedAt,
   });
 
   final String id;
   final String client;
   final String phone;
+  final String clientPhotoUrl;
   final String service;
   final String barber;
   final String date;
@@ -122,6 +125,7 @@ class BookingRequest {
   final String status;
   final double total;
   final String notes;
+  final String updatedAt;
 
   String get paymentMethod {
     final match = RegExp(r'Pagamento:\s*([^.]+)').firstMatch(notes);
@@ -138,18 +142,32 @@ class BookingRequest {
 
   String get formattedDateTime => '$formattedDate às $time';
 
-  BookingRequest copyWith({String? status}) {
+  String get observation {
+    final value = notes
+        .replaceAll(RegExp(r'Solicitacao criada pelo PWA Cliente\.\s*'), '')
+        .replaceAll(RegExp(r'Pagamento:\s*[^.]+\.?'), '')
+        .trim();
+    return value.isEmpty ? 'Sem observacoes.' : value;
+  }
+
+  BookingRequest copyWith({
+    String? status,
+    String? notes,
+    String? updatedAt,
+  }) {
     return BookingRequest(
       id: id,
       client: client,
       phone: phone,
+      clientPhotoUrl: clientPhotoUrl,
       service: service,
       barber: barber,
       date: date,
       time: time,
       status: status ?? this.status,
       total: total,
-      notes: notes,
+      notes: notes ?? this.notes,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
@@ -158,6 +176,7 @@ class BookingRequest {
       id: map['id']?.toString() ?? '',
       client: map['customer_name']?.toString() ?? 'Cliente',
       phone: map['customer_phone']?.toString() ?? '',
+      clientPhotoUrl: map['customer_photo_url']?.toString() ?? '',
       service: map['services']?['name']?.toString() ?? 'Servico',
       barber: map['barbers']?['name']?.toString() ?? 'Barbeiro',
       date: map['requested_date']?.toString() ?? '',
@@ -165,6 +184,7 @@ class BookingRequest {
       status: map['status']?.toString() ?? 'new',
       total: (map['total_price'] as num?)?.toDouble() ?? 0,
       notes: map['notes']?.toString() ?? '',
+      updatedAt: map['updated_at']?.toString() ?? '',
     );
   }
 
@@ -229,6 +249,8 @@ class ManagementSession extends ChangeNotifier {
   String? email;
   bool isLoading = false;
   String? errorMessage;
+  bool isBookingRequestsLoading = false;
+  String? bookingRequestsError;
   List<BookingRequest> bookingRequests = [];
   List<TeamBarber> teamBarbers = [];
 
@@ -304,7 +326,8 @@ class ManagementSession extends ChangeNotifier {
     final token = _accessToken;
     if (token == null) return;
 
-    isLoading = true;
+    isBookingRequestsLoading = true;
+    bookingRequestsError = null;
     notifyListeners();
 
     try {
@@ -312,7 +335,7 @@ class ManagementSession extends ChangeNotifier {
         '${GestaoSupabaseConfig.url}/rest/v1/booking_requests',
       ).replace(queryParameters: {
         'select':
-            'id,customer_name,customer_phone,requested_date,requested_time,status,total_price,notes,barbers(name),services(name)',
+            'id,customer_name,customer_phone,requested_date,requested_time,status,total_price,notes,updated_at,barbers(name),services(name)',
         'order': 'created_at.desc',
         'limit': '20',
       });
@@ -334,11 +357,11 @@ class ManagementSession extends ChangeNotifier {
           .whereType<Map>()
           .map((row) => BookingRequest.fromMap(Map<String, dynamic>.from(row)))
           .toList();
-      errorMessage = null;
+      bookingRequestsError = null;
     } catch (error) {
-      errorMessage = _cleanErrorMessage(error);
+      bookingRequestsError = _cleanErrorMessage(error);
     } finally {
-      isLoading = false;
+      isBookingRequestsLoading = false;
       notifyListeners();
     }
   }
@@ -480,42 +503,52 @@ class ManagementSession extends ChangeNotifier {
     );
   }
 
-  Future<void> updateBookingRequestStatus(String id, String status) async {
+  Future<void> updateBookingRequestStatus(
+    String id,
+    String status, {
+    String? reason,
+  }) async {
     final token = _accessToken;
     if (token == null) return;
 
-    isLoading = true;
-    errorMessage = null;
+    isBookingRequestsLoading = true;
+    bookingRequestsError = null;
     notifyListeners();
 
     try {
-      final uri = Uri.parse(
-        '${GestaoSupabaseConfig.url}/rest/v1/booking_requests',
-      ).replace(queryParameters: {'id': 'eq.$id'});
-
-      final response = await http.patch(
-        uri,
-        headers: {
-          'apikey': GestaoSupabaseConfig.anonKey,
-          'authorization': 'Bearer $token',
-          'content-type': 'application/json',
-          'prefer': 'return=minimal',
+      final current = _bookingRequestById(id);
+      final updatedAt = DateTime.now().toUtc().toIso8601String();
+      final nextNotes = _notesWithReason(current?.notes ?? '', reason);
+      final rows = await _patchRestRows(
+        token,
+        'booking_requests',
+        query: {'id': 'eq.$id'},
+        data: {
+          'status': status,
+          'updated_at': updatedAt,
+          if (reason != null && reason.trim().isNotEmpty) 'notes': nextNotes,
         },
-        body: jsonEncode({'status': status}),
       );
 
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw StateError('Não foi possível atualizar o pedido.');
-      }
-
+      final updated = rows.isEmpty ? null : BookingRequest.fromMap(rows.first);
       bookingRequests = [
         for (final request in bookingRequests)
-          if (request.id == id) request.copyWith(status: status) else request,
+          if (request.id == id)
+            updated ??
+                request.copyWith(
+                  status: status,
+                  notes: nextNotes,
+                  updatedAt: updatedAt,
+                )
+          else
+            request,
       ];
+      bookingRequestsError = null;
     } catch (error) {
-      errorMessage = _cleanErrorMessage(error);
+      bookingRequestsError = _cleanErrorMessage(error);
+      rethrow;
     } finally {
-      isLoading = false;
+      isBookingRequestsLoading = false;
       notifyListeners();
     }
   }
@@ -527,9 +560,18 @@ class ManagementSession extends ChangeNotifier {
     barberShopName = null;
     email = null;
     bookingRequests = [];
+    bookingRequestsError = null;
+    isBookingRequestsLoading = false;
     teamBarbers = [];
     errorMessage = null;
     notifyListeners();
+  }
+
+  BookingRequest? _bookingRequestById(String id) {
+    for (final request in bookingRequests) {
+      if (request.id == id) return request;
+    }
+    return null;
   }
 
   Future<String> _ensureBarberShopId(String token) async {
@@ -675,6 +717,13 @@ class ManagementSession extends ChangeNotifier {
         .replaceFirst(RegExp(r'^\s*Bad state:\s*', caseSensitive: false), '')
         .replaceFirst(RegExp(r'^\s*Exception:\s*', caseSensitive: false), '');
 
+    if (message.contains('Failed to fetch') ||
+        message.contains('XMLHttpRequest') ||
+        message.contains('SocketException') ||
+        message.contains('ClientException')) {
+      return 'Sem internet ou Supabase indisponÃ­vel. Verifique sua conexÃ£o.';
+    }
+
     return switch (message) {
       'Login invalido ou usuario sem acesso.' =>
         'Login inválido ou usuário sem acesso.',
@@ -690,6 +739,16 @@ class ManagementSession extends ChangeNotifier {
         'Não foi possível atualizar o pedido.',
       _ => message,
     };
+  }
+
+  String _notesWithReason(String notes, String? reason) {
+    final cleanReason = reason?.trim();
+    if (cleanReason == null || cleanReason.isEmpty) return notes;
+
+    final reasonLine = 'Motivo: $cleanReason';
+    if (notes.trim().isEmpty) return reasonLine;
+    if (notes.contains(reasonLine)) return notes;
+    return '${notes.trim()}\n$reasonLine';
   }
 }
 
@@ -1389,15 +1448,15 @@ class _BookingRequestsPage extends StatelessWidget {
             const SizedBox(height: 22),
             const _SectionTitle('Novas solicitacoes'),
             const SizedBox(height: 12),
-            if (session.isLoading) ...[
+            if (session.isBookingRequestsLoading) ...[
               const LinearProgressIndicator(color: SharedAppColors.orange),
               const SizedBox(height: 12),
             ],
-            if (session.errorMessage != null)
+            if (session.bookingRequestsError != null)
               _InlineNotice(
                 icon: Icons.warning_amber_rounded,
                 title: 'Não foi possível carregar',
-                subtitle: session.errorMessage!,
+                subtitle: session.bookingRequestsError!,
               )
             else if (requests.isEmpty)
               const _InlineNotice(
@@ -1408,30 +1467,86 @@ class _BookingRequestsPage extends StatelessWidget {
             else
               for (final request in requests)
                 _BookingRequestTile(
-                  status: request.status,
-                  client: request.client,
-                  phone: request.phone,
-                  service: request.service,
-                  paymentMethod: request.paymentMethod,
-                  dateTime: request.formattedDateTime,
+                  request: request,
                   total: _formatCurrency(request.total),
-                  onContacted: () => session.updateBookingRequestStatus(
-                    request.id,
-                    'contacted',
+                  onAccepted: () => _runRequestAction(
+                    context,
+                    () => session.updateBookingRequestStatus(
+                      request.id,
+                      'converted',
+                    ),
                   ),
-                  onConverted: () => session.updateBookingRequestStatus(
-                    request.id,
-                    'converted',
-                  ),
-                  onCancelled: () => session.updateBookingRequestStatus(
-                    request.id,
-                    'cancelled',
+                  onDeclined: () => _declineRequest(context, session, request),
+                  onCancelled: () => _runRequestAction(
+                    context,
+                    () => session.updateBookingRequestStatus(
+                      request.id,
+                      'cancelled',
+                    ),
                   ),
                 ),
           ],
         );
       },
     );
+  }
+
+  Future<void> _declineRequest(
+    BuildContext context,
+    ManagementSession session,
+    BookingRequest request,
+  ) async {
+    final reason = await _askOptionalReason(context);
+    if (!context.mounted) return;
+    await _runRequestAction(
+      context,
+      () => session.updateBookingRequestStatus(
+        request.id,
+        'cancelled',
+        reason: reason,
+      ),
+    );
+  }
+
+  Future<String?> _askOptionalReason(BuildContext context) {
+    final controller = TextEditingController();
+    return showDialog<String?>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Recusar solicitacao'),
+          content: TextField(
+            controller: controller,
+            maxLines: 3,
+            decoration: const InputDecoration(labelText: 'Motivo opcional'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Voltar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, controller.text),
+              child: const Text('Recusar'),
+            ),
+          ],
+        );
+      },
+    ).whenComplete(controller.dispose);
+  }
+
+  Future<void> _runRequestAction(
+    BuildContext context,
+    Future<void> Function() action,
+  ) async {
+    try {
+      await action();
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    }
   }
 
   String _formatCurrency(double value) {
@@ -2144,35 +2259,28 @@ class _AppointmentTile extends StatelessWidget {
 
 class _BookingRequestTile extends StatelessWidget {
   const _BookingRequestTile({
-    required this.status,
-    required this.client,
-    required this.phone,
-    required this.service,
-    required this.paymentMethod,
-    required this.dateTime,
+    required this.request,
     required this.total,
-    required this.onContacted,
-    required this.onConverted,
+    required this.onAccepted,
+    required this.onDeclined,
     required this.onCancelled,
   });
 
-  final String status;
-  final String client;
-  final String phone;
-  final String service;
-  final String paymentMethod;
-  final String dateTime;
+  final BookingRequest request;
   final String total;
-  final VoidCallback onContacted;
-  final VoidCallback onConverted;
+  final VoidCallback onAccepted;
+  final VoidCallback onDeclined;
   final VoidCallback onCancelled;
 
   @override
   Widget build(BuildContext context) {
+    final status = request.status;
+    final isClosed = status == 'converted' || status == 'cancelled';
+    final wasDeclined = status == 'cancelled' && request.notes.contains('Motivo:');
     final statusLabel = switch (status) {
       'contacted' => 'Contatado',
-      'converted' => 'Confirmado',
-      'cancelled' => 'Cancelado',
+      'converted' => 'Aceito',
+      'cancelled' => wasDeclined ? 'Recusado' : 'Cancelado',
       _ => 'Novo',
     };
     final statusColor = switch (status) {
@@ -2194,22 +2302,24 @@ class _BookingRequestTile extends StatelessWidget {
         children: [
           Row(
             children: [
-              const _IconBadge(Icons.event_available_rounded),
+              _ClientAvatar(photoUrl: request.clientPhotoUrl),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      client,
+                      request.client,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontWeight: FontWeight.w900),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '$service\n$dateTime - $paymentMethod',
-                      maxLines: 3,
+                      request.phone.isEmpty
+                          ? 'Telefone nao informado'
+                          : request.phone,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(color: SharedAppColors.muted),
                     ),
@@ -2240,41 +2350,124 @@ class _BookingRequestTile extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
+          _RequestInfoRow(
+            icon: Icons.content_cut_rounded,
+            label: 'Servico',
+            value: request.service,
+          ),
+          _RequestInfoRow(
+            icon: Icons.badge_outlined,
+            label: 'Barbeiro',
+            value: request.barber,
+          ),
+          _RequestInfoRow(
+            icon: Icons.event_rounded,
+            label: 'Data e horario',
+            value: request.formattedDateTime,
+          ),
+          _RequestInfoRow(
+            icon: Icons.payments_outlined,
+            label: 'Pagamento',
+            value: request.paymentMethod,
+          ),
+          _RequestInfoRow(
+            icon: Icons.notes_rounded,
+            label: 'Observacoes',
+            value: request.observation,
+          ),
+          const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: status == 'converted' || status == 'cancelled'
-                      ? null
-                      : onContacted,
-                  icon: const Icon(Icons.chat_bubble_outline_rounded),
-                  label: Text(
-                    status == 'contacted' ? phone : 'Contatar',
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  onPressed: isClosed ? null : onDeclined,
+                  icon: const Icon(Icons.block_rounded),
+                  label: const Text('Recusar'),
                 ),
               ),
               const SizedBox(width: 10),
               IconButton.filledTonal(
                 tooltip: 'Cancelar',
-                onPressed: status == 'cancelled' || status == 'converted'
-                    ? null
-                    : onCancelled,
+                onPressed: isClosed ? null : onCancelled,
                 icon: const Icon(Icons.close_rounded),
               ),
               const SizedBox(width: 10),
               FilledButton.icon(
-                onPressed: status == 'converted' || status == 'cancelled'
-                    ? null
-                    : onConverted,
+                onPressed: isClosed ? null : onAccepted,
                 style: FilledButton.styleFrom(
                   backgroundColor: SharedAppColors.orange,
                   foregroundColor: Colors.white,
                 ),
                 icon: const Icon(Icons.check_rounded),
-                label: const Text('Confirmar'),
+                label: const Text('Aceitar'),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ClientAvatar extends StatelessWidget {
+  const _ClientAvatar({required this.photoUrl});
+
+  final String photoUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    if (photoUrl.isNotEmpty) {
+      return CircleAvatar(
+        radius: 28,
+        backgroundImage: NetworkImage(photoUrl),
+        backgroundColor: SharedAppColors.orange.withOpacity(.12),
+      );
+    }
+
+    return CircleAvatar(
+      radius: 28,
+      backgroundColor: SharedAppColors.orange.withOpacity(.12),
+      child: const Icon(Icons.person_rounded, color: SharedAppColors.orange),
+    );
+  }
+}
+
+class _RequestInfoRow extends StatelessWidget {
+  const _RequestInfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: SharedAppColors.muted),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 86,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: SharedAppColors.muted,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value.isEmpty ? '-' : value,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
