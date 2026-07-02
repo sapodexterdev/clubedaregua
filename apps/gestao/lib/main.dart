@@ -2879,11 +2879,7 @@ class _ServiceFormState extends State<_ServiceForm> {
               const SizedBox(height: 8),
               TextButton(
                 onPressed: _isSaving ? null : _confirmDeleteOrDeactivate,
-                child: Text(
-                  widget.service?.appointmentCount == 0
-                      ? 'Excluir servico'
-                      : 'Inativar servico',
-                ),
+                child: const Text('Excluir servico'),
               ),
             ],
           ],
