@@ -30,32 +30,44 @@ class HomeScreen extends StatelessWidget {
       body: SafeArea(
         child: Consumer<AppState>(
           builder: (context, state, _) {
+            final shop = state.shopIdentity;
+            final shopName = shop?.name ?? AppConstants.appName;
+            final logoUrl = shop?.logoUrl ?? '';
+            final coverUrl = shop?.coverUrl.isNotEmpty == true
+                ? shop!.coverUrl
+                : AppConstants.promoBarber;
+
             return ListView(
               padding: const EdgeInsets.fromLTRB(22, 18, 22, 28),
               children: [
                 Row(
                   children: [
-                    const CircleAvatar(
+                    CircleAvatar(
                       radius: 28,
-                      backgroundImage: NetworkImage(AppConstants.defaultAvatar),
+                      backgroundColor: AppColors.card,
+                      backgroundImage: NetworkImage(
+                        logoUrl.isEmpty ? AppConstants.defaultAvatar : logoUrl,
+                      ),
                     ),
                     const SizedBox(width: 16),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Bom dia!',
+                          const Text(
+                            'Barbearia',
                             style: TextStyle(
                               color: AppColors.muted,
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                          SizedBox(height: 3),
+                          const SizedBox(height: 3),
                           Text(
-                            'Rafael Sapão',
-                            style: TextStyle(
+                            shopName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.w900,
                             ),
@@ -66,11 +78,12 @@ class HomeScreen extends StatelessWidget {
                     IconButton.filled(
                       onPressed: () {},
                       style: IconButton.styleFrom(
-                        backgroundColor: Colors.white,
+                        backgroundColor: AppColors.card,
                         foregroundColor: AppColors.muted,
                         fixedSize: const Size(58, 58),
                       ),
-                      icon: const Icon(Icons.notifications_none_rounded, size: 28),
+                      icon: const Icon(Icons.notifications_none_rounded,
+                          size: 28),
                     ),
                   ],
                 ),
@@ -89,7 +102,7 @@ class HomeScreen extends StatelessWidget {
                     IconButton.filled(
                       onPressed: () {},
                       style: IconButton.styleFrom(
-                        backgroundColor: Colors.white,
+                        backgroundColor: AppColors.card,
                         foregroundColor: AppColors.muted,
                         fixedSize: const Size(58, 58),
                       ),
@@ -104,8 +117,8 @@ class HomeScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.dark,
                     borderRadius: BorderRadius.circular(26),
-                    image: const DecorationImage(
-                      image: NetworkImage(AppConstants.promoBarber),
+                    image: DecorationImage(
+                      image: NetworkImage(coverUrl),
                       fit: BoxFit.cover,
                       alignment: Alignment.centerRight,
                       opacity: .58,
@@ -132,13 +145,28 @@ class HomeScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Ganhe 20% OFF\nno próximo corte!',
-                              style: TextStyle(
+                            Text(
+                              shopName,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 28,
                                 height: 1.08,
                                 fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              shop?.locationLabel ??
+                                  'Tecnologia que eleva o nivel da sua barbearia.',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                                height: 1.35,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                             const Spacer(),
@@ -149,7 +177,7 @@ class HomeScreen extends StatelessWidget {
                               ),
                               style: FilledButton.styleFrom(
                                 backgroundColor: AppColors.orange,
-                                foregroundColor: Colors.white,
+                                foregroundColor: AppColors.onGold,
                                 minimumSize: const Size(138, 52),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(28),
@@ -185,13 +213,14 @@ class HomeScreen extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(horizontal: 24),
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: selected ? AppColors.orange : Colors.white,
+                            color: selected ? AppColors.orange : AppColors.card,
                             borderRadius: BorderRadius.circular(27),
                           ),
                           child: Text(
                             _categoryLabel(category.name),
                             style: TextStyle(
-                              color: selected ? Colors.white : AppColors.muted,
+                              color:
+                                  selected ? AppColors.onGold : AppColors.muted,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
@@ -203,7 +232,8 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(height: 22),
                 SectionHeader(
                   title: state.selectedCategoryTitle,
-                  actionLabel: state.selectedCategoryId == null ? null : 'Ver todos',
+                  actionLabel:
+                      state.selectedCategoryId == null ? null : 'Ver todos',
                   onAction: state.clearCategory,
                 ),
                 const SizedBox(height: 12),
@@ -218,7 +248,8 @@ class HomeScreen extends StatelessWidget {
                         barber: barber,
                         onTap: () {
                           state.selectBarber(barber);
-                          Navigator.pushNamed(context, BarberDetailsScreen.route);
+                          Navigator.pushNamed(
+                              context, BarberDetailsScreen.route);
                         },
                       );
                     },

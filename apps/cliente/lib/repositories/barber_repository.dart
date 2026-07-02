@@ -4,6 +4,89 @@ import '../models/service_item.dart';
 import '../services/mock_data.dart';
 import '../services/supabase_rest_service.dart';
 
+class ShopIdentity {
+  const ShopIdentity({
+    required this.id,
+    required this.name,
+    required this.logoUrl,
+    required this.coverUrl,
+    required this.phone,
+    required this.whatsapp,
+    required this.email,
+    required this.instagram,
+    required this.address,
+    required this.city,
+    required this.state,
+    required this.secondaryColor,
+    required this.bookingIntervalMinutes,
+    required this.bookingDaysAhead,
+    required this.minNoticeMinutes,
+    required this.maxDelayMinutes,
+    required this.minCancelHours,
+  });
+
+  final String id;
+  final String name;
+  final String logoUrl;
+  final String coverUrl;
+  final String phone;
+  final String whatsapp;
+  final String email;
+  final String instagram;
+  final String address;
+  final String city;
+  final String state;
+  final String secondaryColor;
+  final int bookingIntervalMinutes;
+  final int bookingDaysAhead;
+  final int minNoticeMinutes;
+  final int maxDelayMinutes;
+  final int minCancelHours;
+
+  String get locationLabel {
+    final parts = [city, state].where((part) => part.trim().isNotEmpty);
+    return parts.isEmpty ? 'Barbearia parceira' : parts.join(' - ');
+  }
+
+  factory ShopIdentity.fromRows({
+    required Map<String, dynamic> shop,
+    required Map<String, dynamic>? settings,
+  }) {
+    final extra = settings?['settings'];
+    final settingsJson =
+        extra is Map ? Map<String, dynamic>.from(extra) : <String, dynamic>{};
+
+    return ShopIdentity(
+      id: shop['id']?.toString() ?? '',
+      name: shop['name']?.toString() ?? 'Barbearia',
+      logoUrl: shop['logo_url']?.toString() ?? '',
+      coverUrl: shop['cover_url']?.toString() ?? '',
+      phone: shop['phone']?.toString() ?? '',
+      whatsapp: shop['whatsapp']?.toString() ?? '',
+      email: settingsJson['email']?.toString() ?? '',
+      instagram: settingsJson['instagram']?.toString() ?? '',
+      address: shop['address']?.toString() ?? '',
+      city: shop['city']?.toString() ?? '',
+      state: shop['state']?.toString() ?? '',
+      secondaryColor: settingsJson['secondary_color']?.toString() ?? '#F2C14E',
+      bookingIntervalMinutes: int.tryParse(
+              settings?['booking_interval_minutes']?.toString() ?? '') ??
+          30,
+      bookingDaysAhead:
+          int.tryParse(settingsJson['booking_days_ahead']?.toString() ?? '') ??
+              30,
+      minNoticeMinutes:
+          int.tryParse(settingsJson['min_notice_minutes']?.toString() ?? '') ??
+              60,
+      maxDelayMinutes:
+          int.tryParse(settingsJson['max_delay_minutes']?.toString() ?? '') ??
+              15,
+      minCancelHours:
+          int.tryParse(settings?['min_cancel_hours']?.toString() ?? '') ?? 2,
+    );
+  }
+}
+
 class BarberRepository {
   const BarberRepository({SupabaseRestService? rest})
       : _rest = rest ?? const SupabaseRestService();
@@ -54,6 +137,40 @@ class BarberRepository {
     }
   }
 
+  Future<ShopIdentity?> fetchShopIdentity({String? barberShopId}) async {
+    if (!_rest.isConfigured) return null;
+
+    try {
+      final shops = await _rest.getRows(
+        'barber_shops',
+        select: 'id,name,phone,whatsapp,address,city,state,logo_url,cover_url',
+        filters: {
+          'is_active': 'eq.true',
+          if (barberShopId != null && barberShopId.isNotEmpty)
+            'id': 'eq.$barberShopId',
+        },
+        order: 'name.asc',
+        limit: 1,
+      );
+      if (shops.isEmpty) return null;
+
+      final shopId = shops.first['id']?.toString() ?? '';
+      final settings = await _rest.getRows(
+        'shop_settings',
+        select: 'booking_interval_minutes,min_cancel_hours,settings',
+        filters: {'barber_shop_id': 'eq.$shopId'},
+        limit: 1,
+      );
+
+      return ShopIdentity.fromRows(
+        shop: shops.first,
+        settings: settings.isEmpty ? null : settings.first,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<List<ServiceCategory>> fetchCategories() async {
     if (!_rest.isConfigured) return MockData.categories;
 
@@ -85,9 +202,8 @@ class BarberRepository {
         order: 'name.asc',
       );
 
-      final services = rows
-          .map<ServiceItem>((row) => ServiceItem.fromMap(row))
-          .toList();
+      final services =
+          rows.map<ServiceItem>((row) => ServiceItem.fromMap(row)).toList();
       return services;
     } catch (_) {
       return const [];

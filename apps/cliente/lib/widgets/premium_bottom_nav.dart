@@ -44,7 +44,7 @@ class PremiumBottomNav extends StatelessWidget {
                   duration: const Duration(milliseconds: 180),
                   height: 64,
                   decoration: BoxDecoration(
-                    color: selected ? Colors.white : const Color(0xFF232323),
+                    color: selected ? AppColors.orange : AppColors.card,
                     borderRadius: BorderRadius.circular(34),
                   ),
                   child: Row(
@@ -54,15 +54,16 @@ class PremiumBottomNav extends StatelessWidget {
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: selected ? AppColors.orange : Colors.transparent,
+                          color:
+                              selected ? AppColors.onGold : Colors.transparent,
                           shape: BoxShape.circle,
                           border: selected
-                              ? Border.all(color: AppColors.orange)
+                              ? Border.all(color: AppColors.onGold)
                               : Border.all(color: Colors.white24),
                         ),
                         child: Icon(
                           icons[index],
-                          color: selected ? Colors.white : Colors.white54,
+                          color: selected ? AppColors.orange : Colors.white54,
                           size: 24,
                         ),
                       ),
@@ -71,7 +72,7 @@ class PremiumBottomNav extends StatelessWidget {
                         Text(
                           labels[index],
                           style: const TextStyle(
-                            color: AppColors.orange,
+                            color: AppColors.onGold,
                             fontWeight: FontWeight.w800,
                             fontSize: 16,
                           ),

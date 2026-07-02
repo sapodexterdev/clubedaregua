@@ -652,6 +652,7 @@ class ShopConfiguration {
     required this.settingsId,
     required this.name,
     required this.logoUrl,
+    required this.coverUrl,
     required this.document,
     required this.phone,
     required this.whatsapp,
@@ -668,13 +669,16 @@ class ShopConfiguration {
     required this.bookingIntervalMinutes,
     required this.bookingDaysAhead,
     required this.minNoticeMinutes,
+    required this.maxDelayMinutes,
     required this.minCancelHours,
+    required this.secondaryColor,
   });
 
   final String shopId;
   final String settingsId;
   final String name;
   final String logoUrl;
+  final String coverUrl;
   final String document;
   final String phone;
   final String whatsapp;
@@ -691,7 +695,9 @@ class ShopConfiguration {
   final int bookingIntervalMinutes;
   final int bookingDaysAhead;
   final int minNoticeMinutes;
+  final int maxDelayMinutes;
   final int minCancelHours;
+  final String secondaryColor;
 
   factory ShopConfiguration.fromRows({
     required Map<String, dynamic> shop,
@@ -709,6 +715,7 @@ class ShopConfiguration {
       settingsId: settings?['id']?.toString() ?? '',
       name: shop['name']?.toString() ?? '',
       logoUrl: shop['logo_url']?.toString() ?? '',
+      coverUrl: shop['cover_url']?.toString() ?? '',
       document: shop['document']?.toString() ?? '',
       phone: shop['phone']?.toString() ?? '',
       whatsapp: shop['whatsapp']?.toString() ?? '',
@@ -742,8 +749,12 @@ class ShopConfiguration {
       minNoticeMinutes:
           int.tryParse(settingsJson['min_notice_minutes']?.toString() ?? '') ??
               60,
+      maxDelayMinutes:
+          int.tryParse(settingsJson['max_delay_minutes']?.toString() ?? '') ??
+              15,
       minCancelHours:
           int.tryParse(settings?['min_cancel_hours']?.toString() ?? '') ?? 2,
+      secondaryColor: settingsJson['secondary_color']?.toString() ?? '#F2C14E',
     );
   }
 
@@ -756,6 +767,8 @@ class ShopConfiguration {
         'lunch_end': lunchEnd,
         'booking_days_ahead': bookingDaysAhead,
         'min_notice_minutes': minNoticeMinutes,
+        'max_delay_minutes': maxDelayMinutes,
+        'secondary_color': secondaryColor,
         'weekly_hours': {
           for (final day in days) day.key: day.toJson(),
         },
@@ -1361,7 +1374,7 @@ class ManagementSession extends ChangeNotifier {
         'barber_shops',
         query: {
           'select':
-              'id,name,document,phone,whatsapp,address,city,state,logo_url,opening_time,closing_time',
+              'id,name,document,phone,whatsapp,address,city,state,logo_url,cover_url,opening_time,closing_time',
           'id': 'eq.$shopId',
           'limit': '1',
         },
@@ -1420,6 +1433,8 @@ class ManagementSession extends ChangeNotifier {
           'state': config.state.trim().isEmpty ? null : config.state.trim(),
           'logo_url':
               config.logoUrl.trim().isEmpty ? null : config.logoUrl.trim(),
+          'cover_url':
+              config.coverUrl.trim().isEmpty ? null : config.coverUrl.trim(),
           'opening_time': _firstOpenTime(config.days),
           'closing_time': _lastCloseTime(config.days),
         },
@@ -1454,19 +1469,24 @@ class ManagementSession extends ChangeNotifier {
     }
   }
 
-  Future<String> uploadShopLogo(LogoFile file) async {
+  Future<String> uploadShopMedia(LogoFile file,
+      {required String folder}) async {
     final token = _accessToken;
     if (token == null) return '';
 
     final shopId = await _ensureBarberShopId(token);
+    final safeFolder = folder
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9_-]+'), '-')
+        .replaceAll(RegExp(r'-+'), '-');
     final safeName = file.name
         .toLowerCase()
         .replaceAll(RegExp(r'[^a-z0-9._-]+'), '-')
         .replaceAll(RegExp(r'-+'), '-');
     final objectPath =
-        '$shopId/${DateTime.now().millisecondsSinceEpoch}-$safeName';
+        '$shopId/$safeFolder/${DateTime.now().millisecondsSinceEpoch}-$safeName';
     final uri = Uri.parse(
-      '${GestaoSupabaseConfig.url}/storage/v1/object/shop-logos/$objectPath',
+      '${GestaoSupabaseConfig.url}/storage/v1/object/shop-media/$objectPath',
     );
 
     final response = await http.post(
@@ -1485,7 +1505,7 @@ class ManagementSession extends ChangeNotifier {
           'Supabase Storage ${response.statusCode}: ${response.body}');
     }
 
-    return '${GestaoSupabaseConfig.url}/storage/v1/object/public/shop-logos/$objectPath';
+    return '${GestaoSupabaseConfig.url}/storage/v1/object/public/shop-media/$objectPath';
   }
 
   String? _firstOpenTime(List<ShopBusinessDay> days) {
@@ -4591,6 +4611,7 @@ class _SettingsFormState extends State<_SettingsForm> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _logoController;
+  late final TextEditingController _coverController;
   late final TextEditingController _documentController;
   late final TextEditingController _phoneController;
   late final TextEditingController _whatsappController;
@@ -4604,12 +4625,15 @@ class _SettingsFormState extends State<_SettingsForm> {
   late final TextEditingController _lunchEndController;
   late final TextEditingController _bookingDaysController;
   late final TextEditingController _minNoticeController;
+  late final TextEditingController _maxDelayController;
   late final TextEditingController _cancelHoursController;
+  late final TextEditingController _secondaryColorController;
   late List<ShopBusinessDay> _days;
   late bool _lunchEnabled;
   late int _bookingInterval;
   var _isSaving = false;
   var _isUploadingLogo = false;
+  var _isUploadingCover = false;
 
   @override
   void initState() {
@@ -4617,6 +4641,7 @@ class _SettingsFormState extends State<_SettingsForm> {
     final config = widget.config;
     _nameController = TextEditingController(text: config.name);
     _logoController = TextEditingController(text: config.logoUrl);
+    _coverController = TextEditingController(text: config.coverUrl);
     _documentController = TextEditingController(text: config.document);
     _phoneController = TextEditingController(text: config.phone);
     _whatsappController = TextEditingController(text: config.whatsapp);
@@ -4632,8 +4657,12 @@ class _SettingsFormState extends State<_SettingsForm> {
         TextEditingController(text: config.bookingDaysAhead.toString());
     _minNoticeController =
         TextEditingController(text: config.minNoticeMinutes.toString());
+    _maxDelayController =
+        TextEditingController(text: config.maxDelayMinutes.toString());
     _cancelHoursController =
         TextEditingController(text: config.minCancelHours.toString());
+    _secondaryColorController =
+        TextEditingController(text: config.secondaryColor);
     _days = List.of(config.days);
     _lunchEnabled = config.lunchEnabled;
     _bookingInterval = config.bookingIntervalMinutes;
@@ -4643,6 +4672,7 @@ class _SettingsFormState extends State<_SettingsForm> {
   void dispose() {
     _nameController.dispose();
     _logoController.dispose();
+    _coverController.dispose();
     _documentController.dispose();
     _phoneController.dispose();
     _whatsappController.dispose();
@@ -4656,7 +4686,9 @@ class _SettingsFormState extends State<_SettingsForm> {
     _lunchEndController.dispose();
     _bookingDaysController.dispose();
     _minNoticeController.dispose();
+    _maxDelayController.dispose();
     _cancelHoursController.dispose();
+    _secondaryColorController.dispose();
     super.dispose();
   }
 
@@ -4698,7 +4730,7 @@ class _SettingsFormState extends State<_SettingsForm> {
                     onPressed: _isUploadingLogo ? null : _pickAndUploadLogo,
                     style: IconButton.styleFrom(
                       backgroundColor: SharedAppColors.orange,
-                      foregroundColor: Colors.white,
+                      foregroundColor: SharedAppColors.onGold,
                     ),
                     icon: _isUploadingLogo
                         ? const SizedBox(
@@ -4706,7 +4738,7 @@ class _SettingsFormState extends State<_SettingsForm> {
                             height: 18,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Colors.white,
+                              color: SharedAppColors.onGold,
                             ),
                           )
                         : const Icon(Icons.upload_rounded),
@@ -4722,6 +4754,53 @@ class _SettingsFormState extends State<_SettingsForm> {
                     _logoController.text.trim(),
                     height: 88,
                     fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _coverController,
+                      decoration: const InputDecoration(
+                        labelText: 'URL da foto de capa',
+                        helperText: 'Banner publico usado no app Cliente.',
+                        prefixIcon: Icon(Icons.landscape_outlined),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  IconButton.filled(
+                    onPressed: _isUploadingCover ? null : _pickAndUploadCover,
+                    style: IconButton.styleFrom(
+                      backgroundColor: SharedAppColors.orange,
+                      foregroundColor: SharedAppColors.onGold,
+                    ),
+                    icon: _isUploadingCover
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: SharedAppColors.onGold,
+                            ),
+                          )
+                        : const Icon(Icons.upload_rounded),
+                    tooltip: 'Enviar foto de capa',
+                  ),
+                ],
+              ),
+              if (_coverController.text.trim().isNotEmpty) ...[
+                const SizedBox(height: 12),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: Image.network(
+                    _coverController.text.trim(),
+                    height: 120,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                   ),
                 ),
@@ -4808,6 +4887,17 @@ class _SettingsFormState extends State<_SettingsForm> {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _secondaryColorController,
+                decoration: const InputDecoration(
+                  labelText: 'Cor secundaria da barbearia',
+                  helperText:
+                      'Use apenas como detalhe do estabelecimento. A marca Clube da Regua permanece fixa.',
+                  prefixIcon: Icon(Icons.palette_outlined),
+                ),
+                validator: _validateHexColor,
               ),
             ],
           ),
@@ -4904,6 +4994,16 @@ class _SettingsFormState extends State<_SettingsForm> {
               ),
               const SizedBox(height: 12),
               TextFormField(
+                controller: _maxDelayController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Tempo maximo de atraso em minutos',
+                  prefixIcon: Icon(Icons.hourglass_bottom_rounded),
+                ),
+                validator: _positiveInt,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
                 controller: _cancelHoursController,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
@@ -4919,7 +5019,7 @@ class _SettingsFormState extends State<_SettingsForm> {
             onPressed: _isSaving ? null : _save,
             style: FilledButton.styleFrom(
               backgroundColor: SharedAppColors.orange,
-              foregroundColor: Colors.white,
+              foregroundColor: SharedAppColors.onGold,
               minimumSize: const Size.fromHeight(52),
             ),
             child: Text(_isSaving ? 'Salvando...' : 'Salvar configura��es'),
@@ -4940,6 +5040,14 @@ class _SettingsFormState extends State<_SettingsForm> {
     return null;
   }
 
+  String? _validateHexColor(String? value) {
+    final color = value?.trim() ?? '';
+    if (!RegExp(r'^#[0-9a-fA-F]{6}$').hasMatch(color)) {
+      return 'Use uma cor no formato #F2C14E.';
+    }
+    return null;
+  }
+
   String? _validateTime(String? value) {
     if (value == null || value.trim().isEmpty) return 'Informe o hor�rio.';
     if (!RegExp(r'^\d{2}:\d{2}$').hasMatch(value.trim())) {
@@ -4954,7 +5062,7 @@ class _SettingsFormState extends State<_SettingsForm> {
     try {
       final file = await pickLogoFile();
       if (file == null) return;
-      final url = await session.uploadShopLogo(file);
+      final url = await session.uploadShopMedia(file, folder: 'logos');
       if (!mounted || url.isEmpty) return;
       setState(() => _logoController.text = url);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -4970,6 +5078,28 @@ class _SettingsFormState extends State<_SettingsForm> {
     }
   }
 
+  Future<void> _pickAndUploadCover() async {
+    final session = context.read<ManagementSession>();
+    setState(() => _isUploadingCover = true);
+    try {
+      final file = await pickLogoFile();
+      if (file == null) return;
+      final url = await session.uploadShopMedia(file, folder: 'banners');
+      if (!mounted || url.isEmpty) return;
+      setState(() => _coverController.text = url);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Foto de capa enviada com sucesso.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _isUploadingCover = false);
+    }
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -4981,6 +5111,7 @@ class _SettingsFormState extends State<_SettingsForm> {
         settingsId: current.settingsId,
         name: _nameController.text,
         logoUrl: _logoController.text,
+        coverUrl: _coverController.text,
         document: _documentController.text,
         phone: _phoneController.text,
         whatsapp: _whatsappController.text,
@@ -4997,7 +5128,9 @@ class _SettingsFormState extends State<_SettingsForm> {
         bookingIntervalMinutes: _bookingInterval,
         bookingDaysAhead: int.parse(_bookingDaysController.text.trim()),
         minNoticeMinutes: int.parse(_minNoticeController.text.trim()),
+        maxDelayMinutes: int.parse(_maxDelayController.text.trim()),
         minCancelHours: int.parse(_cancelHoursController.text.trim()),
+        secondaryColor: _secondaryColorController.text,
       );
       await context.read<ManagementSession>().saveShopConfiguration(config);
       if (!mounted) return;
@@ -5025,12 +5158,46 @@ class _SettingsCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: SharedAppColors.card,
         borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: SharedAppColors.stroke),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: children,
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: SharedAppColors.dark,
+            labelStyle: const TextStyle(color: SharedAppColors.muted),
+            helperStyle: const TextStyle(color: SharedAppColors.muted),
+            prefixIconColor: SharedAppColors.orange,
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: SharedAppColors.stroke),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: SharedAppColors.orange),
+            ),
+          ),
+          textTheme: Theme.of(context).textTheme.apply(
+                bodyColor: SharedAppColors.text,
+                displayColor: SharedAppColors.text,
+              ),
+          switchTheme: SwitchThemeData(
+            thumbColor: WidgetStateProperty.resolveWith(
+              (states) => states.contains(WidgetState.selected)
+                  ? SharedAppColors.orange
+                  : SharedAppColors.muted,
+            ),
+          ),
+        ),
+        child: DefaultTextStyle.merge(
+          style: const TextStyle(color: SharedAppColors.text),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: children,
+          ),
+        ),
       ),
     );
   }

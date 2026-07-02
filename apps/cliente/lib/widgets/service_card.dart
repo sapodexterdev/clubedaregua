@@ -32,12 +32,12 @@ class ServiceCard extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: isSelected ? Colors.white24 : AppColors.background,
+                color: isSelected ? Colors.black12 : AppColors.background,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(
                 Icons.content_cut,
-                color: isSelected ? Colors.white : AppColors.orange,
+                color: isSelected ? AppColors.onGold : AppColors.orange,
               ),
             ),
             const SizedBox(width: 14),
@@ -48,7 +48,7 @@ class ServiceCard extends StatelessWidget {
                   Text(
                     service.name,
                     style: TextStyle(
-                      color: isSelected ? Colors.white : AppColors.text,
+                      color: isSelected ? AppColors.onGold : AppColors.text,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -56,7 +56,7 @@ class ServiceCard extends StatelessWidget {
                   Text(
                     '${service.durationMinutes} min',
                     style: TextStyle(
-                      color: isSelected ? Colors.white70 : AppColors.muted,
+                      color: isSelected ? AppColors.onGold : AppColors.muted,
                     ),
                   ),
                 ],
@@ -65,7 +65,7 @@ class ServiceCard extends StatelessWidget {
             Text(
               'R\$ ${service.price.toStringAsFixed(0)}',
               style: TextStyle(
-                color: isSelected ? Colors.white : AppColors.text,
+                color: isSelected ? AppColors.onGold : AppColors.text,
                 fontWeight: FontWeight.w900,
               ),
             ),

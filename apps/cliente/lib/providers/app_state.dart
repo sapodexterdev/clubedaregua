@@ -25,6 +25,7 @@ class AppState extends ChangeNotifier {
   List<ServiceItem> services = List.of(MockData.services);
   List<Appointment> appointments = List.of(MockData.appointments);
   List<String> availableTimes = List.of(MockData.times);
+  ShopIdentity? shopIdentity;
   bool lastBookingRequestCreated = false;
 
   List<Barber> get filteredBarbers {
@@ -75,12 +76,17 @@ class AppState extends ChangeNotifier {
     final fetchedCategories = await categoriesFuture;
     final fetchedServices = await servicesFuture;
     final fetchedAppointments = await appointmentsFuture;
+    final fetchedShopIdentity = await _barberRepository.fetchShopIdentity(
+      barberShopId:
+          fetchedBarbers.isEmpty ? null : fetchedBarbers.first.barberShopId,
+    );
 
     _applyData(
       barbersData: fetchedBarbers,
       categoriesData: fetchedCategories,
       servicesData: fetchedServices,
       appointmentsData: fetchedAppointments,
+      shopIdentityData: fetchedShopIdentity,
     );
     await refreshAvailableTimes();
 
@@ -93,11 +99,13 @@ class AppState extends ChangeNotifier {
     required List<ServiceCategory> categoriesData,
     required List<ServiceItem> servicesData,
     required List<Appointment> appointmentsData,
+    required ShopIdentity? shopIdentityData,
   }) {
     barbers = barbersData;
     categories = categoriesData;
     services = servicesData;
     appointments = appointmentsData;
+    shopIdentity = shopIdentityData;
     selectedBarber = _preserveSelectedBarber(selectedBarber);
     selectedService = _preserveSelectedService(selectedService);
     selectedCategoryId = _preserveSelectedCategory(selectedCategoryId);
@@ -146,6 +154,7 @@ class AppState extends ChangeNotifier {
     final barber = selectedBarber;
     final service = selectedService;
     if (barber == null || service == null) return false;
+    if (!_selectedDateIsAllowed()) return false;
     await refreshAvailableTimes();
     if (!availableTimes.contains(selectedTime)) return false;
 
@@ -221,11 +230,45 @@ class AppState extends ChangeNotifier {
       date: selectedDate,
       durationMinutes: service.durationMinutes,
     );
-    availableTimes = times;
+    availableTimes = _filterTimesBySettings(times);
     if (!availableTimes.contains(selectedTime)) {
       selectedTime = availableTimes.isEmpty ? '' : availableTimes.first;
     }
     notifyListeners();
+  }
+
+  bool _selectedDateIsAllowed() {
+    final identity = shopIdentity;
+    if (identity == null) return true;
+    final today = DateTime.now();
+    final selectedDay =
+        DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+    final maxDay = DateTime(today.year, today.month, today.day)
+        .add(Duration(days: identity.bookingDaysAhead));
+    return !selectedDay.isAfter(maxDay);
+  }
+
+  List<String> _filterTimesBySettings(List<String> times) {
+    final identity = shopIdentity;
+    if (identity == null) return times;
+
+    final minDateTime =
+        DateTime.now().add(Duration(minutes: identity.minNoticeMinutes));
+    return times.where((time) {
+      final parts = time.split(':');
+      if (parts.length != 2) return false;
+      final hour = int.tryParse(parts[0]);
+      final minute = int.tryParse(parts[1]);
+      if (hour == null || minute == null) return false;
+      final slot = DateTime(
+        selectedDate.year,
+        selectedDate.month,
+        selectedDate.day,
+        hour,
+        minute,
+      );
+      return !slot.isBefore(minDateTime);
+    }).toList();
   }
 
   void _ensureSelectedServiceMatchesBarber() {

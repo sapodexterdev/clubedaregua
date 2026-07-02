@@ -63,7 +63,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.card,
                   borderRadius: BorderRadius.circular(28),
                 ),
                 child: Column(
@@ -71,7 +71,8 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                   children: [
                     const Text(
                       'Resumo',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
                     ),
                     const SizedBox(height: 16),
                     _SummaryRow(label: 'Barbeiro', value: barber?.name ?? '-'),
@@ -82,9 +83,8 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                     ),
                     _SummaryRow(
                       label: 'Horario',
-                      value: state.selectedTime.isEmpty
-                          ? '-'
-                          : state.selectedTime,
+                      value:
+                          state.selectedTime.isEmpty ? '-' : state.selectedTime,
                     ),
                     const Divider(height: 28),
                     _SummaryRow(
@@ -241,7 +241,7 @@ class _PaymentMethodSelector extends StatelessWidget {
             backgroundColor: AppColors.background,
             side: BorderSide.none,
             labelStyle: TextStyle(
-              color: selected == method ? Colors.white : AppColors.text,
+              color: selected == method ? AppColors.onGold : AppColors.text,
               fontWeight: FontWeight.w800,
             ),
           ),

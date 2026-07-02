@@ -11,12 +11,14 @@ class AppTheme {
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.orange,
         primary: AppColors.orange,
+        onPrimary: AppColors.onGold,
         surface: AppColors.card,
+        onSurface: AppColors.text,
       ),
       textTheme: ThemeData.light().textTheme.apply(
-        bodyColor: AppColors.text,
-        displayColor: AppColors.text,
-      ),
+            bodyColor: AppColors.text,
+            displayColor: AppColors.text,
+          ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.background,
         elevation: 0,
@@ -25,9 +27,10 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
+        fillColor: AppColors.card,
         hintStyle: const TextStyle(color: AppColors.muted),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(22),
           borderSide: BorderSide.none,
@@ -36,7 +39,7 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.orange,
-          foregroundColor: Colors.white,
+          foregroundColor: AppColors.onGold,
           elevation: 0,
           minimumSize: const Size.fromHeight(56),
           shape: RoundedRectangleBorder(

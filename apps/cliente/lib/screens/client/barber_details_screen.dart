@@ -221,7 +221,7 @@ class _PillTab extends StatelessWidget {
           height: 58,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: selected ? AppColors.orange : Colors.white,
+            color: selected ? AppColors.orange : AppColors.card,
             borderRadius: BorderRadius.circular(29),
             border: Border.all(
               color: selected ? AppColors.orange : AppColors.stroke,
@@ -230,7 +230,7 @@ class _PillTab extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              color: selected ? Colors.white : AppColors.muted,
+              color: selected ? AppColors.onGold : AppColors.muted,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -293,7 +293,7 @@ class _BookingTab extends StatelessWidget {
                     ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.orange,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.onGold,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(36),
               ),
@@ -374,7 +374,7 @@ class _CalendarStrip extends StatelessWidget {
                   Text(
                     _weekdayLabel(day.weekday),
                     style: TextStyle(
-                      color: selected ? Colors.white : AppColors.muted,
+                      color: selected ? AppColors.onGold : AppColors.muted,
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
@@ -464,7 +464,7 @@ class _TimeStrip extends StatelessWidget {
               child: Text(
                 time,
                 style: TextStyle(
-                  color: selected ? Colors.white : AppColors.muted,
+                  color: selected ? AppColors.onGold : AppColors.muted,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -663,7 +663,8 @@ class _InfoTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
+                Text(title,
+                    style: const TextStyle(fontWeight: FontWeight.w900)),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
@@ -702,7 +703,8 @@ class _ReviewTile extends StatelessWidget {
             children: [
               Text(name, style: const TextStyle(fontWeight: FontWeight.w900)),
               const Spacer(),
-              const Icon(Icons.star_rounded, color: Color(0xFFFFB000), size: 18),
+              const Icon(Icons.star_rounded,
+                  color: Color(0xFFFFB000), size: 18),
               const SizedBox(width: 4),
               const Text('5,0', style: TextStyle(fontWeight: FontWeight.w800)),
             ],
