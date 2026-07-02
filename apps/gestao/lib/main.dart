@@ -806,18 +806,31 @@ class _ManagementLoginScreenState extends State<ManagementLoginScreen> {
                   TextField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
+                    cursorColor: SharedAppColors.orange,
+                    style: const TextStyle(color: SharedAppColors.text),
                     decoration: const InputDecoration(
                       labelText: 'E-mail',
+                      labelStyle: TextStyle(color: SharedAppColors.muted),
                       prefixIcon: Icon(Icons.mail_outline_rounded),
+                      prefixIconColor: SharedAppColors.muted,
+                      filled: true,
+                      fillColor: Colors.white,
                     ),
                   ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: _passwordController,
                     obscureText: !_showPassword,
+                    cursorColor: SharedAppColors.orange,
+                    style: const TextStyle(color: SharedAppColors.text),
                     decoration: InputDecoration(
                       labelText: 'Senha',
+                      labelStyle:
+                          const TextStyle(color: SharedAppColors.muted),
                       prefixIcon: const Icon(Icons.lock_outline_rounded),
+                      prefixIconColor: SharedAppColors.muted,
+                      filled: true,
+                      fillColor: Colors.white,
                       suffixIcon: TextButton(
                         onPressed: () => setState(
                           () => _showPassword = !_showPassword,
