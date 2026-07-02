@@ -80,3 +80,5 @@ with check (
   )
   or public.is_platform_admin()
 );
+
+notify pgrst, 'reload schema';

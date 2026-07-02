@@ -1610,6 +1610,12 @@ class ManagementSession extends ChangeNotifier {
       return 'Sem internet ou Supabase indisponÃƒÂ­vel. Verifique sua conexÃƒÂ£o.';
     }
 
+    if (message.contains('management_clients') ||
+        message.contains('management_client_appointments') ||
+        message.contains('PGRST205')) {
+      return 'Execute o script supabase/issue_006_customer_management.sql no Supabase e atualize a tela. Ele cria as views necessarias para listar clientes.';
+    }
+
     return switch (message) {
       'Login invalido ou usuario sem acesso.' =>
         'Login invÃ¡lido ou usuÃ¡rio sem acesso.',
@@ -3327,7 +3333,7 @@ class _FilterChipButton extends StatelessWidget {
         backgroundColor: Colors.white,
         side: BorderSide.none,
         labelStyle: TextStyle(
-          color: selected ? Colors.white : SharedAppColors.text,
+          color: selected ? Colors.white : const Color(0xFF261F1C),
           fontWeight: FontWeight.w800,
         ),
       ),
