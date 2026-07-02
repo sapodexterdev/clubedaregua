@@ -20,7 +20,7 @@ class ClubeDaReguaGestaoApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Clube da RÃ©gua GestÃ£o',
+      title: 'Clube da Régua Gestão',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -129,7 +129,7 @@ class BookingRequest {
 
   String get paymentMethod {
     final match = RegExp(r'Pagamento:\s*([^.]+)').firstMatch(notes);
-    return match?.group(1)?.trim() ?? 'NÃ£o informado';
+    return match?.group(1)?.trim() ?? 'Não informado';
   }
 
   String get formattedDate {
@@ -140,7 +140,7 @@ class BookingRequest {
     return '${parts[2]}/${parts[1]}/$year';
   }
 
-  String get formattedDateTime => '$formattedDate Ã s $time';
+  String get formattedDateTime => '$formattedDate às $time';
 
   String get observation {
     final value = notes
@@ -223,7 +223,7 @@ class TeamBarber {
   String get detail {
     final commission = commissionPercent.toStringAsFixed(0);
     final status = isActive ? 'agenda ativa' : 'inativo';
-    return '$commission% comissÃ£o - $status';
+    return '$commission% comissão - $status';
   }
 
   factory TeamBarber.fromMap(Map<String, dynamic> map) {
@@ -442,6 +442,8 @@ class ManagedCustomer {
   final int appointmentCount;
   final String favoriteBarber;
 
+  bool get canEdit =>
+      relationshipId.isNotEmpty && !clientId.startsWith('booking:');
   bool get isActive => !isBlocked;
   String get statusLabel => isActive ? 'Ativo' : 'Inativo';
   String get lastAppointmentLabel => lastAppointmentAt == null
@@ -475,6 +477,30 @@ class ManagedCustomer {
           _parseDateTime(map['last_appointment_at']?.toString()),
       notes: map['notes']?.toString() ?? '',
       isBlocked: map['is_blocked'] == true,
+      appointmentCount: appointmentCount,
+      favoriteBarber: favoriteBarber,
+    );
+  }
+
+  factory ManagedCustomer.fromBookingRequest(
+    Map<String, dynamic> map, {
+    required int appointmentCount,
+    required String favoriteBarber,
+    DateTime? computedLastAppointmentAt,
+  }) {
+    final phone = map['customer_phone']?.toString() ?? '';
+    return ManagedCustomer(
+      relationshipId: '',
+      clientId: 'booking:${_digitsOnly(phone)}',
+      name: map['customer_name']?.toString() ?? 'Cliente',
+      phone: phone,
+      email: '',
+      avatarUrl: '',
+      createdAt: _parseDateTime(map['created_at']?.toString()),
+      firstSeenAt: _parseDateTime(map['created_at']?.toString()),
+      lastAppointmentAt: computedLastAppointmentAt,
+      notes: map['notes']?.toString() ?? '',
+      isBlocked: false,
       appointmentCount: appointmentCount,
       favoriteBarber: favoriteBarber,
     );
@@ -514,6 +540,10 @@ class ManagedCustomer {
     final year = value.year.toString().padLeft(4, '0');
     return '$day/$month/$year';
   }
+
+  static String _digitsOnly(String value) {
+    return value.replaceAll(RegExp(r'\D'), '');
+  }
 }
 
 class CustomerAppointment {
@@ -548,6 +578,32 @@ class CustomerAppointment {
       status: ScheduleEntry._statusLabel(map['status']?.toString() ?? ''),
       notes: map['notes']?.toString() ?? '',
     );
+  }
+
+  factory CustomerAppointment.fromBookingRequest(Map<String, dynamic> map) {
+    final date = map['requested_date']?.toString() ?? '';
+    final time = map['requested_time']?.toString() ?? '';
+    return CustomerAppointment(
+      id: 'booking-${map['id']}',
+      clientId:
+          'booking:${ManagedCustomer._digitsOnly(map['customer_phone']?.toString() ?? '')}',
+      date: ManagedCustomer._parseDateTime(
+          '$date ${time.isEmpty ? '00:00' : time}'),
+      service: map['services']?['name']?.toString() ?? 'Servico',
+      barber: map['barbers']?['name']?.toString() ?? 'Barbeiro',
+      status: _bookingStatusLabel(map['status']?.toString() ?? ''),
+      notes: map['notes']?.toString() ?? '',
+    );
+  }
+
+  static String _bookingStatusLabel(String status) {
+    return switch (status) {
+      'new' => 'Novo',
+      'contacted' => 'Contatado',
+      'converted' => 'Aceito',
+      'cancelled' => 'Cancelado',
+      _ => status.isEmpty ? 'Solicitado' : status,
+    };
   }
 }
 
@@ -675,7 +731,7 @@ class ManagementSession extends ChangeNotifier {
       );
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw StateError('Login invÃ¡lido ou usuÃ¡rio sem acesso.');
+        throw StateError('Login inválido ou usuário sem acesso.');
       }
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -728,7 +784,7 @@ class ManagementSession extends ChangeNotifier {
       );
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw StateError('NÃ£o foi possÃ­vel carregar os pedidos.');
+        throw StateError('Não foi possível carregar os pedidos.');
       }
 
       final rows = jsonDecode(response.body) as List<dynamic>;
@@ -929,8 +985,20 @@ class ManagementSession extends ChangeNotifier {
           'order': 'starts_at.desc',
         },
       );
-      customerAppointments =
-          appointmentRows.map(CustomerAppointment.fromMap).toList();
+      final bookingRows = await _getRestRows(
+        token,
+        'booking_requests',
+        query: {
+          'select':
+              'id,customer_name,customer_phone,requested_date,requested_time,status,notes,created_at,barbers(name),services(name)',
+          'barber_shop_id': 'eq.$shopId',
+          'order': 'created_at.desc',
+        },
+      );
+      customerAppointments = [
+        ...appointmentRows.map(CustomerAppointment.fromMap),
+        ...bookingRows.map(CustomerAppointment.fromBookingRequest),
+      ];
 
       final appointmentCounts = <String, int>{};
       final barberCounts = <String, Map<String, int>>{};
@@ -950,7 +1018,7 @@ class ManagementSession extends ChangeNotifier {
         }
       }
 
-      customers = rows
+      final relationshipCustomers = rows
           .map((row) {
             final clientId = row['client_id']?.toString() ?? '';
             final favoriteBarber = _favoriteBarber(barberCounts[clientId]);
@@ -963,6 +1031,38 @@ class ManagementSession extends ChangeNotifier {
           })
           .where((customer) => customer.clientId.isNotEmpty)
           .toList();
+
+      final relationshipPhones = relationshipCustomers
+          .map((customer) => ManagedCustomer._digitsOnly(customer.phone))
+          .where((phone) => phone.isNotEmpty)
+          .toSet();
+      final bookingCustomersByPhone = <String, ManagedCustomer>{};
+      for (final row in bookingRows) {
+        final phone = ManagedCustomer._digitsOnly(
+          row['customer_phone']?.toString() ?? '',
+        );
+        if (phone.isEmpty || relationshipPhones.contains(phone)) continue;
+        final clientId = 'booking:$phone';
+        final existing = bookingCustomersByPhone[phone];
+        final favoriteBarber = _favoriteBarber(barberCounts[clientId]);
+        final next = ManagedCustomer.fromBookingRequest(
+          row,
+          appointmentCount: appointmentCounts[clientId] ?? 0,
+          favoriteBarber: favoriteBarber,
+          computedLastAppointmentAt: lastAppointments[clientId],
+        );
+        if (existing == null ||
+            (next.lastAppointmentAt ?? DateTime.fromMillisecondsSinceEpoch(0))
+                .isAfter(existing.lastAppointmentAt ??
+                    DateTime.fromMillisecondsSinceEpoch(0))) {
+          bookingCustomersByPhone[phone] = next;
+        }
+      }
+
+      customers = [
+        ...relationshipCustomers,
+        ...bookingCustomersByPhone.values,
+      ];
       customersError = null;
     } catch (error) {
       customersError = _cleanErrorMessage(error);
@@ -1476,14 +1576,14 @@ class ManagementSession extends ChangeNotifier {
     );
 
     if (shops.isEmpty) {
-      throw StateError('Nenhuma barbearia disponÃ­vel para este usuÃ¡rio.');
+      throw StateError('Nenhuma barbearia disponível para este usuário.');
     }
 
     final shop = shops.first;
     _barberShopId = shop['id']?.toString();
     barberShopName = shop['name']?.toString();
     if (_barberShopId == null || _barberShopId!.isEmpty) {
-      throw StateError('Barbearia sem identificador vÃ¡lido.');
+      throw StateError('Barbearia sem identificador válido.');
     }
 
     return _barberShopId!;
@@ -1607,7 +1707,7 @@ class ManagementSession extends ChangeNotifier {
         message.contains('XMLHttpRequest') ||
         message.contains('SocketException') ||
         message.contains('ClientException')) {
-      return 'Sem internet ou Supabase indisponÃƒÂ­vel. Verifique sua conexÃƒÂ£o.';
+      return 'Sem internet ou Supabase indisponível. Verifique sua conexão.';
     }
 
     if (message.contains('management_clients') ||
@@ -1618,17 +1718,17 @@ class ManagementSession extends ChangeNotifier {
 
     return switch (message) {
       'Login invalido ou usuario sem acesso.' =>
-        'Login invÃ¡lido ou usuÃ¡rio sem acesso.',
-      'Login invÃ¡lido ou usuÃ¡rio sem acesso.' =>
-        'Login invÃ¡lido ou usuÃ¡rio sem acesso.',
+        'Login inválido ou usuário sem acesso.',
+      'Login inválido ou usuário sem acesso.' =>
+        'Login inválido ou usuário sem acesso.',
       'Nao foi possivel carregar pedidos.' =>
-        'NÃ£o foi possÃ­vel carregar os pedidos.',
-      'NÃ£o foi possÃ­vel carregar os pedidos.' =>
-        'NÃ£o foi possÃ­vel carregar os pedidos.',
+        'Não foi possível carregar os pedidos.',
+      'Não foi possível carregar os pedidos.' =>
+        'Não foi possível carregar os pedidos.',
       'Nao foi possivel atualizar o pedido.' =>
-        'NÃ£o foi possÃ­vel atualizar o pedido.',
-      'NÃ£o foi possÃ­vel atualizar o pedido.' =>
-        'NÃ£o foi possÃ­vel atualizar o pedido.',
+        'Não foi possível atualizar o pedido.',
+      'Não foi possível atualizar o pedido.' =>
+        'Não foi possível atualizar o pedido.',
       _ => message,
     };
   }
@@ -1690,13 +1790,13 @@ class _ManagementLoginScreenState extends State<ManagementLoginScreen> {
                   ),
                   const SizedBox(height: 18),
                   const Text(
-                    'Clube da RÃ©gua GestÃ£o',
+                    'Clube da Régua Gestão',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Entre para ver pedidos, agenda e operaÃ§Ã£o da barbearia.',
+                    'Entre para ver pedidos, agenda e operação da barbearia.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: SharedAppColors.muted),
                   ),
@@ -1801,7 +1901,7 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
     }
 
     if (password != confirmPassword) {
-      setState(() => _message = 'As senhas digitadas nÃ£o conferem.');
+      setState(() => _message = 'As senhas digitadas não conferem.');
       return;
     }
 
@@ -1907,7 +2007,7 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
       // Keep the fallback below when Supabase returns an empty or non-JSON body.
     }
 
-    return 'NÃ£o foi possÃ­vel redefinir a senha. Gere um novo link e tente novamente.';
+    return 'Não foi possível redefinir a senha. Gere um novo link e tente novamente.';
   }
 
   @override
@@ -1947,8 +2047,8 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
                   const SizedBox(height: 8),
                   Text(
                     _isDone
-                        ? 'Agora vocÃª jÃ¡ pode entrar com sua nova senha.'
-                        : 'Digite sua nova senha para acessar a gestÃ£o.',
+                        ? 'Agora você já pode entrar com sua nova senha.'
+                        : 'Digite sua nova senha para acessar a gestão.',
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: SharedAppColors.muted),
                   ),
@@ -2057,7 +2157,7 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
             icon: const Icon(Icons.refresh_rounded),
           ),
           IconButton(
-            tooltip: 'NotificaÃ§Ãµes',
+            tooltip: 'Notificações',
             onPressed: () {},
             icon: const Icon(Icons.notifications_none_rounded),
           ),
@@ -2132,7 +2232,7 @@ class _ManagementTab {
 const _barberTabs = [
   _ManagementTab(
     label: 'Pedidos',
-    title: 'SolicitaÃ§Ãµes recebidas',
+    title: 'Solicitações recebidas',
     icon: Icons.inbox_outlined,
     selectedIcon: Icons.inbox_rounded,
     child: _BookingRequestsPage(),
@@ -2145,7 +2245,7 @@ const _barberTabs = [
     child: _BarberAgendaPage(),
   ),
   _ManagementTab(
-    label: 'HorÃ¡rios',
+    label: 'Horários',
     title: 'Disponibilidade',
     icon: Icons.schedule_outlined,
     selectedIcon: Icons.schedule_rounded,
@@ -2159,8 +2259,8 @@ const _barberTabs = [
     child: _ClientsPage(),
   ),
   _ManagementTab(
-    label: 'ComissÃ£o',
-    title: 'ComissÃ£o e faturamento',
+    label: 'Comissão',
+    title: 'Comissão e faturamento',
     icon: Icons.payments_outlined,
     selectedIcon: Icons.payments_rounded,
     child: _CommissionPage(),
@@ -2170,7 +2270,7 @@ const _barberTabs = [
 const _adminTabs = [
   _ManagementTab(
     label: 'Pedidos',
-    title: 'SolicitaÃ§Ãµes recebidas',
+    title: 'Solicitações recebidas',
     icon: Icons.inbox_outlined,
     selectedIcon: Icons.inbox_rounded,
     child: _BookingRequestsPage(),
@@ -2190,8 +2290,8 @@ const _adminTabs = [
     child: _BarberAgendaPage(adminView: true),
   ),
   _ManagementTab(
-    label: 'ServiÃ§os',
-    title: 'Cadastro de serviÃ§os',
+    label: 'Serviços',
+    title: 'Cadastro de serviços',
     icon: Icons.design_services_outlined,
     selectedIcon: Icons.design_services_rounded,
     child: _ServicesPage(),
@@ -2286,8 +2386,8 @@ class _Header extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             isAdmin
-                ? 'Controle equipe, serviÃ§os, caixa e desempenho da unidade.'
-                : 'Confirme atendimentos, bloqueie horÃ¡rios e acompanhe sua comissÃ£o.',
+                ? 'Controle equipe, serviços, caixa e desempenho da unidade.'
+                : 'Confirme atendimentos, bloqueie horários e acompanhe sua comissão.',
             style: const TextStyle(color: Colors.white70, height: 1.35),
           ),
         ],
@@ -2548,7 +2648,7 @@ class _BookingRequestsPage extends StatelessWidget {
             if (session.bookingRequestsError != null)
               _InlineNotice(
                 icon: Icons.warning_amber_rounded,
-                title: 'NÃ£o foi possÃ­vel carregar',
+                title: 'Não foi possível carregar',
                 subtitle: session.bookingRequestsError!,
               )
             else if (requests.isEmpty)
@@ -2656,25 +2756,25 @@ class _AvailabilityPage extends StatelessWidget {
     return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionTitle('HorÃ¡rios disponÃ­veis'),
+        _SectionTitle('Horários disponíveis'),
         SizedBox(height: 12),
         _ScheduleTile(day: 'Segunda a sexta', hours: '09:00 - 18:00'),
-        _ScheduleTile(day: 'SÃ¡bado', hours: '09:00 - 14:00'),
+        _ScheduleTile(day: 'Sábado', hours: '09:00 - 14:00'),
         SizedBox(height: 22),
         _SectionTitle('Bloqueios'),
         SizedBox(height: 12),
         _BlockedTile(
-          title: 'AlmoÃ§o estendido',
+          title: 'Almoço estendido',
           detail: 'Hoje, 12:00 - 13:30',
         ),
         _BlockedTile(
-          title: 'FÃ©rias programadas',
-          detail: '12/08 atÃ© 18/08',
+          title: 'Férias programadas',
+          detail: '12/08 até 18/08',
         ),
         SizedBox(height: 22),
         _ActionPanel(
           title: 'Ajustar disponibilidade',
-          subtitle: 'Crie horÃ¡rios fixos, folgas ou bloqueios rÃ¡pidos.',
+          subtitle: 'Crie horários fixos, folgas ou bloqueios rápidos.',
           buttonLabel: 'Novo bloqueio',
           icon: Icons.event_busy_rounded,
         ),
@@ -2900,6 +3000,7 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _nameController,
+              enabled: customer.canEdit,
               decoration: const InputDecoration(
                 labelText: 'Nome',
                 prefixIcon: Icon(Icons.person_outline_rounded),
@@ -2914,6 +3015,7 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
             const SizedBox(height: 12),
             TextFormField(
               controller: _phoneController,
+              enabled: customer.canEdit,
               keyboardType: TextInputType.phone,
               decoration: const InputDecoration(
                 labelText: 'Telefone',
@@ -2941,6 +3043,7 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
             const SizedBox(height: 12),
             TextFormField(
               controller: _notesController,
+              enabled: customer.canEdit,
               minLines: 2,
               maxLines: 4,
               decoration: const InputDecoration(
@@ -2953,22 +3056,30 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
               contentPadding: EdgeInsets.zero,
               value: _isActive,
               activeColor: SharedAppColors.orange,
-              onChanged: _isSaving
+              onChanged: _isSaving || !customer.canEdit
                   ? null
                   : (value) => setState(() => _isActive = value),
               title: const Text('Cliente ativo'),
               subtitle: const Text('Clientes inativos ficam filtraveis.'),
             ),
             const SizedBox(height: 12),
-            FilledButton(
-              onPressed: _isSaving ? null : () => _save(customer),
-              style: FilledButton.styleFrom(
-                backgroundColor: SharedAppColors.orange,
-                foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(52),
+            if (!customer.canEdit)
+              const _InlineNotice(
+                icon: Icons.info_outline_rounded,
+                title: 'Cliente vindo de solicitacao',
+                subtitle:
+                    'Este cliente ainda nao possui cadastro vinculado. Ele aparece pelo agendamento realizado, mas a edicao fica bloqueada.',
+              )
+            else
+              FilledButton(
+                onPressed: _isSaving ? null : () => _save(customer),
+                style: FilledButton.styleFrom(
+                  backgroundColor: SharedAppColors.orange,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(52),
+                ),
+                child: Text(_isSaving ? 'Salvando...' : 'Salvar'),
               ),
-              child: Text(_isSaving ? 'Salvando...' : 'Salvar'),
-            ),
             const SizedBox(height: 22),
             const _SectionTitle('Historico de agendamentos'),
             const SizedBox(height: 12),
@@ -3046,21 +3157,21 @@ class _CommissionPage extends StatelessWidget {
           cards: [
             _MetricData('Semana', 'R\$ 1.780', Icons.trending_up_rounded),
             _MetricData(
-                'ComissÃ£o', 'R\$ 712', Icons.account_balance_wallet_rounded),
+                'Comissão', 'R\$ 712', Icons.account_balance_wallet_rounded),
           ],
         ),
         SizedBox(height: 22),
         _SectionTitle('Resumo'),
         SizedBox(height: 12),
         _InsightTile(
-          title: 'Atendimentos concluÃ­dos',
+          title: 'Atendimentos concluídos',
           value: '31',
-          subtitle: 'Ticket mÃ©dio de R\$ 57',
+          subtitle: 'Ticket médio de R\$ 57',
         ),
         _InsightTile(
-          title: 'ServiÃ§o mais feito',
+          title: 'Serviço mais feito',
           value: 'Corte + barba',
-          subtitle: '14 atendimentos no perÃ­odo',
+          subtitle: '14 atendimentos no período',
         ),
       ],
     );
@@ -3090,14 +3201,14 @@ class _AdminDashboardPage extends StatelessWidget {
           subtitle: '18 atendimentos esta semana',
         ),
         _InsightTile(
-          title: 'ServiÃ§o mais vendido',
+          title: 'Serviço mais vendido',
           value: 'Corte + barba',
           subtitle: '34% dos agendamentos',
         ),
         _InsightTile(
           title: 'Caixa do dia',
           value: 'R\$ 1.240',
-          subtitle: 'PIX, dinheiro e cartÃ£o',
+          subtitle: 'PIX, dinheiro e cartão',
         ),
       ],
     );
@@ -3196,9 +3307,9 @@ class _UnusedLegacyServicesPageSnapshot extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _ActionPanel(
-          title: 'CatÃ¡logo de serviÃ§os',
-          subtitle: 'Cadastre preÃ§os, duraÃ§Ã£o e comissÃ£o por serviÃ§o.',
-          buttonLabel: 'Novo serviÃ§o',
+          title: 'Catálogo de serviços',
+          subtitle: 'Cadastre preços, duração e comissão por serviço.',
+          buttonLabel: 'Novo serviço',
           icon: Icons.add_circle_rounded,
         ),
         SizedBox(height: 18),
@@ -3721,7 +3832,7 @@ class _TeamPage extends StatelessWidget {
             if (session.errorMessage != null)
               _InlineNotice(
                 icon: Icons.warning_amber_rounded,
-                title: 'NÃ£o foi possÃ­vel carregar a equipe',
+                title: 'Não foi possível carregar a equipe',
                 subtitle: session.errorMessage!,
               )
             else if (session.teamBarbers.isEmpty)
@@ -3769,7 +3880,7 @@ class LegacyTeamPage extends StatelessWidget {
       children: [
         _ActionPanel(
           title: 'Equipe da unidade',
-          subtitle: 'Gerencie barbeiros, permissÃµes e percentuais.',
+          subtitle: 'Gerencie barbeiros, permissões e percentuais.',
           buttonLabel: 'Novo barbeiro',
           icon: Icons.person_add_alt_1_rounded,
         ),
@@ -3777,16 +3888,16 @@ class LegacyTeamPage extends StatelessWidget {
         _TeamTile(
           name: 'Barbeiro demo',
           role: 'Barbeiro principal',
-          detail: '40% comissÃ£o - agenda ativa',
+          detail: '40% comissão - agenda ativa',
         ),
         _TeamTile(
           name: 'Ricardo Anderson',
           role: 'Barbeiro',
-          detail: '35% comissÃ£o - agenda ativa',
+          detail: '35% comissão - agenda ativa',
         ),
         _TeamTile(
           name: 'Camila Rocha',
-          role: 'RecepÃ§Ã£o',
+          role: 'Recepção',
           detail: 'Acesso a agenda e caixa',
         ),
       ],
@@ -3914,7 +4025,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     decoration: const InputDecoration(
-                      labelText: 'PreÃ§o inicial',
+                      labelText: 'Preço inicial',
                       prefixIcon: Icon(Icons.attach_money),
                     ),
                     validator: _validateMoney,
@@ -3927,7 +4038,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     decoration: const InputDecoration(
-                      labelText: 'ComissÃ£o %',
+                      labelText: 'Comissão %',
                       prefixIcon: Icon(Icons.percent),
                     ),
                     validator: _validateCommission,
@@ -3971,7 +4082,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
 
   String? _validateMoney(String? value) {
     final parsed = _parseNumber(value);
-    if (parsed == null || parsed < 0) return 'Valor invÃ¡lido.';
+    if (parsed == null || parsed < 0) return 'Valor inválido.';
     return null;
   }
 
@@ -4056,20 +4167,20 @@ class _CashPage extends StatelessWidget {
         _MetricsGrid(
           cards: [
             _MetricData('Entradas', 'R\$ 1.240', Icons.south_west_rounded),
-            _MetricData('SaÃ­das', 'R\$ 180', Icons.north_east_rounded),
+            _MetricData('Saídas', 'R\$ 180', Icons.north_east_rounded),
           ],
         ),
         SizedBox(height: 22),
         _SectionTitle('Movimentos de caixa'),
         SizedBox(height: 12),
         _CashMovementTile(title: 'PIX - Marcos Lima', value: '+ R\$ 85'),
-        _CashMovementTile(title: 'Dinheiro - JoÃ£o Pedro', value: '+ R\$ 55'),
+        _CashMovementTile(title: 'Dinheiro - João Pedro', value: '+ R\$ 55'),
         _CashMovementTile(title: 'Compra de pomada', value: '- R\$ 180'),
         SizedBox(height: 22),
-        _SectionTitle('Estoque crÃ­tico'),
+        _SectionTitle('Estoque crítico'),
         SizedBox(height: 12),
         _StockTile(name: 'Pomada modeladora', quantity: '3 un'),
-        _StockTile(name: 'LÃ¢mina descartÃ¡vel', quantity: '18 un'),
+        _StockTile(name: 'Lâmina descartável', quantity: '18 un'),
       ],
     );
   }
@@ -4668,7 +4779,7 @@ class _TeamTile extends StatelessWidget {
         child: Icon(Icons.person_rounded, color: Colors.white),
       ),
       title: name,
-      subtitle: '$role â€¢ $detail',
+      subtitle: '$role • $detail',
       trailing: const Icon(Icons.chevron_right_rounded),
     );
   }
@@ -4721,7 +4832,7 @@ class _CashMovementTile extends StatelessWidget {
         isPositive ? Icons.south_west_rounded : Icons.north_east_rounded,
       ),
       title: title,
-      subtitle: isPositive ? 'Entrada' : 'SaÃ­da',
+      subtitle: isPositive ? 'Entrada' : 'Saída',
       trailing: Text(
         value,
         style: TextStyle(
@@ -4744,7 +4855,7 @@ class _StockTile extends StatelessWidget {
     return _SurfaceTile(
       leading: const _IconBadge(Icons.inventory_2_rounded),
       title: name,
-      subtitle: 'ReposiÃ§Ã£o recomendada',
+      subtitle: 'Reposição recomendada',
       trailing: Text(
         quantity,
         style: const TextStyle(fontWeight: FontWeight.w900),
@@ -4769,7 +4880,7 @@ class _InsightTile extends StatelessWidget {
     return _SurfaceTile(
       leading: const _IconBadge(Icons.insights_rounded),
       title: value,
-      subtitle: '$title â€¢ $subtitle',
+      subtitle: '$title • $subtitle',
     );
   }
 }
