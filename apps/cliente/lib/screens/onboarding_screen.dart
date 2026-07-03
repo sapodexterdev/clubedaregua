@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -17,9 +19,26 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _controller = PageController();
+  Timer? _timer;
   int _page = 0;
+  static const _pageCount = 3;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted || !_controller.hasClients) return;
+      final nextPage = (_page + 1) % _pageCount;
+      _controller.animateToPage(
+        nextPage,
+        duration: const Duration(milliseconds: 520),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
 
   Future<void> _finish() async {
+    _timer?.cancel();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(SplashScreen.onboardingSeenKey, true);
     if (!mounted) return;
@@ -39,6 +58,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   void dispose() {
+    _timer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -47,27 +67,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: PageView(
-        controller: _controller,
-        onPageChanged: (value) => setState(() => _page = value),
+      body: Stack(
+        fit: StackFit.expand,
         children: [
-          _DiscoveryIntroStep(
-            page: _page,
-            onNext: _next,
+          PageView(
+            controller: _controller,
+            onPageChanged: (value) => setState(() => _page = value),
+            children: [
+              const _DiscoveryIntroStep(),
+              _OnboardingStep(
+                imageUrl: AppConstants.heroBarbershop,
+                icon: Icons.calendar_month_outlined,
+                title: 'Agende com praticidade\ne sem complicacao.',
+                subtitle:
+                    'Escolha servico, profissional e horario ideal para voce.',
+                onNext: _next,
+              ),
+              _ExploreStep(onNext: _next),
+            ],
           ),
-          _OnboardingStep(
-            imageUrl: AppConstants.heroBarbershop,
-            icon: Icons.calendar_month_outlined,
-            title: 'Agende com praticidade\ne sem complicacao.',
-            subtitle:
-                'Escolha servico, profissional e horario ideal para voce.',
+          _FixedOnboardingAction(
             page: _page,
-            onNext: _next,
-          ),
-          _ExploreStep(
-            page: _page,
-            onPrimary: _finish,
-            onSecondary: _finish,
+            pageCount: _pageCount,
+            onTap: _finish,
           ),
         ],
       ),
@@ -76,48 +98,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 }
 
 class _DiscoveryIntroStep extends StatelessWidget {
-  const _DiscoveryIntroStep({
-    required this.page,
-    required this.onNext,
-  });
-
-  final int page;
-  final VoidCallback onNext;
+  const _DiscoveryIntroStep();
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset(
-              AppConstants.splashBarberReference,
-              fit: BoxFit.cover,
-              alignment: Alignment.center,
-            ),
-            Positioned(
-              left: constraints.maxWidth * .09,
-              right: constraints.maxWidth * .09,
-              top: constraints.maxHeight * .748,
-              height: constraints.maxHeight * .075,
-              child: Semantics(
-                button: true,
-                label: 'Encontrar barbearias',
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(18),
-                    splashColor: AppColors.orange.withOpacity(.16),
-                    highlightColor: AppColors.orange.withOpacity(.08),
-                    onTap: onNext,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+    return Image.asset(
+      AppConstants.splashBarberReference,
+      fit: BoxFit.cover,
+      alignment: Alignment.center,
     );
   }
 }
@@ -128,7 +116,6 @@ class _OnboardingStep extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
-    required this.page,
     required this.onNext,
   });
 
@@ -136,7 +123,6 @@ class _OnboardingStep extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
-  final int page;
   final VoidCallback onNext;
 
   @override
@@ -196,8 +182,7 @@ class _OnboardingStep extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const Spacer(flex: 3),
-                  _ProgressDots(page: page),
+                  const Spacer(flex: 4),
                 ],
               ),
             ),
@@ -209,15 +194,9 @@ class _OnboardingStep extends StatelessWidget {
 }
 
 class _ExploreStep extends StatelessWidget {
-  const _ExploreStep({
-    required this.page,
-    required this.onPrimary,
-    required this.onSecondary,
-  });
+  const _ExploreStep({required this.onNext});
 
-  final int page;
-  final VoidCallback onPrimary;
-  final VoidCallback onSecondary;
+  final VoidCallback onNext;
 
   @override
   Widget build(BuildContext context) {
@@ -291,18 +270,7 @@ class _ExploreStep extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 30),
-                const SizedBox(height: 8),
-                _PrimaryBoardButton(
-                  label: 'Explorar barbearias',
-                  icon: Icons.search_rounded,
-                  onTap: onPrimary,
-                ),
-                const SizedBox(height: 12),
-                _SecondaryBoardButton(
-                  label: 'Continuar sem cadastro',
-                  onTap: onSecondary,
-                ),
+                const Spacer(),
               ],
             ),
           ),
@@ -312,90 +280,68 @@ class _ExploreStep extends StatelessWidget {
   }
 }
 
-class _ProgressDots extends StatelessWidget {
-  const _ProgressDots({required this.page});
+class _FixedOnboardingAction extends StatelessWidget {
+  const _FixedOnboardingAction({
+    required this.page,
+    required this.pageCount,
+    required this.onTap,
+  });
 
   final int page;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(4, (index) {
-        final selected = index == page;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          width: selected ? 24 : 7,
-          height: 7,
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          decoration: BoxDecoration(
-            color: selected ? AppColors.orange : AppColors.muted,
-            borderRadius: BorderRadius.circular(8),
-          ),
-        );
-      }),
-    );
-  }
-}
-
-class _PrimaryBoardButton extends StatelessWidget {
-  const _PrimaryBoardButton({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
+  final int pageCount;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: FilledButton.icon(
-        onPressed: onTap,
-        icon: Icon(icon),
-        label: Text(label),
-        style: FilledButton.styleFrom(
-          backgroundColor: AppColors.orange,
-          foregroundColor: AppColors.onGold,
-          textStyle: const TextStyle(fontWeight: FontWeight.w900),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+    return SafeArea(
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(36, 0, 36, 58),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: double.infinity,
+                height: 62,
+                child: FilledButton.icon(
+                  onPressed: onTap,
+                  icon: const Icon(Icons.search_rounded, size: 34),
+                  label: const Text('ENCONTRAR BARBEARIAS'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.orange,
+                    foregroundColor: AppColors.onGold,
+                    textStyle: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: .2,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(pageCount, (index) {
+                  final selected = index == page;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    width: selected ? 22 : 9,
+                    height: 9,
+                    margin: const EdgeInsets.symmetric(horizontal: 5),
+                    decoration: BoxDecoration(
+                      color: selected ? AppColors.orange : AppColors.muted,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  );
+                }),
+              ),
+            ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _SecondaryBoardButton extends StatelessWidget {
-  const _SecondaryBoardButton({
-    required this.label,
-    required this.onTap,
-  });
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 52,
-      child: OutlinedButton(
-        onPressed: onTap,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.orange,
-          side: const BorderSide(color: AppColors.orange),
-          textStyle: const TextStyle(fontWeight: FontWeight.w900),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-        ),
-        child: Text(label),
       ),
     );
   }
