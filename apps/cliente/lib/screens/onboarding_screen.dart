@@ -86,7 +86,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               _ExploreStep(onNext: _next),
             ],
           ),
-          _FixedOnboardingAction(
+          _FixedOnboardingOverlay(
             page: _page,
             pageCount: _pageCount,
             onTap: _finish,
@@ -280,8 +280,8 @@ class _ExploreStep extends StatelessWidget {
   }
 }
 
-class _FixedOnboardingAction extends StatelessWidget {
-  const _FixedOnboardingAction({
+class _FixedOnboardingOverlay extends StatelessWidget {
+  const _FixedOnboardingOverlay({
     required this.page,
     required this.pageCount,
     required this.onTap,
@@ -297,27 +297,23 @@ class _FixedOnboardingAction extends StatelessWidget {
       child: Align(
         alignment: Alignment.bottomCenter,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(36, 0, 36, 58),
+          padding: const EdgeInsets.fromLTRB(36, 0, 36, 84),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               SizedBox(
                 width: double.infinity,
                 height: 62,
-                child: FilledButton.icon(
-                  onPressed: onTap,
-                  icon: const Icon(Icons.search_rounded, size: 34),
-                  label: const Text('ENCONTRAR BARBEARIAS'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.orange,
-                    foregroundColor: AppColors.onGold,
-                    textStyle: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: .2,
-                    ),
-                    shape: RoundedRectangleBorder(
+                child: Semantics(
+                  button: true,
+                  label: 'Encontrar barbearias',
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
                       borderRadius: BorderRadius.circular(15),
+                      splashColor: AppColors.orange.withOpacity(.16),
+                      highlightColor: AppColors.orange.withOpacity(.08),
+                      onTap: onTap,
                     ),
                   ),
                 ),
