@@ -14,70 +14,57 @@ class PremiumBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const icons = [
-      Icons.home_outlined,
-      Icons.search_rounded,
-      Icons.favorite_border_rounded,
-      Icons.person_rounded,
+    const items = [
+      _NavItem(Icons.search_rounded, 'Descobrir'),
+      _NavItem(Icons.favorite_border_rounded, 'Favoritos'),
+      _NavItem(Icons.calendar_month_outlined, 'Agenda'),
+      _NavItem(Icons.person_outline_rounded, 'Perfil'),
     ];
-    const labels = ['Início', 'Buscar', 'Favoritos', 'Perfil'];
 
     return SafeArea(
       top: false,
       child: Container(
-        height: 82,
-        margin: const EdgeInsets.fromLTRB(44, 0, 44, 16),
-        padding: const EdgeInsets.all(9),
-        decoration: BoxDecoration(
-          color: AppColors.dark,
-          borderRadius: BorderRadius.circular(42),
+        height: 72,
+        decoration: const BoxDecoration(
+          color: AppColors.background,
+          border: Border(top: BorderSide(color: AppColors.stroke)),
         ),
         child: Row(
-          children: List.generate(icons.length, (index) {
+          children: List.generate(items.length, (index) {
+            final item = items[index];
             final selected = currentIndex == index;
+
             return Expanded(
-              flex: selected ? 2 : 1,
               child: InkWell(
-                borderRadius: BorderRadius.circular(34),
                 onTap: () => onTap(index),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 180),
-                  height: 64,
+                  padding: const EdgeInsets.only(top: 8, bottom: 6),
                   decoration: BoxDecoration(
-                    color: selected ? AppColors.orange : AppColors.card,
-                    borderRadius: BorderRadius.circular(34),
+                    color: selected
+                        ? AppColors.orange.withOpacity(.08)
+                        : Colors.transparent,
                   ),
-                  child: Row(
+                  child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color:
-                              selected ? AppColors.onGold : Colors.transparent,
-                          shape: BoxShape.circle,
-                          border: selected
-                              ? Border.all(color: AppColors.onGold)
-                              : Border.all(color: Colors.white24),
-                        ),
-                        child: Icon(
-                          icons[index],
-                          color: selected ? AppColors.orange : Colors.white54,
-                          size: 24,
+                      Icon(
+                        item.icon,
+                        color: selected ? AppColors.orange : AppColors.muted,
+                        size: 23,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        item.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: selected ? AppColors.orange : AppColors.muted,
+                          fontSize: 11,
+                          fontWeight:
+                              selected ? FontWeight.w900 : FontWeight.w700,
                         ),
                       ),
-                      if (selected) ...[
-                        const SizedBox(width: 10),
-                        Text(
-                          labels[index],
-                          style: const TextStyle(
-                            color: AppColors.onGold,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ),
@@ -88,4 +75,11 @@ class PremiumBottomNav extends StatelessWidget {
       ),
     );
   }
+}
+
+class _NavItem {
+  const _NavItem(this.icon, this.label);
+
+  final IconData icon;
+  final String label;
 }

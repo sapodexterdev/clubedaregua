@@ -6,170 +6,398 @@ import '../theme/app_colors.dart';
 import 'client/home_screen.dart';
 import 'splash_screen.dart';
 
-class OnboardingScreen extends StatelessWidget {
+class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
   static const route = '/onboarding';
 
   @override
+  State<OnboardingScreen> createState() => _OnboardingScreenState();
+}
+
+class _OnboardingScreenState extends State<OnboardingScreen> {
+  final _controller = PageController();
+  int _page = 0;
+
+  Future<void> _finish() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(SplashScreen.onboardingSeenKey, true);
+    if (!mounted) return;
+    Navigator.pushReplacementNamed(context, HomeScreen.route);
+  }
+
+  void _next() {
+    if (_page == 2) {
+      _finish();
+      return;
+    }
+    _controller.nextPage(
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final compact = constraints.maxHeight < 700;
-          final titleSize = compact ? 50.0 : 60.0;
-
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              Image.network(
-                AppConstants.heroBarbershop,
-                fit: BoxFit.cover,
-                color: Colors.black.withOpacity(.62),
-                colorBlendMode: BlendMode.darken,
-              ),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: AppColors.background.withOpacity(.18),
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xEE0D0D0D), Color(0xAA1A1A1A)],
-                  ),
-                ),
-              ),
-              Positioned(
-                right: -90,
-                top: 60,
-                child: Transform.rotate(
-                  angle: -.45,
-                  child: Icon(
-                    Icons.content_cut_rounded,
-                    size: compact ? 210 : 260,
-                    color: Colors.white.withOpacity(.035),
-                  ),
-                ),
-              ),
-              Positioned(
-                left: -34,
-                bottom: 98,
-                child: Icon(
-                  Icons.auto_awesome_rounded,
-                  size: 138,
-                  color: AppColors.orange.withOpacity(.08),
-                ),
-              ),
-              SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(28, 22, 28, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        height: 62,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.card.withOpacity(.78),
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: AppColors.orange.withOpacity(.38),
-                          ),
-                        ),
-                        child: Image.asset(
-                          AppConstants.brandLogoHorizontal,
-                          fit: BoxFit.contain,
-                          alignment: Alignment.centerLeft,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        'O sistema\noperacional\nda barbearia\nmoderna.',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: titleSize,
-                          height: .92,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0,
-                        ),
-                      ),
-                      SizedBox(height: compact ? 16 : 22),
-                      const Text(
-                        'Tecnologia que eleva o nível da sua barbearia.',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 15,
-                          height: 1.5,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      SizedBox(height: compact ? 24 : 32),
-                      InkWell(
-                        borderRadius: BorderRadius.circular(34),
-                        onTap: () async {
-                          final prefs = await SharedPreferences.getInstance();
-                          await prefs.setBool(
-                            SplashScreen.onboardingSeenKey,
-                            true,
-                          );
-                          if (!context.mounted) return;
-                          Navigator.pushReplacementNamed(
-                            context,
-                            HomeScreen.route,
-                          );
-                        },
-                        child: Container(
-                          height: 70,
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColors.card.withOpacity(.9),
-                            borderRadius: BorderRadius.circular(36),
-                            border: Border.all(
-                              color: AppColors.orange.withOpacity(.55),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(28),
-                                child: Image.asset(
-                                  AppConstants.brandIconCr,
-                                  width: 56,
-                                  height: 56,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              const Expanded(
-                                child: Text(
-                                  'Começar',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ),
-                              const Icon(
-                                Icons.keyboard_double_arrow_right_rounded,
-                                color: AppColors.orange,
-                                size: 34,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
+      body: PageView(
+        controller: _controller,
+        onPageChanged: (value) => setState(() => _page = value),
+        children: [
+          _OnboardingStep(
+            imageUrl: AppConstants.promoBarber,
+            icon: Icons.workspace_premium_outlined,
+            title: 'Encontre as melhores\nbarbearias perto de voce.',
+            subtitle: 'Avaliacoes reais, horarios disponiveis e muito mais.',
+            buttonLabel: 'Continuar',
+            page: _page,
+            onNext: _next,
+          ),
+          _OnboardingStep(
+            imageUrl: AppConstants.heroBarbershop,
+            icon: Icons.calendar_month_outlined,
+            title: 'Agende com praticidade\ne sem complicacao.',
+            subtitle:
+                'Escolha servico, profissional e horario ideal para voce.',
+            buttonLabel: 'Continuar',
+            page: _page,
+            onNext: _next,
+          ),
+          _ExploreStep(
+            page: _page,
+            onPrimary: _finish,
+            onSecondary: _finish,
+          ),
+        ],
       ),
     );
   }
+}
+
+class _OnboardingStep extends StatelessWidget {
+  const _OnboardingStep({
+    required this.imageUrl,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.buttonLabel,
+    required this.page,
+    required this.onNext,
+  });
+
+  final String imageUrl;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String buttonLabel;
+  final int page;
+  final VoidCallback onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.network(
+          imageUrl,
+          fit: BoxFit.cover,
+          color: Colors.black.withOpacity(.58),
+          colorBlendMode: BlendMode.darken,
+        ),
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0x880D0D0D),
+                Color(0xCC0D0D0D),
+                AppColors.background,
+              ],
+            ),
+          ),
+        ),
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(28, 24, 28, 28),
+            child: Column(
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Image.asset(
+                    AppConstants.brandLogoHorizontal,
+                    width: 210,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                const Spacer(),
+                Icon(icon, color: AppColors.orange, size: 54),
+                const SizedBox(height: 22),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: AppColors.text,
+                    fontSize: 28,
+                    height: 1.08,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  subtitle,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 15,
+                    height: 1.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                _ProgressDots(page: page),
+                const SizedBox(height: 28),
+                _PrimaryBoardButton(
+                  label: buttonLabel,
+                  icon: Icons.arrow_forward_rounded,
+                  onTap: onNext,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ExploreStep extends StatelessWidget {
+  const _ExploreStep({
+    required this.page,
+    required this.onPrimary,
+    required this.onSecondary,
+  });
+
+  final int page;
+  final VoidCallback onPrimary;
+  final VoidCallback onSecondary;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.network(
+          AppConstants.heroBarbershop,
+          fit: BoxFit.cover,
+          color: Colors.black.withOpacity(.72),
+          colorBlendMode: BlendMode.darken,
+        ),
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xDD0D0D0D), AppColors.background],
+            ),
+          ),
+        ),
+        Positioned.fill(
+          child: CustomPaint(painter: _MapPinPainter()),
+        ),
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(28, 24, 28, 28),
+            child: Column(
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Image.asset(
+                    AppConstants.brandLogoHorizontal,
+                    width: 210,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  width: 112,
+                  height: 112,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.orange.withOpacity(.12),
+                    border: Border.all(color: AppColors.orange, width: 2),
+                  ),
+                  child: const Icon(
+                    Icons.storefront_outlined,
+                    color: AppColors.orange,
+                    size: 50,
+                  ),
+                ),
+                const SizedBox(height: 30),
+                const Text(
+                  'Pronto para descobrir?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppColors.text,
+                    fontSize: 25,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Explore as melhores barbearias\ne agende do seu jeito.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 15,
+                    height: 1.45,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 30),
+                _ProgressDots(page: page),
+                const SizedBox(height: 24),
+                _PrimaryBoardButton(
+                  label: 'Explorar barbearias',
+                  icon: Icons.search_rounded,
+                  onTap: onPrimary,
+                ),
+                const SizedBox(height: 12),
+                _SecondaryBoardButton(
+                  label: 'Continuar sem cadastro',
+                  onTap: onSecondary,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProgressDots extends StatelessWidget {
+  const _ProgressDots({required this.page});
+
+  final int page;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(3, (index) {
+        final selected = index == page;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          width: selected ? 24 : 7,
+          height: 7,
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.orange : AppColors.muted,
+            borderRadius: BorderRadius.circular(8),
+          ),
+        );
+      }),
+    );
+  }
+}
+
+class _PrimaryBoardButton extends StatelessWidget {
+  const _PrimaryBoardButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: FilledButton.icon(
+        onPressed: onTap,
+        icon: Icon(icon),
+        label: Text(label),
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.orange,
+          foregroundColor: AppColors.onGold,
+          textStyle: const TextStyle(fontWeight: FontWeight.w900),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SecondaryBoardButton extends StatelessWidget {
+  const _SecondaryBoardButton({
+    required this.label,
+    required this.onTap,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: OutlinedButton(
+        onPressed: onTap,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.orange,
+          side: const BorderSide(color: AppColors.orange),
+          textStyle: const TextStyle(fontWeight: FontWeight.w900),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+        child: Text(label),
+      ),
+    );
+  }
+}
+
+class _MapPinPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppColors.orange.withOpacity(.72)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    final points = [
+      Offset(size.width * .18, size.height * .28),
+      Offset(size.width * .78, size.height * .20),
+      Offset(size.width * .28, size.height * .48),
+      Offset(size.width * .82, size.height * .58),
+    ];
+
+    for (final point in points) {
+      canvas.drawCircle(point, 8, paint);
+      canvas.drawLine(
+        Offset(point.dx, point.dy + 8),
+        Offset(point.dx, point.dy + 24),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

@@ -42,14 +42,63 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: AppColors.background,
-      body: Center(
-        child: Image(
-          image: AssetImage(AppConstants.brandLogoHorizontal),
-          width: 260,
-          fit: BoxFit.contain,
-        ),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.network(
+            AppConstants.promoBarber,
+            fit: BoxFit.cover,
+            color: Colors.black.withOpacity(.76),
+            colorBlendMode: BlendMode.darken,
+          ),
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0x770D0D0D), AppColors.background],
+              ),
+            ),
+          ),
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset(
+                  AppConstants.brandLogoHorizontal,
+                  width: 260,
+                  fit: BoxFit.contain,
+                ),
+                const SizedBox(height: 26),
+                const Text(
+                  'SUA BARBEARIA.\nSEU ESTILO.\nSEU MOMENTO.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppColors.text,
+                    fontSize: 17,
+                    height: 1.55,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: .8,
+                  ),
+                ),
+                const SizedBox(height: 36),
+                SizedBox(
+                  width: 96,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: const LinearProgressIndicator(
+                      minHeight: 4,
+                      color: AppColors.orange,
+                      backgroundColor: AppColors.card,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
