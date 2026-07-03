@@ -87,6 +87,42 @@ class ShopIdentity {
   }
 }
 
+class PublicBarbershop {
+  const PublicBarbershop({
+    required this.identity,
+    required this.barbers,
+    required this.services,
+    required this.rating,
+    required this.reviewCount,
+    required this.distanceKm,
+    required this.nextSlot,
+    required this.isOpen,
+    required this.neighborhood,
+  });
+
+  final ShopIdentity identity;
+  final List<Barber> barbers;
+  final List<ServiceItem> services;
+  final double rating;
+  final int reviewCount;
+  final double distanceKm;
+  final String nextSlot;
+  final bool isOpen;
+  final String neighborhood;
+
+  String get priceRange {
+    if (services.isEmpty) return 'Consultar';
+    final prices = services.map((service) => service.price).toList()..sort();
+    final min = prices.first.toStringAsFixed(0);
+    final max = prices.last.toStringAsFixed(0);
+    if (min == max) return 'A partir de R\$ $min';
+    return 'R\$ $min - R\$ $max';
+  }
+
+  String get distanceLabel => '${distanceKm.toStringAsFixed(1)} km';
+  String get statusLabel => isOpen ? 'Aberto' : 'Fechado';
+}
+
 class BarberRepository {
   const BarberRepository({SupabaseRestService? rest})
       : _rest = rest ?? const SupabaseRestService();
@@ -168,6 +204,62 @@ class BarberRepository {
       );
     } catch (_) {
       return null;
+    }
+  }
+
+  Future<List<ShopIdentity>> fetchShopIdentities() async {
+    if (!_rest.isConfigured) {
+      return const [
+        ShopIdentity(
+          id: MockData.demoShopId,
+          name: 'Barbearia Elite',
+          logoUrl: '',
+          coverUrl: '',
+          phone: '',
+          whatsapp: '',
+          email: '',
+          instagram: '@barbeariaelite',
+          address: 'Centro',
+          city: 'Sao Paulo',
+          state: 'SP',
+          secondaryColor: '#F2C14E',
+          bookingIntervalMinutes: 30,
+          bookingDaysAhead: 30,
+          minNoticeMinutes: 60,
+          maxDelayMinutes: 15,
+          minCancelHours: 2,
+        ),
+      ];
+    }
+
+    try {
+      final shops = await _rest.getRows(
+        'barber_shops',
+        select: 'id,name,phone,whatsapp,address,city,state,logo_url,cover_url',
+        filters: const {'is_active': 'eq.true'},
+        order: 'name.asc',
+      );
+
+      final identities = <ShopIdentity>[];
+      for (final shop in shops) {
+        final shopId = shop['id']?.toString() ?? '';
+        if (shopId.isEmpty) continue;
+        final settings = await _rest.getRows(
+          'shop_settings',
+          select: 'booking_interval_minutes,min_cancel_hours,settings',
+          filters: {'barber_shop_id': 'eq.$shopId'},
+          limit: 1,
+        );
+        identities.add(
+          ShopIdentity.fromRows(
+            shop: shop,
+            settings: settings.isEmpty ? null : settings.first,
+          ),
+        );
+      }
+      return identities;
+    } catch (_) {
+      return const [];
     }
   }
 

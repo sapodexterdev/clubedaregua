@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/app_state.dart';
+import '../../screens/auth/login_screen.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/premium_bottom_nav.dart';
 
@@ -22,6 +23,12 @@ class HistoryScreen extends StatelessWidget {
       ),
       body: Consumer<AppState>(
         builder: (context, state, _) {
+          if (!state.isSignedIn) {
+            return const _LoginRequired(
+              title: 'Histórico disponível para clientes autenticados.',
+            );
+          }
+
           return ListView.separated(
             padding: const EdgeInsets.all(20),
             itemCount: state.appointments.length,
@@ -69,7 +76,8 @@ class HistoryScreen extends StatelessWidget {
                           label: const Text('Avaliar'),
                         ),
                         TextButton.icon(
-                          onPressed: () => state.cancelAppointment(appointment.id),
+                          onPressed: () =>
+                              state.cancelAppointment(appointment.id),
                           icon: const Icon(Icons.close_rounded),
                           label: const Text('Cancelar'),
                         ),
@@ -92,5 +100,37 @@ class HistoryScreen extends StatelessWidget {
       'cancelled' => 'Cancelado',
       _ => status,
     };
+  }
+}
+
+class _LoginRequired extends StatelessWidget {
+  const _LoginRequired({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.lock_outline_rounded, color: AppColors.orange),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 14),
+            FilledButton(
+              onPressed: () => Navigator.pushNamed(context, LoginScreen.route),
+              child: const Text('Entrar'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/app_state.dart';
+import '../../screens/auth/login_screen.dart';
 import '../../theme/app_colors.dart';
 import 'appointment_screen.dart';
 
@@ -64,7 +65,7 @@ class _BarberDetailsScreenState extends State<BarberDetailsScreen> {
                 builder: (context, controller) {
                   return Container(
                     decoration: const BoxDecoration(
-                      color: Colors.white,
+                      color: AppColors.background,
                       borderRadius: BorderRadius.vertical(
                         top: Radius.circular(34),
                       ),
@@ -116,17 +117,35 @@ class _BarberDetailsScreenState extends State<BarberDetailsScreen> {
                                 ],
                               ),
                             ),
-                            Container(
-                              width: 58,
-                              height: 58,
-                              decoration: const BoxDecoration(
-                                color: AppColors.background,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.favorite_rounded,
-                                color: Colors.red,
-                                size: 28,
+                            InkWell(
+                              borderRadius: BorderRadius.circular(29),
+                              onTap: () {
+                                if (!state.isSignedIn) {
+                                  Navigator.pushNamed(
+                                    context,
+                                    LoginScreen.route,
+                                  );
+                                  return;
+                                }
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Favorito salvo.'),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                width: 58,
+                                height: 58,
+                                decoration: BoxDecoration(
+                                  color: AppColors.card,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: AppColors.stroke),
+                                ),
+                                child: const Icon(
+                                  Icons.favorite_border_rounded,
+                                  color: AppColors.orange,
+                                  size: 28,
+                                ),
                               ),
                             ),
                           ],
@@ -190,9 +209,10 @@ class _CircleButton extends StatelessWidget {
       child: Container(
         width: 54,
         height: 54,
-        decoration: const BoxDecoration(
-          color: Colors.white,
+        decoration: BoxDecoration(
+          color: AppColors.card,
           shape: BoxShape.circle,
+          border: Border.all(color: AppColors.stroke),
         ),
         child: Icon(icon, color: AppColors.text, size: 28),
       ),
@@ -385,7 +405,7 @@ class _CalendarStrip extends StatelessWidget {
                     height: 42,
                     alignment: Alignment.center,
                     decoration: const BoxDecoration(
-                      color: Colors.white,
+                      color: AppColors.card,
                       shape: BoxShape.circle,
                     ),
                     child: Text(

@@ -61,7 +61,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (mounted) {
         await appState.loadInitialData();
         if (!mounted) return;
-        navigator.pushReplacementNamed(HomeScreen.route);
+        appState.requireSignedIn();
+        final returnRoute = ModalRoute.of(context)?.settings.arguments;
+        navigator.pushReplacementNamed(
+          returnRoute is String ? returnRoute : HomeScreen.route,
+        );
       }
     } catch (error) {
       if (mounted) _showMessage(error.toString());

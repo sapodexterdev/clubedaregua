@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/app_state.dart';
+import '../../screens/auth/login_screen.dart';
+import '../../screens/auth/register_screen.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/service_card.dart';
@@ -44,6 +46,15 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
           body: ListView(
             padding: const EdgeInsets.all(20),
             children: [
+              if (!state.isSignedIn) ...[
+                _AuthRequiredCard(
+                  barberName: barber?.name ?? '-',
+                  serviceName: service?.name ?? '-',
+                  date: state.selectedDate,
+                  time: state.selectedTime,
+                ),
+                const SizedBox(height: 20),
+              ],
               const Text(
                 'Selecione o servico',
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
@@ -120,6 +131,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
               const SizedBox(height: 20),
               TextField(
                 controller: _nameController,
+                enabled: state.isSignedIn,
                 textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                   labelText: 'Seu nome',
@@ -129,6 +141,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
               const SizedBox(height: 12),
               TextField(
                 controller: _phoneController,
+                enabled: state.isSignedIn,
                 keyboardType: TextInputType.phone,
                 inputFormatters: const [_WhatsappInputFormatter()],
                 decoration: const InputDecoration(
@@ -139,10 +152,22 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
               ),
               const SizedBox(height: 20),
               PrimaryButton(
-                label: _isSubmitting ? 'Enviando...' : 'Agendar agora',
+                label: !state.isSignedIn
+                    ? 'Entrar para confirmar'
+                    : _isSubmitting
+                        ? 'Enviando...'
+                        : 'Agendar agora',
                 onPressed: _isSubmitting
                     ? null
                     : () async {
+                        if (!state.isSignedIn) {
+                          Navigator.pushNamed(
+                            context,
+                            LoginScreen.route,
+                            arguments: AppointmentScreen.route,
+                          );
+                          return;
+                        }
                         final name = _nameController.text.trim();
                         final phone = _phoneController.text.trim();
                         final phoneDigits = _digitsOnly(phone);
@@ -203,6 +228,81 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
 
   String _digitsOnly(String value) {
     return value.replaceAll(RegExp(r'\D'), '');
+  }
+}
+
+class _AuthRequiredCard extends StatelessWidget {
+  const _AuthRequiredCard({
+    required this.barberName,
+    required this.serviceName,
+    required this.date,
+    required this.time,
+  });
+
+  final String barberName;
+  final String serviceName;
+  final DateTime date;
+  final String time;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.stroke),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.lock_outline_rounded, color: AppColors.orange),
+          const SizedBox(height: 12),
+          const Text(
+            'Entre para confirmar seu horário',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '$serviceName com $barberName • ${DateFormat('dd/MM').format(date)} às ${time.isEmpty ? '-' : time}',
+            style: const TextStyle(
+              color: AppColors.muted,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton(
+                  onPressed: () => Navigator.pushNamed(
+                    context,
+                    LoginScreen.route,
+                    arguments: AppointmentScreen.route,
+                  ),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.orange,
+                    foregroundColor: AppColors.onGold,
+                  ),
+                  child: const Text('Entrar'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pushNamed(
+                    context,
+                    RegisterScreen.route,
+                    arguments: AppointmentScreen.route,
+                  ),
+                  child: const Text('Criar conta'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
 

@@ -41,7 +41,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
       await authService.signIn(email, password);
       if (mounted) await context.read<AppState>().loadInitialData();
-      if (mounted) Navigator.pushReplacementNamed(context, HomeScreen.route);
+      if (mounted) {
+        context.read<AppState>().requireSignedIn();
+        final returnRoute = ModalRoute.of(context)?.settings.arguments;
+        Navigator.pushReplacementNamed(
+          context,
+          returnRoute is String ? returnRoute : HomeScreen.route,
+        );
+      }
     } catch (error) {
       if (mounted) _showMessage(error.toString());
     } finally {
@@ -111,7 +118,11 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 14),
             TextButton(
-              onPressed: () => Navigator.pushNamed(context, RegisterScreen.route),
+              onPressed: () => Navigator.pushNamed(
+                context,
+                RegisterScreen.route,
+                arguments: ModalRoute.of(context)?.settings.arguments,
+              ),
               child: const Text('Criar conta'),
             ),
             TextButton(

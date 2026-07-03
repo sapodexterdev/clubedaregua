@@ -5,6 +5,7 @@ import 'screens/auth/register_screen.dart';
 import 'screens/client/appointment_confirmation_screen.dart';
 import 'screens/client/appointment_screen.dart';
 import 'screens/client/barber_details_screen.dart';
+import 'screens/client/barbershop_profile_screen.dart';
 import 'screens/client/history_screen.dart';
 import 'screens/client/home_screen.dart';
 import 'screens/client/profile_screen.dart';
@@ -30,6 +31,7 @@ class ClubeDaReguaApp extends StatelessWidget {
         LoginScreen.route: (_) => const LoginScreen(),
         RegisterScreen.route: (_) => const RegisterScreen(),
         HomeScreen.route: (_) => const HomeScreen(),
+        BarbershopProfileScreen.route: (_) => const BarbershopProfileScreen(),
         BarberDetailsScreen.route: (_) => const BarberDetailsScreen(),
         AppointmentScreen.route: (_) => const AppointmentScreen(),
         AppointmentConfirmationScreen.route: (_) =>
@@ -57,7 +59,8 @@ class _ResponsivePhoneFrame extends StatelessWidget {
           return currentChild;
         }
 
-        final height = (constraints.maxHeight - 36).clamp(640.0, 900.0).toDouble();
+        final height =
+            (constraints.maxHeight - 36).clamp(640.0, 900.0).toDouble();
 
         return ColoredBox(
           color: AppColors.softBackground,
