@@ -56,9 +56,7 @@ class HomeScreen extends StatelessWidget {
                   _SearchAndFilter(onChanged: state.updateDiscoveryQuery),
                   const SizedBox(height: 14),
                   const _LocationPill(),
-                  const SizedBox(height: 16),
-                  _CategoryChips(labels: _categoryLabels(state)),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 20),
                   if (state.isLoading && shops.isEmpty)
                     const _DiscoveryLoading()
                   else if (shops.isEmpty)
@@ -90,13 +88,6 @@ class HomeScreen extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  static List<String> _categoryLabels(AppState state) {
-    if (state.categories.isEmpty) {
-      return const ['Corte', 'Barba', 'Premium', 'Infantil', 'Combo'];
-    }
-    return state.categories.take(5).map((item) => item.name).toList();
   }
 }
 
@@ -209,67 +200,6 @@ class _LocationPill extends StatelessWidget {
   }
 }
 
-class _CategoryChips extends StatelessWidget {
-  const _CategoryChips({required this.labels});
-
-  final List<String> labels;
-
-  @override
-  Widget build(BuildContext context) {
-    const icons = [
-      Icons.content_cut_rounded,
-      Icons.face_retouching_natural_outlined,
-      Icons.workspace_premium_outlined,
-      Icons.child_care_outlined,
-      Icons.auto_awesome_outlined,
-    ];
-
-    return SizedBox(
-      height: 68,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: labels.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
-          return SizedBox(
-            width: 58,
-            child: Column(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: AppColors.card,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.stroke),
-                  ),
-                  child: Icon(
-                    icons[index % icons.length],
-                    color: AppColors.orange,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  labels[index],
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: AppColors.muted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
 class _DiscoverySection extends StatelessWidget {
   const _DiscoverySection({
     required this.title,
@@ -285,33 +215,31 @@ class _DiscoverySection extends StatelessWidget {
   Widget build(BuildContext context) {
     final visible = shops.take(6).toList();
 
+    if (!compact) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _SectionHeader(title: title),
+            const SizedBox(height: 12),
+            if (visible.isNotEmpty)
+              _BarbershopCard(
+                shop: visible.first,
+                compact: false,
+                fullWidth: true,
+              ),
+          ],
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 26),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    color: AppColors.text,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-              const Text(
-                'Ver todas',
-                style: TextStyle(
-                  color: AppColors.orange,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
-          ),
+          _SectionHeader(title: title),
           const SizedBox(height: 12),
           SizedBox(
             height: compact ? 150 : 292,
@@ -337,10 +265,12 @@ class _BarbershopCard extends StatelessWidget {
   const _BarbershopCard({
     required this.shop,
     required this.compact,
+    this.fullWidth = false,
   });
 
   final PublicBarbershop shop;
   final bool compact;
+  final bool fullWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -352,7 +282,7 @@ class _BarbershopCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(14),
       onTap: () => _openProfile(context),
       child: Container(
-        width: compact ? 282 : 300,
+        width: fullWidth ? double.infinity : (compact ? 282 : 300),
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: AppColors.card,
@@ -408,9 +338,9 @@ class _LargeCardContent extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 9),
+        const SizedBox(height: 8),
         _ShopMainInfo(shop: shop),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         Row(
           children: [
             Expanded(
@@ -437,6 +367,44 @@ class _LargeCardContent extends StatelessWidget {
               child: const Text('Agendar'),
             ),
           ],
+        ),
+      ],
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Icon(
+          Icons.local_fire_department_rounded,
+          color: AppColors.orange,
+          size: 15,
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(
+              color: AppColors.text,
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+        const Text(
+          'Ver todas',
+          style: TextStyle(
+            color: AppColors.orange,
+            fontSize: 11,
+            fontWeight: FontWeight.w900,
+          ),
         ),
       ],
     );

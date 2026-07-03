@@ -66,12 +66,32 @@ class _SplashScreenState extends State<SplashScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Image.asset(
-                  AppConstants.brandLogoHorizontal,
-                  width: 260,
-                  fit: BoxFit.contain,
+                const Icon(
+                  Icons.workspace_premium_outlined,
+                  color: AppColors.orange,
+                  size: 84,
                 ),
-                const SizedBox(height: 26),
+                const SizedBox(height: 18),
+                const Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(text: 'CLUBE\nDA '),
+                      TextSpan(
+                        text: 'REGUA',
+                        style: TextStyle(color: AppColors.orange),
+                      ),
+                    ],
+                  ),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppColors.text,
+                    fontSize: 42,
+                    height: .9,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: .5,
+                  ),
+                ),
+                const SizedBox(height: 24),
                 const Text(
                   'SUA BARBEARIA.\nSEU ESTILO.\nSEU MOMENTO.',
                   textAlign: TextAlign.center,
@@ -85,7 +105,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 ),
                 const SizedBox(height: 36),
                 SizedBox(
-                  width: 96,
+                  width: 72,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: const LinearProgressIndicator(

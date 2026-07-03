@@ -56,7 +56,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             icon: Icons.workspace_premium_outlined,
             title: 'Encontre as melhores\nbarbearias perto de voce.',
             subtitle: 'Avaliacoes reais, horarios disponiveis e muito mais.',
-            buttonLabel: 'Continuar',
             page: _page,
             onNext: _next,
           ),
@@ -66,7 +65,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             title: 'Agende com praticidade\ne sem complicacao.',
             subtitle:
                 'Escolha servico, profissional e horario ideal para voce.',
-            buttonLabel: 'Continuar',
             page: _page,
             onNext: _next,
           ),
@@ -87,7 +85,6 @@ class _OnboardingStep extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
-    required this.buttonLabel,
     required this.page,
     required this.onNext,
   });
@@ -96,85 +93,74 @@ class _OnboardingStep extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
-  final String buttonLabel;
   final int page;
   final VoidCallback onNext;
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Image.network(
-          imageUrl,
-          fit: BoxFit.cover,
-          color: Colors.black.withOpacity(.58),
-          colorBlendMode: BlendMode.darken,
-        ),
-        const DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color(0x880D0D0D),
-                Color(0xCC0D0D0D),
-                AppColors.background,
-              ],
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onNext,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.network(
+            imageUrl,
+            fit: BoxFit.cover,
+            color: Colors.black.withOpacity(.54),
+            colorBlendMode: BlendMode.darken,
+          ),
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0x440D0D0D),
+                  Color(0xAA0D0D0D),
+                  AppColors.background,
+                ],
+              ),
             ),
           ),
-        ),
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(28, 24, 28, 28),
-            child: Column(
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Image.asset(
-                    AppConstants.brandLogoHorizontal,
-                    width: 210,
-                    fit: BoxFit.contain,
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(28, 24, 28, 28),
+              child: Column(
+                children: [
+                  const Spacer(flex: 5),
+                  Icon(icon, color: AppColors.orange, size: 50),
+                  const SizedBox(height: 22),
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: AppColors.text,
+                      fontSize: 24,
+                      height: 1.12,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0,
+                    ),
                   ),
-                ),
-                const Spacer(),
-                Icon(icon, color: AppColors.orange, size: 54),
-                const SizedBox(height: 22),
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: AppColors.text,
-                    fontSize: 28,
-                    height: 1.08,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0,
+                  const SizedBox(height: 16),
+                  Text(
+                    subtitle,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: AppColors.text,
+                      fontSize: 12,
+                      height: 1.55,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  subtitle,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: AppColors.muted,
-                    fontSize: 15,
-                    height: 1.5,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 28),
-                _ProgressDots(page: page),
-                const SizedBox(height: 28),
-                _PrimaryBoardButton(
-                  label: buttonLabel,
-                  icon: Icons.arrow_forward_rounded,
-                  onTap: onNext,
-                ),
-              ],
+                  const Spacer(flex: 3),
+                  _ProgressDots(page: page),
+                ],
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -263,8 +249,7 @@ class _ExploreStep extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 30),
-                _ProgressDots(page: page),
-                const SizedBox(height: 24),
+                const SizedBox(height: 8),
                 _PrimaryBoardButton(
                   label: 'Explorar barbearias',
                   icon: Icons.search_rounded,
@@ -293,7 +278,7 @@ class _ProgressDots extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(3, (index) {
+      children: List.generate(4, (index) {
         final selected = index == page;
         return AnimatedContainer(
           duration: const Duration(milliseconds: 180),
