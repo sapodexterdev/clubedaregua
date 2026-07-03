@@ -17,6 +17,36 @@ Toda UI deve ser dark first, com paleta preto/grafite/dourado, botões principai
 
 É proibido criar nova paleta, novos estilos visuais ou nova linguagem de UI sem atualizar a documentação oficial da marca.
 
+## UX Boards
+
+Toda funcionalidade do Clube da Regua deve possuir um UX Board antes de entrar em desenvolvimento.
+
+Fluxo oficial:
+
+Ideia
+
+↓
+
+UX Board
+
+↓
+
+Aprovacao
+
+↓
+
+Issue Tecnica
+
+↓
+
+Implementacao
+
+↓
+
+Validacao
+
+A documentacao oficial das jornadas fica em `docs/ux/`. Cada `board.png` e a fonte visual oficial da experiencia e deve orientar a implementacao antes da issue tecnica.
+
 ## Apps
 
 ### App Cliente
