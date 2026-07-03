@@ -51,11 +51,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         controller: _controller,
         onPageChanged: (value) => setState(() => _page = value),
         children: [
-          _OnboardingStep(
-            imageUrl: AppConstants.promoBarber,
-            icon: Icons.workspace_premium_outlined,
-            title: 'Encontre as melhores\nbarbearias perto de voce.',
-            subtitle: 'Avaliacoes reais, horarios disponiveis e muito mais.',
+          _DiscoveryIntroStep(
             page: _page,
             onNext: _next,
           ),
@@ -75,6 +71,53 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _DiscoveryIntroStep extends StatelessWidget {
+  const _DiscoveryIntroStep({
+    required this.page,
+    required this.onNext,
+  });
+
+  final int page;
+  final VoidCallback onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              AppConstants.splashBarberReference,
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+            ),
+            Positioned(
+              left: constraints.maxWidth * .09,
+              right: constraints.maxWidth * .09,
+              top: constraints.maxHeight * .748,
+              height: constraints.maxHeight * .075,
+              child: Semantics(
+                button: true,
+                label: 'Encontrar barbearias',
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(18),
+                    splashColor: AppColors.orange.withOpacity(.16),
+                    highlightColor: AppColors.orange.withOpacity(.08),
+                    onTap: onNext,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
