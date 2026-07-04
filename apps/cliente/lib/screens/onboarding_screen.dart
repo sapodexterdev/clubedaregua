@@ -293,32 +293,64 @@ class _FixedOnboardingOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (page == 0) {
+      return SafeArea(
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(36, 0, 36, 152),
+            child: SizedBox(
+              width: double.infinity,
+              height: 62,
+              child: Semantics(
+                button: true,
+                label: 'Encontrar barbearias',
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(15),
+                    splashColor: AppColors.orange.withOpacity(.16),
+                    highlightColor: AppColors.orange.withOpacity(.08),
+                    onTap: onTap,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return SafeArea(
       child: Align(
         alignment: Alignment.bottomCenter,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(36, 0, 36, 84),
+          padding: const EdgeInsets.fromLTRB(36, 0, 36, 46),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               SizedBox(
                 width: double.infinity,
                 height: 62,
-                child: Semantics(
-                  button: true,
-                  label: 'Encontrar barbearias',
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
+                child: FilledButton.icon(
+                  onPressed: onTap,
+                  icon: const Icon(Icons.search_rounded, size: 31),
+                  label: const Text('ENCONTRAR BARBEARIAS'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.orange,
+                    foregroundColor: AppColors.onGold,
+                    textStyle: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: .2,
+                    ),
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
-                      splashColor: AppColors.orange.withOpacity(.16),
-                      highlightColor: AppColors.orange.withOpacity(.08),
-                      onTap: onTap,
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 22),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(pageCount, (index) {
