@@ -2,13 +2,23 @@
 
 ## Referência Oficial
 
-A prancha de identidade enviada pelo Rafael é a fonte de verdade visual da marca Clube da Régua.
+A identidade utilizada nos UX Boards aprovados é a fonte de verdade visual da marca Clube da Régua.
 
-Salvar a prancha oficial como:
+A referência oficial atual deve ser salva como:
 
-`docs/brand/Brand_Board_v1.png`
+`docs/brand/Brand_Kit_v2.png`
+
+O arquivo `docs/brand/Brand_Kit_v1.png` é legado e permanece apenas como histórico de evolução da marca.
 
 Nenhuma decisão visual do produto deve contrariar essa referência.
+
+## Brand Evolution
+
+A identidade visual foi refinada durante o desenvolvimento do produto para aproximar o Clube da Régua da experiência validada nos UX Boards.
+
+O Brand Kit V2 passa a consolidar a logo oficial, paleta, tipografia, texturas, iconografia, estilo de mockups e linguagem visual do produto.
+
+Novas telas, assets, mockups e componentes devem partir do Brand Kit V2.
 
 ## Marca
 

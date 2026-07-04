@@ -1,5 +1,9 @@
 # Typography - Clube da Régua
 
+## Fonte Oficial
+
+A tipografia oficial deriva do `docs/brand/Brand_Kit_v2.png` e da identidade validada nos UX Boards aprovados.
+
 ## Fontes Oficiais
 
 - Títulos: **Bebas Neue**

@@ -1,5 +1,9 @@
 # Color Tokens - Clube da Régua
 
+## Fonte Oficial
+
+Os tokens abaixo derivam do `docs/brand/Brand_Kit_v2.png` e da identidade validada nos UX Boards aprovados.
+
 ## Paleta Oficial
 
 | Token | Hex | Uso |

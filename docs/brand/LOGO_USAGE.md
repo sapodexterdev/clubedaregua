@@ -4,7 +4,9 @@
 
 A referência de uso da logo está em:
 
-`docs/brand/Brand_Kit_v1.png`
+`docs/brand/Brand_Kit_v2.png`
+
+O arquivo `docs/brand/Brand_Kit_v1.png` é legado e não deve orientar novas aplicações da marca.
 
 ## Versões Previstas
 

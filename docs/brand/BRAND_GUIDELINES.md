@@ -1,16 +1,36 @@
 # Brand Guidelines - Clube da Régua
 
-> A partir desta versão, toda alteração visual do Clube da Régua deve seguir obrigatoriamente esta documentação e o arquivo Brand_Kit_v1.png. Em caso de conflito entre código existente e documentação da marca, prevalece a documentação da marca.
+> A partir desta versão, toda alteração visual do Clube da Régua deve seguir obrigatoriamente esta documentação e o arquivo Brand_Kit_v2.png. Em caso de conflito entre código existente e documentação da marca, prevalece a documentação da marca.
 
 ## Fonte Oficial
 
-A imagem `docs/brand/Brand_Kit_v1.png` é a fonte oficial da identidade visual do Clube da Régua.
+A imagem `docs/brand/Brand_Kit_v2.png` é a fonte oficial da identidade visual do Clube da Régua.
+
+A nova referência oficial passa a ser a identidade utilizada nos UX Boards aprovados.
 
 Nenhuma alteração visual deve ser implementada sem consultar:
 
-- `docs/brand/Brand_Kit_v1.png`
+- `docs/brand/Brand_Kit_v2.png`
 - `docs/brand/BRAND_GUIDELINES.md`
 - `docs/brand/UI_PRINCIPLES.md`
+
+## Brand Evolution
+
+A identidade visual do Clube da Régua foi refinada durante o desenvolvimento do produto para ficar mais próxima da experiência aprovada nos UX Boards.
+
+O Brand Kit V2 consolida essa evolução e passa a ser a referência oficial para produto, documentação, mockups, telas, componentes e peças visuais.
+
+O arquivo `docs/brand/Brand_Kit_v1.png` fica marcado como legado. Ele pode ser consultado apenas como histórico de evolução da marca, mas não deve orientar novas implementações.
+
+## Elementos Oficiais
+
+Toda documentação e implementação visual deve utilizar exclusivamente:
+
+- Logo oficial dos UX Boards.
+- Paleta oficial documentada em `docs/brand/COLOR_TOKENS.md`.
+- Tipografia oficial documentada em `docs/brand/TYPOGRAPHY.md`.
+- Texturas oficiais presentes no Brand Kit V2 e nos UX Boards aprovados.
+- Iconografia oficial documentada em `docs/brand/ICONOGRAPHY.md`.
 
 ## Marca
 
@@ -31,7 +51,7 @@ A marca deve transmitir uma barbearia moderna, urbana e premium. A estética com
 
 ## Regras Obrigatórias
 
-1. A `Brand_Kit_v1.png` é a fonte oficial da identidade visual.
+1. A `Brand_Kit_v2.png` é a fonte oficial da identidade visual.
 2. Toda UI deve ser dark first.
 3. Botões principais devem usar dourado.
 4. Cards devem usar fundo escuro/grafite com borda discreta.
@@ -40,6 +60,7 @@ A marca deve transmitir uma barbearia moderna, urbana e premium. A estética com
 7. Cliente e Gestão devem parecer parte do mesmo produto.
 8. É proibido criar nova paleta, novos estilos visuais ou nova linguagem de UI sem atualizar os documentos da pasta `docs/brand`.
 9. Toda nova issue deve começar respeitando `BRAND_GUIDELINES.md`.
+10. O Brand Kit V1 é legado e não deve ser usado como referência para novas telas.
 
 ## Paleta Oficial
 

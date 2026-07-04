@@ -1,5 +1,9 @@
 # Iconography - Clube da Régua
 
+## Fonte Oficial
+
+A iconografia oficial deriva do `docs/brand/Brand_Kit_v2.png` e dos UX Boards aprovados.
+
 ## Direção Visual
 
 A iconografia deve reforçar:

@@ -1,5 +1,9 @@
 # UI Principles - Clube da Régua
 
+## Fonte Oficial
+
+Toda decisão de UI deve partir do `docs/brand/Brand_Kit_v2.png`, dos documentos em `docs/brand/` e dos UX Boards aprovados.
+
 ## Princípio Central
 
 A interface do Clube da Régua deve ser **dark first**, urbana, premium e operacional.
