@@ -75,6 +75,38 @@ Implementacao
 
 A Welcome Experience fica em `docs/experience/welcome/` e deve ser atualizada sempre que a abertura do aplicativo mudar.
 
+## UI Specifications
+
+Antes de implementar qualquer tela, deve existir uma UI Specification aprovada.
+
+A UI Specification passa a ser a referencia visual oficial para implementacao Flutter.
+
+Enquanto Brand define identidade, Experience define sensacao e UX define jornada, `docs/ui/` define a construcao visual final de cada tela.
+
+Fluxo oficial:
+
+Brand
+
+->
+
+Experience
+
+->
+
+UX
+
+->
+
+UI Specification
+
+->
+
+Issue Tecnica
+
+->
+
+Implementacao
+
 ## Apps
 
 ### App Cliente
