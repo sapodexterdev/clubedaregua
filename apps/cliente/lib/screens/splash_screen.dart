@@ -21,35 +21,33 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  late final Animation<double> _fade;
+  late final Animation<double> _opacity;
   late final Animation<double> _scale;
-  late final Animation<double> _glow;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1900),
+      duration: const Duration(milliseconds: 2000),
     );
-    _fade = CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0, .52, curve: Curves.easeOut),
-    );
-    _scale = Tween<double>(begin: .98, end: 1).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(.08, .72, curve: Curves.easeOutCubic),
+    _opacity = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 0.0, end: 1.0).chain(
+          CurveTween(curve: Curves.easeOutCubic),
+        ),
+        weight: 28,
       ),
-    );
-    _glow = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0, end: 1), weight: 50),
-      TweenSequenceItem(tween: Tween(begin: 1, end: .35), weight: 50),
-    ]).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(.18, .92, curve: Curves.easeOut),
+      TweenSequenceItem(tween: ConstantTween<double>(1), weight: 52),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 0.0).chain(
+          CurveTween(curve: Curves.easeInOut),
+        ),
+        weight: 20,
       ),
+    ]).animate(_controller);
+    _scale = Tween<double>(begin: .96, end: 1).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     );
     _start();
   }
@@ -90,7 +88,7 @@ class _SplashScreenState extends State<SplashScreen>
                 decoration: BoxDecoration(
                   gradient: RadialGradient(
                     center: Alignment.center,
-                    radius: .78,
+                    radius: .82,
                     colors: [
                       Color(0xFF1A1A1A),
                       Color(0xFF0D0D0D),
@@ -100,49 +98,40 @@ class _SplashScreenState extends State<SplashScreen>
               ),
               Center(
                 child: Opacity(
-                  opacity: _fade.value,
+                  opacity: _opacity.value,
                   child: Transform.scale(
                     scale: _scale.value,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 30),
-                      decoration: BoxDecoration(
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.orange.withOpacity(
-                              .18 * _glow.value,
-                            ),
-                            blurRadius: 42,
-                            spreadRadius: 4,
-                          ),
-                        ],
-                      ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Image.asset(
-                            AppConstants.brandLogoHorizontal,
-                            width: 270,
-                            fit: BoxFit.contain,
-                          ),
-                          const SizedBox(height: 28),
-                          Container(
-                            width: 78,
-                            height: 3,
+                          DecoratedBox(
                             decoration: BoxDecoration(
-                              color: AppColors.orange,
-                              borderRadius: BorderRadius.circular(99),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.orange.withOpacity(.14),
+                                  blurRadius: 38,
+                                  spreadRadius: 1,
+                                ),
+                              ],
+                            ),
+                            child: Image.asset(
+                              AppConstants.brandLogoHorizontal,
+                              width: 280,
+                              fit: BoxFit.contain,
                             ),
                           ),
-                          const SizedBox(height: 28),
+                          const SizedBox(height: 30),
                           const Text(
-                            'TECNOLOGIA QUE ELEVA O NIVEL\nDA SUA BARBEARIA.',
+                            'Tecnologia que eleva o nivel da sua barbearia.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: AppColors.text,
-                              fontSize: 12,
-                              height: 1.7,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 2.2,
+                              fontSize: 13,
+                              height: 1.5,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.2,
                             ),
                           ),
                         ],
