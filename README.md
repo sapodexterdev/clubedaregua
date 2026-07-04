@@ -47,6 +47,34 @@ Validacao
 
 A documentacao oficial das jornadas fica em `docs/ux/`. Cada `board.png` e a fonte visual oficial da experiencia e deve orientar a implementacao antes da issue tecnica.
 
+## Experience
+
+A experiencia do usuario e documentada separadamente da UX.
+
+Enquanto `docs/ux/` descreve jornadas, telas e componentes, `docs/experience/` documenta sensacao, movimento, transicoes, ritmo e primeira impressao.
+
+Estrutura oficial:
+
+Brand
+
+↓
+
+Experience
+
+↓
+
+UX
+
+↓
+
+Issue
+
+↓
+
+Implementacao
+
+A Welcome Experience fica em `docs/experience/welcome/` e deve ser atualizada sempre que a abertura do aplicativo mudar.
+
 ## Apps
 
 ### App Cliente
