@@ -43,6 +43,32 @@ A experiência visual deve transmitir:
 - Títulos: **Bebas Neue**
 - Textos: **Inter**
 
+## Uso da Marca em Mockups
+
+A logo oficial do Clube da Régua nunca deve ser recriada por IA.
+
+Toda imagem gerada por IA deve conter apenas:
+
+- Cenário.
+- Iluminação.
+- Composição.
+- Espaço reservado para a marca.
+
+A aplicação da identidade visual deverá utilizar exclusivamente os arquivos oficiais presentes em:
+
+`assets/brand/`
+
+Nunca substituir:
+
+- Tipografia.
+- Coroa.
+- Navalha.
+- Proporções.
+- Espaçamentos.
+- Cores.
+
+A logo oficial deve ser aplicada posteriormente pelo Flutter, Figma ou editor gráfico.
+
 ## Uso da Logo
 
 Variações previstas:

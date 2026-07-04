@@ -55,6 +55,32 @@ A marca deve transmitir uma barbearia moderna, urbana e premium. A estética com
 - Títulos: **Bebas Neue**
 - Corpo de texto: **Inter**
 
+## Uso da Marca em Mockups
+
+A logo oficial do Clube da Régua nunca deve ser recriada por IA.
+
+Toda imagem gerada por IA deve conter apenas:
+
+- Cenário.
+- Iluminação.
+- Composição.
+- Espaço reservado para a marca.
+
+A aplicação da identidade visual deverá utilizar exclusivamente os arquivos oficiais presentes em:
+
+`assets/brand/`
+
+Nunca substituir:
+
+- Tipografia.
+- Coroa.
+- Navalha.
+- Proporções.
+- Espaçamentos.
+- Cores.
+
+A logo oficial deve ser aplicada posteriormente pelo Flutter, Figma ou editor gráfico.
+
 ## Aplicação
 
 Toda tela nova, ajuste visual, componente, botão, card, navegação, modal ou estado visual deve seguir esta documentação.
