@@ -6,7 +6,7 @@ Documentar a especificacao visual final da tela Splash do app Cliente.
 
 ## Status
 
-Em especificacao.
+Implementada.
 
 ## Tela Relacionada
 
@@ -22,3 +22,16 @@ Splash Premium da Welcome Experience.
 ## Observacoes
 
 Esta tela deve apresentar a marca oficial com clareza, rapidez e impacto premium.
+
+## Implementacao
+
+- fundo preto puro `#000000`, conforme o storyboard aprovado;
+- logo oficial colorida do Brand Kit V2, sem recriacao ou alteracao;
+- roteiro de 2 segundos: fundo preto, risco amarelo, navalha, coroa,
+  logo completa, slogan e fade out;
+- navalha com escala e glow amarelo discreto;
+- navalha isolada diretamente do master oficial, sem recorte em runtime;
+- logo completa com fade e escala de 96% para 100%;
+- carregamento inicial executado em paralelo com a animacao;
+- destino definido pela conclusao previa do onboarding;
+- largura responsiva e area segura para diferentes telas.
