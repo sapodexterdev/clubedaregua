@@ -90,8 +90,8 @@ class _SplashScreenState extends State<SplashScreen>
                     center: Alignment.center,
                     radius: .82,
                     colors: [
-                      Color(0xFF1A1A1A),
-                      Color(0xFF0D0D0D),
+                      Color(0xFF18181B),
+                      Color(0xFF09090B),
                     ],
                   ),
                 ),

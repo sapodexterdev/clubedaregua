@@ -213,7 +213,7 @@ class CDRButton extends StatelessWidget {
 
     switch (variant) {
       case CDRButtonVariant.primary:
-        return CDRColorTokens.black;
+        return CDRColorTokens.onGold;
       case CDRButtonVariant.secondary:
       case CDRButtonVariant.outlined:
       case CDRButtonVariant.ghost:

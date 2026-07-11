@@ -20,7 +20,7 @@ Entrada da marca no Splash Premium.
 
 Tipo:
 
-Ripple dourado
+Ripple amarelo
 
 Tempo:
 

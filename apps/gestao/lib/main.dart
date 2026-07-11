@@ -754,7 +754,7 @@ class ShopConfiguration {
               15,
       minCancelHours:
           int.tryParse(settings?['min_cancel_hours']?.toString() ?? '') ?? 2,
-      secondaryColor: settingsJson['secondary_color']?.toString() ?? '#F2C14E',
+      secondaryColor: settingsJson['secondary_color']?.toString() ?? '#F3B200',
     );
   }
 
@@ -5043,7 +5043,7 @@ class _SettingsFormState extends State<_SettingsForm> {
   String? _validateHexColor(String? value) {
     final color = value?.trim() ?? '';
     if (!RegExp(r'^#[0-9a-fA-F]{6}$').hasMatch(color)) {
-      return 'Use uma cor no formato #F2C14E.';
+      return 'Use uma cor no formato #F3B200.';
     }
     return null;
   }

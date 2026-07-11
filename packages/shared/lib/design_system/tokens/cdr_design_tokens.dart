@@ -3,17 +3,22 @@ import 'package:flutter/material.dart';
 class CDRColorTokens {
   const CDRColorTokens._();
 
-  static const black = Color(0xFF0D0D0D);
-  static const graphite = Color(0xFF1A1A1A);
-  static const graphiteLight = Color(0xFF2C2C2C);
-  static const gold = Color(0xFFF2C14E);
-  static const goldHover = Color(0xFFFFD56A);
-  static const goldPressed = Color(0xFFE0AE37);
+  static const black = Color(0xFF000000);
+  static const night = Color(0xFF09090B);
+  static const graphite = Color(0xFF18181B);
+  static const graphiteLight = Color(0xFF27272A);
+  static const brandYellow = Color(0xFFF3B200);
+  static const brandYellowHover = Color(0xFFFFC62B);
+  static const brandYellowPressed = Color(0xFFD99F00);
+  static const gold = brandYellow;
+  static const goldHover = brandYellowHover;
+  static const goldPressed = brandYellowPressed;
   static const white = Color(0xFFFFFFFF);
-  static const gray = Color(0xFF7A7A7A);
-  static const border = Color(0xFF3A3A3A);
-  static const disabledBackground = Color(0xFF242424);
-  static const disabledForeground = Color(0xFF666666);
+  static const gray = Color(0xFFA1A1AA);
+  static const border = Color(0xFF3F3F46);
+  static const disabledBackground = Color(0xFF27272A);
+  static const disabledForeground = Color(0xFF71717A);
+  static const onGold = Color(0xFF09090B);
 }
 
 class CDRSpacingTokens {

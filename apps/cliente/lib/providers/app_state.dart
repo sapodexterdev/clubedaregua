@@ -213,7 +213,7 @@ class AppState extends ChangeNotifier {
               address: 'Centro',
               city: 'Sao Paulo',
               state: 'SP',
-              secondaryColor: '#F2C14E',
+              secondaryColor: '#F3B200',
               bookingIntervalMinutes: 30,
               bookingDaysAhead: 30,
               minNoticeMinutes: 60,

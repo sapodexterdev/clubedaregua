@@ -42,13 +42,13 @@ Ver Horarios
 - Informacoes essenciais sempre visiveis nos cards.
 - Perfil da barbearia deve abrir em uma unica acao.
 - Acesso aos horarios em ate dois cliques.
-- Acoes principais sempre em dourado.
+- Acoes principais sempre em amarelo.
 - O usuario pode favoritar apenas quando estiver autenticado.
 - Imagens de barbearias devem manter proporcao 16:9.
 
 ## Relacao com o Brand Kit
 
-Esta jornada aplica o visual urbano premium da marca: dark first, preto e grafite como base, dourado para acao principal e status importante, Bebas Neue em titulos e Inter no corpo de texto. Os cards, filtros e chips seguem linguagem premium com bordas discretas e iconografia outline.
+Esta jornada aplica o visual urbano premium da marca: dark first, preto e grafite como base, amarelo para acao principal e status importante, Barlow Condensed em titulos e Inter no corpo de texto. Os cards, filtros e chips seguem linguagem premium com bordas discretas e iconografia outline.
 
 ## Fonte Visual Oficial
 

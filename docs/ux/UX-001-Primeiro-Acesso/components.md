@@ -45,7 +45,7 @@
 
 - Fundo preto profundo.
 - Cards em cinza escuro.
-- Dourado em acoes principais e destaque.
+- Amarelo em acoes principais e destaque.
 - Texto branco para conteudo principal.
 - Cinza medio para informacoes secundarias.
 - Icones outline com cantos arredondados.

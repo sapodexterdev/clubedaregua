@@ -19,7 +19,7 @@ A iconografia deve reforçar:
 ## Regras
 
 - Preferir ícones simples, legíveis e consistentes.
-- Usar dourado apenas para ícone ativo, ação principal ou destaque importante.
+- Usar amarelo apenas para ícone ativo, ação principal ou destaque importante.
 - Ícones inativos devem usar branco, cinza ou grafite claro conforme contraste.
 - Não misturar famílias de ícones sem necessidade.
 - Não usar ícones infantis, genéricos demais ou desalinhados com a estética urbana premium.

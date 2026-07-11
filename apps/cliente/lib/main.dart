@@ -35,7 +35,7 @@ class StartupErrorApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
-        backgroundColor: const Color(0xFF0D0D0D),
+        backgroundColor: const Color(0xFF09090B),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -44,7 +44,7 @@ class StartupErrorApp extends StatelessWidget {
               children: [
                 const Icon(
                   Icons.error_outline_rounded,
-                  color: Color(0xFFF2C14E),
+                  color: Color(0xFFF3B200),
                   size: 56,
                 ),
                 const SizedBox(height: 18),
@@ -57,7 +57,7 @@ class StartupErrorApp extends StatelessWidget {
                 Text(
                   error.toString(),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Color(0xFF7A7A7A)),
+                  style: const TextStyle(color: Color(0xFFA1A1AA)),
                 ),
               ],
             ),

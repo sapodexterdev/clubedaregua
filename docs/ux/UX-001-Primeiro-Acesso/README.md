@@ -47,7 +47,7 @@ Home Publica
 
 ## Relacao com o Brand Kit
 
-Esta jornada usa a identidade dark first do Clube da Regua, com preto profundo, cinza escuro, dourado para acao principal e branco para leitura. Os titulos seguem Bebas Neue e os textos seguem Inter. Icones outline e cards premium reforcam a estetica urbana da marca.
+Esta jornada usa a identidade dark first do Clube da Regua, com preto profundo, cinza escuro, amarelo para acao principal e branco para leitura. Os titulos seguem Barlow Condensed e os textos seguem Inter. Icones outline e cards premium reforcam a estetica urbana da marca.
 
 ## Fonte Visual Oficial
 
