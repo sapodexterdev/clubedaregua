@@ -8,12 +8,14 @@ A identidade visual oficial do Clube da Régua está documentada em `docs/brand/
 
 Qualquer alteração visual deve seguir obrigatoriamente:
 
-- `docs/brand/Brand_Kit_v1.png`
+- `docs/brand/Brand_Kit_v2.png`
 - `docs/brand/BRAND_GUIDELINES.md`
 - `docs/brand/UI_PRINCIPLES.md`
 - demais documentos em `docs/brand/`
 
-Toda UI deve ser dark first, com paleta preto/grafite/dourado, botões principais em dourado e cards escuros com borda discreta. Cliente e Gestão devem parecer parte do mesmo produto.
+Toda UI deve ser dark first, com paleta noite/grafite/Amarelo Régua, botões principais em `#F3B200` e cards escuros com borda discreta. Cliente e Gestão devem parecer parte do mesmo produto.
+
+O `docs/brand/Brand_Kit_v1.png` é legado e permanece apenas como histórico de evolução da marca.
 
 É proibido criar nova paleta, novos estilos visuais ou nova linguagem de UI sem atualizar a documentação oficial da marca.
 

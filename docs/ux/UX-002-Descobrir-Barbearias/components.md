@@ -65,9 +65,9 @@
 
 ## Tokens Visuais Aplicados
 
-- Preto `#0D0D0D` como fundo principal.
-- Grafite `#1A1A1A` em superficies.
-- Dourado `#F2C14E` para CTA, selecao e destaque.
+- Preto `#09090B` como fundo principal.
+- Grafite `#18181B` em superficies.
+- Amarelo `#F3B200` para CTA, selecao e destaque.
 - Branco `#FFFFFF` para leitura principal.
-- Cinza `#7A7A7A` para textos secundarios.
+- Cinza `#A1A1AA` para textos secundarios.
 - Icones outline com espessura de 2px e cantos arredondados.

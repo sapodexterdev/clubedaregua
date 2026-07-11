@@ -14,7 +14,7 @@ Home Publica da experiencia discovery first.
 
 ## Dependencias
 
-- `docs/brand/Brand_Kit_v1.png`
+- `docs/brand/Brand_Kit_v2.png`
 - `docs/experience/welcome/`
 - `docs/ux/UX-002-Descobrir-Barbearias/`
 

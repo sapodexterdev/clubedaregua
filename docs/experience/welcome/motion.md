@@ -12,7 +12,7 @@ Animacoes:
 
 - Fade In.
 - Scale 98% -> 100%.
-- Glow dourado discreto.
+- Glow amarelo discreto.
 - Fade Out.
 
 Objetivo:
@@ -48,7 +48,7 @@ Fazer a transicao da marca para o uso pratico do produto de forma suave e clara.
 
 ## Microinteracoes
 
-- Ripple dourado no CTA principal.
+- Ripple amarelo no CTA principal.
 - Transicao suave entre indicadores.
 - Feedback visual ao tocar em cards.
 - Leve elevacao em botoes principais.

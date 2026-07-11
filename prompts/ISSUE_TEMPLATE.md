@@ -2,7 +2,7 @@
 
 IMPORTANTE:
 Antes de implementar, leia:
-- docs/brand/Brand_Kit_v1.png
+- docs/brand/Brand_Kit_v2.png
 - docs/brand/BRAND_GUIDELINES.md
 - docs/brand/UI_PRINCIPLES.md
 

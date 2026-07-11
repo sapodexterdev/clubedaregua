@@ -1,13 +1,17 @@
 # Typography - Clube da Régua
 
+## Fonte Oficial
+
+A tipografia oficial deriva do `docs/brand/Brand_Kit_v2.png` e da identidade validada nos UX Boards aprovados.
+
 ## Fontes Oficiais
 
-- Títulos: **Bebas Neue**
+- Títulos: **Barlow Condensed**
 - Corpo de texto: **Inter**
 
 ## Títulos
 
-Usar Bebas Neue para:
+Usar Barlow Condensed para:
 
 - Nome do produto.
 - Títulos de tela.

@@ -2,13 +2,23 @@
 
 ## Referência Oficial
 
-A prancha de identidade enviada pelo Rafael é a fonte de verdade visual da marca Clube da Régua.
+A fonte de verdade visual da marca Clube da Régua é o Brand Kit V2 aprovado e seus arquivos mestres em `assets/brand/`.
 
-Salvar a prancha oficial como:
+A prancha oficial está salva como:
 
-`docs/brand/Brand_Board_v1.png`
+`docs/brand/Brand_Kit_v2.png`
+
+O arquivo `docs/brand/Brand_Kit_v1.png` é legado e permanece apenas como histórico de evolução da marca.
 
 Nenhuma decisão visual do produto deve contrariar essa referência.
+
+## Brand Evolution
+
+A identidade visual foi refinada e vetorizada a partir da marca aprovada, preservando coroa, lettering urbano e navalha-régua.
+
+O Brand Kit V2 consolida a logo oficial, paleta, tipografia, texturas, iconografia, ícone do aplicativo e linguagem visual do produto.
+
+Novas telas, assets, mockups e componentes devem partir do Brand Kit V2.
 
 ## Marca
 
@@ -32,26 +42,54 @@ A experiência visual deve transmitir:
 
 ## Paleta Oficial
 
-- Preto base: `#0D0D0D`
-- Grafite: `#1A1A1A`
-- Dourado: `#F2C14E`
+- Preto base: `#09090B`
+- Grafite: `#18181B`
+- Amarelo Régua: `#F3B200`
 - Branco: `#FFFFFF`
-- Cinza de apoio: `#7A7A7A`
+- Cinza de apoio: `#A1A1AA`
 
 ## Tipografia
 
-- Títulos: **Bebas Neue**
+- Títulos: **Barlow Condensed**
 - Textos: **Inter**
+
+## Uso da Marca em Mockups
+
+A logo oficial do Clube da Régua nunca deve ser recriada por IA.
+
+Toda imagem gerada por IA deve conter apenas:
+
+- Cenário.
+- Iluminação.
+- Composição.
+- Espaço reservado para a marca.
+
+A aplicação da identidade visual deverá utilizar exclusivamente os arquivos oficiais presentes em:
+
+`assets/brand/`
+
+Nunca substituir:
+
+- Tipografia.
+- Coroa.
+- Navalha.
+- Proporções.
+- Espaçamentos.
+- Cores.
+
+A logo oficial deve ser aplicada posteriormente pelo Flutter, Figma ou editor gráfico.
 
 ## Uso da Logo
 
-Variações previstas:
+Arquivos oficiais:
 
-- Logo principal.
-- Logo horizontal.
-- Ícone CR.
-- Versão circular.
-- Versão monocromática.
+- Assinatura principal colorida.
+- Versões monocromáticas preta, branca e amarela.
+- Símbolo reduzido da coroa.
+- Ícone oficial do aplicativo.
+- Favicon e atalhos web.
+
+Os arquivos mestres estão em `assets/brand/`.
 
 Regras:
 
@@ -64,11 +102,11 @@ Regras:
 ## Regras de UI
 
 - Produto **dark first**.
-- Botões principais em dourado.
+- Botões principais em amarelo.
 - Cards escuros com borda discreta.
 - Textos claros sobre fundos escuros.
-- Dourado deve ser usado apenas para destaque, ação principal e estados selecionados.
-- Evitar excesso de dourado para preservar sensação premium.
+- Amarelo deve ser usado apenas para destaque, ação principal e estados selecionados.
+- Evitar excesso de amarelo para preservar sensação premium.
 - Cliente e Gestão devem parecer parte do mesmo produto.
 - Manter consistência visual entre telas, fluxos e aplicativos.
 - Ícones devem reforçar o universo de barbearia, gestão e precisão.

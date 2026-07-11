@@ -1,5 +1,9 @@
 # Iconography - Clube da Régua
 
+## Fonte Oficial
+
+A iconografia oficial deriva do `docs/brand/Brand_Kit_v2.png` e dos UX Boards aprovados.
+
 ## Direção Visual
 
 A iconografia deve reforçar:
@@ -15,7 +19,7 @@ A iconografia deve reforçar:
 ## Regras
 
 - Preferir ícones simples, legíveis e consistentes.
-- Usar dourado apenas para ícone ativo, ação principal ou destaque importante.
+- Usar amarelo apenas para ícone ativo, ação principal ou destaque importante.
 - Ícones inativos devem usar branco, cinza ou grafite claro conforme contraste.
 - Não misturar famílias de ícones sem necessidade.
 - Não usar ícones infantis, genéricos demais ou desalinhados com a estética urbana premium.

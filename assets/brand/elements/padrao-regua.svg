@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" role="img" aria-label="Padrão gráfico Clube da Régua">
+  <defs><pattern id="regua" width="260" height="160" patternUnits="userSpaceOnUse" patternTransform="rotate(-14)">
+    <path d="M20 112h220" stroke="#F3B200" stroke-width="10" stroke-linecap="round" opacity=".28"/>
+    <path d="M40 70v42m32-22v22m32-42v42m32-22v22m32-42v42m32-22v22" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" opacity=".14"/>
+    <path d="M18 138h142" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" opacity=".08"/>
+  </pattern></defs>
+  <rect width="1200" height="600" fill="url(#regua)"/>
+</svg>

@@ -68,7 +68,7 @@ class ShopIdentity {
       address: shop['address']?.toString() ?? '',
       city: shop['city']?.toString() ?? '',
       state: shop['state']?.toString() ?? '',
-      secondaryColor: settingsJson['secondary_color']?.toString() ?? '#F2C14E',
+      secondaryColor: settingsJson['secondary_color']?.toString() ?? '#F3B200',
       bookingIntervalMinutes: int.tryParse(
               settings?['booking_interval_minutes']?.toString() ?? '') ??
           30,
@@ -222,7 +222,7 @@ class BarberRepository {
           address: 'Centro',
           city: 'Sao Paulo',
           state: 'SP',
-          secondaryColor: '#F2C14E',
+          secondaryColor: '#F3B200',
           bookingIntervalMinutes: 30,
           bookingDaysAhead: 30,
           minNoticeMinutes: 60,

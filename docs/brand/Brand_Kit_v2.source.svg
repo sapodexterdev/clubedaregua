@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1920" height="1080" viewBox="0 0 1920 1080" role="img" aria-labelledby="title desc">
+  <title id="title">Brand Kit V2 — Clube da Régua</title>
+  <desc id="desc">Prancha oficial da identidade visual do aplicativo Clube da Régua</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#09090B"/>
+      <stop offset="1" stop-color="#18181B"/>
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#bg)"/>
+  <path d="M0 910C430 790 690 1030 1160 890s570-100 760-20v210H0Z" fill="#F3B200" opacity=".05"/>
+  <path d="M1450 60h470v8h-470zM1560 88h360v4h-360z" fill="#F3B200" opacity=".45"/>
+  <g font-family="DejaVu Sans, Arial, sans-serif">
+    <text x="80" y="88" fill="#F3B200" font-size="27" font-weight="700" letter-spacing="6">IDENTIDADE VISUAL OFICIAL</text>
+    <text x="80" y="145" fill="#FFFFFF" font-size="52" font-weight="800">CLUBE DA RÉGUA</text>
+    <text x="80" y="187" fill="#A1A1AA" font-size="23">Brand Kit V2 · Aplicativo SaaS para barbearias</text>
+    <rect x="80" y="235" width="1110" height="620" rx="34" fill="#111114" stroke="#2D2D31" stroke-width="2"/>
+    <text x="120" y="290" fill="#A1A1AA" font-size="19" font-weight="700" letter-spacing="3">ASSINATURA PRINCIPAL</text>
+    <image xlink:href="../../assets/brand/logos/logo-oficial-colorida-3000.png" x="140" y="315" width="990" height="480" preserveAspectRatio="xMidYMid meet"/>
+    <rect x="1230" y="235" width="610" height="310" rx="34" fill="#111114" stroke="#2D2D31" stroke-width="2"/>
+    <text x="1270" y="290" fill="#A1A1AA" font-size="19" font-weight="700" letter-spacing="3">ÍCONE DO APP</text>
+    <image xlink:href="../../assets/brand/app-icon/icone-app-1024.png" x="1395" y="315" width="280" height="280" preserveAspectRatio="xMidYMid meet"/>
+    <rect x="1230" y="585" width="610" height="270" rx="34" fill="#111114" stroke="#2D2D31" stroke-width="2"/>
+    <text x="1270" y="640" fill="#A1A1AA" font-size="19" font-weight="700" letter-spacing="3">SÍMBOLO REDUZIDO</text>
+    <image xlink:href="../../assets/brand/logos/simbolo-coroa-colorido-1024.png" x="1360" y="655" width="350" height="170" preserveAspectRatio="xMidYMid meet"/>
+    <text x="80" y="930" fill="#FFFFFF" font-size="25" font-weight="800">PALETA OFICIAL</text>
+    <g transform="translate(80 955)">
+      <g><rect width="230" height="75" rx="15" fill="#F3B200"/><text x="20" y="31" fill="#09090B" font-size="17" font-weight="800">AMARELO RÉGUA</text><text x="20" y="56" fill="#09090B" font-size="17">#F3B200</text></g>
+      <g transform="translate(250)"><rect width="230" height="75" rx="15" fill="#09090B" stroke="#35353A"/><text x="20" y="31" fill="#FFFFFF" font-size="17" font-weight="800">NOITE</text><text x="20" y="56" fill="#A1A1AA" font-size="17">#09090B</text></g>
+      <g transform="translate(500)"><rect width="230" height="75" rx="15" fill="#18181B" stroke="#35353A"/><text x="20" y="31" fill="#FFFFFF" font-size="17" font-weight="800">CARVÃO</text><text x="20" y="56" fill="#A1A1AA" font-size="17">#18181B</text></g>
+      <g transform="translate(750)"><rect width="230" height="75" rx="15" fill="#FFFFFF"/><text x="20" y="31" fill="#09090B" font-size="17" font-weight="800">BRANCO</text><text x="20" y="56" fill="#3F3F46" font-size="17">#FFFFFF</text></g>
+      <g transform="translate(1000)"><rect width="230" height="75" rx="15" fill="#A1A1AA"/><text x="20" y="31" fill="#09090B" font-size="17" font-weight="800">CINZA</text><text x="20" y="56" fill="#27272A" font-size="17">#A1A1AA</text></g>
+    </g>
+    <g transform="translate(1370 920)">
+      <text fill="#FFFFFF" font-size="25" font-weight="800">TIPOGRAFIA DO PRODUTO</text>
+      <text y="42" fill="#F3B200" font-size="25" font-weight="800">Barlow Condensed</text>
+      <text y="73" fill="#A1A1AA" font-size="20">Títulos e números</text>
+      <text x="365" y="42" fill="#FFFFFF" font-size="25" font-weight="700">Inter</text>
+      <text x="365" y="73" fill="#A1A1AA" font-size="20">Interface e textos</text>
+    </g>
+  </g>
+</svg>
