@@ -25,7 +25,7 @@ Esta tela deve apresentar a marca oficial com clareza, rapidez e impacto premium
 
 ## Implementacao
 
-- fundo radial entre `#18181B` e `#09090B`;
+- fundo preto puro `#000000`, conforme o storyboard aprovado;
 - logo oficial colorida do Brand Kit V2, sem recriacao ou alteracao;
 - roteiro de 2 segundos: fundo preto, risco amarelo, navalha, coroa,
   logo completa, slogan e fade out;
