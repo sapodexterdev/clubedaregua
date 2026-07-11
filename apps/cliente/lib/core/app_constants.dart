@@ -1,7 +1,8 @@
 class AppConstants {
   static const appName = 'Clube da Régua';
   static const primaryColorHex = '#F3B200';
-  static const brandLogoHorizontal = 'assets/images/brand_logo_horizontal.png';
+  static const brandLogoOfficial = 'assets/images/brand_logo_oficial.png';
+  static const brandLogoHorizontal = brandLogoOfficial;
   static const brandIconCr = 'assets/images/brand_icon_cr.png';
   static const splashBarberReference =
       'assets/images/splash_barber_reference.png';

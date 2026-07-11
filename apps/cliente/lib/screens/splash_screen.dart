@@ -29,24 +29,14 @@ class _SplashScreenState extends State<SplashScreen>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 400),
     );
-    _opacity = TweenSequence<double>([
-      TweenSequenceItem(
-        tween: Tween(begin: 0.0, end: 1.0).chain(
-          CurveTween(curve: Curves.easeOutCubic),
-        ),
-        weight: 28,
-      ),
-      TweenSequenceItem(tween: ConstantTween<double>(1), weight: 52),
-      TweenSequenceItem(
-        tween: Tween(begin: 1.0, end: 0.0).chain(
-          CurveTween(curve: Curves.easeInOut),
-        ),
-        weight: 20,
-      ),
-    ]).animate(_controller);
-    _scale = Tween<double>(begin: .96, end: 1).animate(
+    _opacity = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+    _scale = Tween<double>(begin: .98, end: 1).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     );
     _start();
@@ -55,11 +45,22 @@ class _SplashScreenState extends State<SplashScreen>
   Future<void> _start() async {
     final prefsFuture = SharedPreferences.getInstance();
     final dataFuture = context.read<AppState>().loadInitialData();
+    final minimumDisplayFuture = Future<void>.delayed(
+      const Duration(milliseconds: 1600),
+    );
+
     await _controller.forward();
-    final prefs = await prefsFuture;
-    await dataFuture;
+    final results = await Future.wait<Object?>([
+      prefsFuture,
+      dataFuture,
+      minimumDisplayFuture,
+    ]);
+
+    if (!mounted) return;
+    await _controller.reverse();
     if (!mounted) return;
 
+    final prefs = results.first as SharedPreferences;
     final hasSeenOnboarding =
         prefs.getBool(SplashScreen.onboardingSeenKey) ?? false;
     Navigator.pushReplacementNamed(
@@ -96,45 +97,61 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
               ),
-              Center(
-                child: Opacity(
-                  opacity: _opacity.value,
-                  child: Transform.scale(
-                    scale: _scale.value,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          DecoratedBox(
-                            decoration: BoxDecoration(
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.orange.withOpacity(.14),
-                                  blurRadius: 38,
-                                  spreadRadius: 1,
+              SafeArea(
+                child: Center(
+                  child: Opacity(
+                    opacity: _opacity.value,
+                    child: Transform.scale(
+                      scale: _scale.value,
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final logoWidth =
+                              (constraints.maxWidth * .82).clamp(240.0, 420.0);
+
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Semantics(
+                                  image: true,
+                                  label: 'Clube da Régua',
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: AppColors.brandYellow
+                                              .withOpacity(.14),
+                                          blurRadius: 40,
+                                          spreadRadius: 2,
+                                        ),
+                                      ],
+                                    ),
+                                    child: Image.asset(
+                                      AppConstants.brandLogoOfficial,
+                                      width: logoWidth,
+                                      fit: BoxFit.contain,
+                                      filterQuality: FilterQuality.high,
+                                      excludeFromSemantics: true,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 28),
+                                const Text(
+                                  'Tecnologia que eleva o nível da sua barbearia.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: AppColors.muted,
+                                    fontSize: 13,
+                                    height: 1.5,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: .8,
+                                  ),
                                 ),
                               ],
                             ),
-                            child: Image.asset(
-                              AppConstants.brandLogoHorizontal,
-                              width: 280,
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                          const SizedBox(height: 30),
-                          const Text(
-                            'Tecnologia que eleva o nivel da sua barbearia.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: AppColors.text,
-                              fontSize: 13,
-                              height: 1.5,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                        ],
+                          );
+                        },
                       ),
                     ),
                   ),
