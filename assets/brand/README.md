@@ -6,7 +6,8 @@ Esta pasta contém os arquivos oficiais aprovados do Brand Kit V2.
 
 - `logos/`: assinatura principal, versões monocromáticas e símbolo reduzido.
 - `app-icon/`: ícone mestre do aplicativo e favicons.
-- `elements/`: padrão de régua e iconografia complementar.
+- `elements/`: padrão de régua, iconografia complementar e navalha isolada
+  derivada diretamente da assinatura oficial para animações.
 - `tokens/`: tokens CSS e JSON da identidade visual.
 
 ## Regras

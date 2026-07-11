@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,6 +28,8 @@ class _SplashScreenState extends State<SplashScreen>
   late final Animation<double> _razorOpacity;
   late final Animation<double> _razorScale;
   late final Animation<double> _crownOpacity;
+  late final Animation<double> _assemblyProgress;
+  late final Animation<double> _separateElementsOpacity;
   late final Animation<double> _logoOpacity;
   late final Animation<double> _logoScale;
   late final Animation<double> _sloganOpacity;
@@ -44,21 +48,20 @@ class _SplashScreenState extends State<SplashScreen>
       TweenSequenceItem(tween: ConstantTween<double>(1), weight: 20),
       TweenSequenceItem(tween: Tween<double>(begin: 1, end: 0), weight: 30),
     ]).animate(_interval(.15, .48, curve: Curves.linear));
-    _razorOpacity = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween<double>(begin: 0, end: 1), weight: 45),
-      TweenSequenceItem(tween: ConstantTween<double>(1), weight: 30),
-      TweenSequenceItem(tween: Tween<double>(begin: 1, end: 0), weight: 25),
-    ]).animate(_interval(.30, .62, curve: Curves.linear));
+    _razorOpacity = _interval(.26, .43);
     _razorScale = Tween<double>(begin: .90, end: 1).animate(
       _interval(.30, .52, curve: Curves.easeOutBack),
     );
-    _crownOpacity = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween<double>(begin: 0, end: 1), weight: 55),
-      TweenSequenceItem(tween: Tween<double>(begin: 1, end: 0), weight: 45),
-    ]).animate(_interval(.50, .75));
-    _logoOpacity = _interval(.70, .84);
+    _crownOpacity = _interval(.48, .62);
+    _assemblyProgress = _interval(.62, .80, curve: Curves.easeInOutCubic);
+    _separateElementsOpacity = TweenSequence<double>([
+      TweenSequenceItem(tween: ConstantTween<double>(1), weight: 78),
+      TweenSequenceItem(tween: Tween<double>(begin: 1, end: 0), weight: 10),
+      TweenSequenceItem(tween: ConstantTween<double>(0), weight: 12),
+    ]).animate(_controller);
+    _logoOpacity = _interval(.74, .86);
     _logoScale = Tween<double>(begin: .96, end: 1).animate(
-      _interval(.70, .84, curve: Curves.easeOutCubic),
+      _interval(.74, .86, curve: Curves.easeOutCubic),
     );
     _sloganOpacity = _interval(.84, .94);
     _sceneOpacity = TweenSequence<double>([
@@ -121,7 +124,18 @@ class _SplashScreenState extends State<SplashScreen>
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     final logoWidth =
-                        (constraints.maxWidth * .76).clamp(250.0, 390.0);
+                        (constraints.maxWidth * .82).clamp(270.0, 420.0);
+                    final assembly = _assemblyProgress.value;
+                    final razorOffset = Offset.lerp(
+                      Offset.zero,
+                      Offset(logoWidth * .31, logoWidth * .04),
+                      assembly,
+                    )!;
+                    final crownOffset = Offset.lerp(
+                      Offset.zero,
+                      Offset(-logoWidth * .27, -logoWidth * .24),
+                      assembly,
+                    )!;
 
                     return Opacity(
                       opacity: _sceneOpacity.value,
@@ -140,30 +154,19 @@ class _SplashScreenState extends State<SplashScreen>
                             ),
                           ),
                           Center(
-                            child: Transform.translate(
-                              offset: Offset(-logoWidth * .22, 0),
-                              child: Opacity(
-                                opacity: _razorOpacity.value,
-                                child: Transform.scale(
-                                  scale: _razorScale.value,
-                                  child: DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: AppColors.brandYellow
-                                              .withOpacity(.22),
-                                          blurRadius: 34,
-                                          spreadRadius: 2,
-                                        ),
-                                      ],
-                                    ),
-                                    child: ClipPath(
-                                      clipper: const _RazorClipper(),
-                                      child: Image.asset(
-                                        AppConstants.brandLogoOfficial,
-                                        width: logoWidth,
-                                        filterQuality: FilterQuality.high,
-                                      ),
+                            child: Opacity(
+                              opacity: _separateElementsOpacity.value *
+                                  _razorOpacity.value,
+                              child: Transform.translate(
+                                offset: razorOffset,
+                                child: Transform.rotate(
+                                  angle: .42 * (1 - assembly),
+                                  child: Transform.scale(
+                                    scale: _razorScale.value,
+                                    child: _GlowAsset(
+                                      asset: AppConstants.brandRazorOfficial,
+                                      width: logoWidth * .36,
+                                      glowOpacity: .18,
                                     ),
                                   ),
                                 ),
@@ -172,11 +175,18 @@ class _SplashScreenState extends State<SplashScreen>
                           ),
                           Center(
                             child: Opacity(
-                              opacity: _crownOpacity.value,
-                              child: Image.asset(
-                                AppConstants.brandCrownOfficial,
-                                width: logoWidth * .34,
-                                filterQuality: FilterQuality.high,
+                              opacity: _separateElementsOpacity.value *
+                                  _crownOpacity.value,
+                              child: Transform.translate(
+                                offset: crownOffset,
+                                child: Transform.scale(
+                                  scale: 1.45 - (.45 * assembly),
+                                  child: _GlowAsset(
+                                    asset: AppConstants.brandCrownOfficial,
+                                    width: logoWidth * .25,
+                                    glowOpacity: .12,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -275,12 +285,19 @@ class _GoldenSlashPainter extends CustomPainter {
       ..quadraticBezierTo(control.dx, control.dy, end.dx, end.dy);
     final metric = path.computeMetrics().first;
     final visiblePath = metric.extractPath(0, metric.length * progress);
+    final glowPaint = Paint()
+      ..color = AppColors.brandYellow.withOpacity(.24)
+      ..strokeWidth = 16
+      ..strokeCap = StrokeCap.round
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10)
+      ..style = PaintingStyle.stroke;
     final paint = Paint()
       ..color = AppColors.brandYellow
-      ..strokeWidth = 4
+      ..strokeWidth = 4.5
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
 
+    canvas.drawPath(visiblePath, glowPaint);
     canvas.drawPath(visiblePath, paint);
   }
 
@@ -290,28 +307,41 @@ class _GoldenSlashPainter extends CustomPainter {
   }
 }
 
-class _RazorClipper extends CustomClipper<Path> {
-  const _RazorClipper();
+class _GlowAsset extends StatelessWidget {
+  const _GlowAsset({
+    required this.asset,
+    required this.width,
+    required this.glowOpacity,
+  });
+
+  final String asset;
+  final double width;
+  final double glowOpacity;
 
   @override
-  Path getClip(Size size) {
-    return Path()
-      ..moveTo(size.width * .75, size.height * .12)
-      ..lineTo(size.width * .90, size.height * .10)
-      ..lineTo(size.width * .95, size.height * .56)
-      ..lineTo(size.width, size.height * .63)
-      ..lineTo(size.width * .97, size.height * .76)
-      ..lineTo(size.width, size.height * .82)
-      ..lineTo(size.width * .95, size.height * .84)
-      ..lineTo(size.width * .91, size.height * .77)
-      ..lineTo(size.width * .80, size.height)
-      ..lineTo(size.width * .68, size.height)
-      ..lineTo(size.width * .69, size.height * .88)
-      ..lineTo(size.width * .91, size.height * .64)
-      ..lineTo(size.width * .84, size.height * .53)
-      ..close();
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        ImageFiltered(
+          imageFilter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Opacity(
+            opacity: glowOpacity,
+            child: ColorFiltered(
+              colorFilter: const ColorFilter.mode(
+                AppColors.brandYellow,
+                BlendMode.srcIn,
+              ),
+              child: Image.asset(asset, width: width),
+            ),
+          ),
+        ),
+        Image.asset(
+          asset,
+          width: width,
+          filterQuality: FilterQuality.high,
+        ),
+      ],
+    );
   }
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }

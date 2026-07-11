@@ -3,6 +3,7 @@ class AppConstants {
   static const primaryColorHex = '#F3B200';
   static const brandLogoOfficial = 'assets/images/brand_logo_oficial.png';
   static const brandCrownOfficial = 'assets/images/brand_crown_oficial.png';
+  static const brandRazorOfficial = 'assets/images/brand_razor_oficial.png';
   static const brandLogoHorizontal = brandLogoOfficial;
   static const brandIconCr = 'assets/images/brand_icon_cr.png';
   static const splashBarberReference =

@@ -30,6 +30,7 @@ Esta tela deve apresentar a marca oficial com clareza, rapidez e impacto premium
 - roteiro de 2 segundos: fundo preto, risco amarelo, navalha, coroa,
   logo completa, slogan e fade out;
 - navalha com escala e glow amarelo discreto;
+- navalha isolada diretamente do master oficial, sem recorte em runtime;
 - logo completa com fade e escala de 96% para 100%;
 - carregamento inicial executado em paralelo com a animacao;
 - destino definido pela conclusao previa do onboarding;
