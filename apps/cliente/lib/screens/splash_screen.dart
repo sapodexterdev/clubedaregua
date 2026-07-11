@@ -28,8 +28,8 @@ class _SplashScreenState extends State<SplashScreen>
   late final Animation<double> _razorOpacity;
   late final Animation<double> _razorScale;
   late final Animation<double> _crownOpacity;
-  late final Animation<double> _assemblyProgress;
-  late final Animation<double> _separateElementsOpacity;
+  late final Animation<double> _sparkleOpacity;
+  late final Animation<double> _sparkleScale;
   late final Animation<double> _logoOpacity;
   late final Animation<double> _logoScale;
   late final Animation<double> _sloganOpacity;
@@ -45,20 +45,29 @@ class _SplashScreenState extends State<SplashScreen>
     _slashProgress = _interval(.15, .35);
     _slashOpacity = TweenSequence<double>([
       TweenSequenceItem(tween: Tween<double>(begin: 0, end: 1), weight: 50),
-      TweenSequenceItem(tween: ConstantTween<double>(1), weight: 20),
+      TweenSequenceItem(tween: ConstantTween<double>(1), weight: 15),
+      TweenSequenceItem(tween: Tween<double>(begin: 1, end: 0), weight: 35),
+    ]).animate(_interval(.15, .43, curve: Curves.linear));
+    _razorOpacity = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween<double>(begin: 0, end: 1), weight: 40),
+      TweenSequenceItem(tween: ConstantTween<double>(1), weight: 30),
       TweenSequenceItem(tween: Tween<double>(begin: 1, end: 0), weight: 30),
-    ]).animate(_interval(.15, .48, curve: Curves.linear));
-    _razorOpacity = _interval(.26, .43);
+    ]).animate(_interval(.26, .55, curve: Curves.linear));
     _razorScale = Tween<double>(begin: .90, end: 1).animate(
       _interval(.30, .52, curve: Curves.easeOutBack),
     );
-    _crownOpacity = _interval(.48, .62);
-    _assemblyProgress = _interval(.62, .80, curve: Curves.easeInOutCubic);
-    _separateElementsOpacity = TweenSequence<double>([
-      TweenSequenceItem(tween: ConstantTween<double>(1), weight: 78),
-      TweenSequenceItem(tween: Tween<double>(begin: 1, end: 0), weight: 10),
-      TweenSequenceItem(tween: ConstantTween<double>(0), weight: 12),
-    ]).animate(_controller);
+    _sparkleOpacity = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween<double>(begin: 0, end: 1), weight: 30),
+      TweenSequenceItem(tween: ConstantTween<double>(1), weight: 30),
+      TweenSequenceItem(tween: Tween<double>(begin: 1, end: 0), weight: 40),
+    ]).animate(_interval(.35, .54, curve: Curves.easeOut));
+    _sparkleScale = Tween<double>(begin: .25, end: 1.25).animate(
+      _interval(.35, .48, curve: Curves.easeOutBack),
+    );
+    _crownOpacity = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween<double>(begin: 0, end: 1), weight: 55),
+      TweenSequenceItem(tween: Tween<double>(begin: 1, end: 0), weight: 45),
+    ]).animate(_interval(.55, .78));
     _logoOpacity = _interval(.74, .86);
     _logoScale = Tween<double>(begin: .96, end: 1).animate(
       _interval(.74, .86, curve: Curves.easeOutCubic),
@@ -125,17 +134,6 @@ class _SplashScreenState extends State<SplashScreen>
                   builder: (context, constraints) {
                     final logoWidth =
                         (constraints.maxWidth * .82).clamp(270.0, 420.0);
-                    final assembly = _assemblyProgress.value;
-                    final razorOffset = Offset.lerp(
-                      Offset.zero,
-                      Offset(logoWidth * .31, logoWidth * .04),
-                      assembly,
-                    )!;
-                    final crownOffset = Offset.lerp(
-                      Offset.zero,
-                      Offset(-logoWidth * .27, -logoWidth * .24),
-                      assembly,
-                    )!;
 
                     return Opacity(
                       opacity: _sceneOpacity.value,
@@ -155,19 +153,15 @@ class _SplashScreenState extends State<SplashScreen>
                           ),
                           Center(
                             child: Opacity(
-                              opacity: _separateElementsOpacity.value *
-                                  _razorOpacity.value,
-                              child: Transform.translate(
-                                offset: razorOffset,
-                                child: Transform.rotate(
-                                  angle: .42 * (1 - assembly),
-                                  child: Transform.scale(
-                                    scale: _razorScale.value,
-                                    child: _GlowAsset(
-                                      asset: AppConstants.brandRazorOfficial,
-                                      width: logoWidth * .36,
-                                      glowOpacity: .18,
-                                    ),
+                              opacity: _razorOpacity.value,
+                              child: Transform.rotate(
+                                angle: .42,
+                                child: Transform.scale(
+                                  scale: _razorScale.value,
+                                  child: _RazorStage(
+                                    width: logoWidth * .36,
+                                    sparkleOpacity: _sparkleOpacity.value,
+                                    sparkleScale: _sparkleScale.value,
                                   ),
                                 ),
                               ),
@@ -175,17 +169,13 @@ class _SplashScreenState extends State<SplashScreen>
                           ),
                           Center(
                             child: Opacity(
-                              opacity: _separateElementsOpacity.value *
-                                  _crownOpacity.value,
-                              child: Transform.translate(
-                                offset: crownOffset,
-                                child: Transform.scale(
-                                  scale: 1.45 - (.45 * assembly),
-                                  child: _GlowAsset(
-                                    asset: AppConstants.brandCrownOfficial,
-                                    width: logoWidth * .25,
-                                    glowOpacity: .12,
-                                  ),
+                              opacity: _crownOpacity.value,
+                              child: Transform.scale(
+                                scale: .84 + (_crownOpacity.value * .16),
+                                child: _GlowAsset(
+                                  asset: AppConstants.brandCrownOfficial,
+                                  width: logoWidth * .32,
+                                  glowOpacity: .16,
                                 ),
                               ),
                             ),
@@ -344,4 +334,80 @@ class _GlowAsset extends StatelessWidget {
       ],
     );
   }
+}
+
+class _RazorStage extends StatelessWidget {
+  const _RazorStage({
+    required this.width,
+    required this.sparkleOpacity,
+    required this.sparkleScale,
+  });
+
+  final double width;
+  final double sparkleOpacity;
+  final double sparkleScale;
+
+  @override
+  Widget build(BuildContext context) {
+    final height = width * 1.654;
+
+    return SizedBox(
+      width: width,
+      height: height,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Align(
+            alignment: Alignment.center,
+            child: _GlowAsset(
+              asset: AppConstants.brandRazorOfficial,
+              width: width,
+              glowOpacity: .20,
+            ),
+          ),
+          Positioned(
+            left: width * .60,
+            top: height * .43,
+            child: Opacity(
+              opacity: sparkleOpacity,
+              child: Transform.scale(
+                scale: sparkleScale,
+                child: const CustomPaint(
+                  size: Size(58, 58),
+                  painter: _RazorSparklePainter(),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RazorSparklePainter extends CustomPainter {
+  const _RazorSparklePainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final glow = Paint()
+      ..color = AppColors.brandYellow.withOpacity(.35)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9);
+    canvas.drawCircle(center, 10, glow);
+
+    final rays = Paint()
+      ..color = const Color(0xFFFFE7A0)
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 2.4;
+    canvas
+      ..drawLine(Offset(center.dx, 3), Offset(center.dx, size.height - 3), rays)
+      ..drawLine(Offset(3, center.dy), Offset(size.width - 3, center.dy), rays)
+      ..drawLine(const Offset(10, 10), const Offset(48, 48), rays)
+      ..drawLine(const Offset(48, 10), const Offset(10, 48), rays);
+    canvas.drawCircle(center, 4.5, Paint()..color = Colors.white);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
