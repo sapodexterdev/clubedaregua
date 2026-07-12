@@ -4,6 +4,7 @@ class CDRColorTokens {
   const CDRColorTokens._();
 
   static const black = Color(0xFF000000);
+  static const brandBlack = Color(0xFF050505);
   static const night = Color(0xFF09090B);
   static const graphite = Color(0xFF18181B);
   static const graphiteLight = Color(0xFF27272A);
@@ -19,6 +20,10 @@ class CDRColorTokens {
   static const disabledBackground = Color(0xFF27272A);
   static const disabledForeground = Color(0xFF71717A);
   static const onGold = Color(0xFF09090B);
+  static const success = Color(0xFF22C55E);
+  static const warning = Color(0xFFF97316);
+  static const error = Color(0xFFEF4444);
+  static const info = Color(0xFF38BDF8);
 }
 
 class CDRSpacingTokens {
@@ -30,12 +35,21 @@ class CDRSpacingTokens {
   static const lg = 16.0;
   static const xl = 20.0;
   static const xxl = 24.0;
+  static const xxxl = 32.0;
+  static const section = 40.0;
+  static const sectionLarge = 48.0;
+  static const sectionHero = 64.0;
 }
 
 class CDRRadiusTokens {
   const CDRRadiusTokens._();
 
+  static const small = 8.0;
+  static const medium = 14.0;
   static const button = 18.0;
+  static const large = 22.0;
+  static const app = 28.0;
+  static const pill = 999.0;
 }
 
 class CDRSizeTokens {
@@ -51,6 +65,8 @@ class CDRDurationTokens {
   const CDRDurationTokens._();
 
   static const fast = Duration(milliseconds: 150);
+  static const standard = Duration(milliseconds: 250);
+  static const emphasis = Duration(milliseconds: 400);
 }
 
 class CDRTypographyTokens {
