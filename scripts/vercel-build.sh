@@ -23,6 +23,9 @@ flutter build web \
   --dart-define=SUPABASE_URL="${SUPABASE_URL:-}" \
   --dart-define=SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-}"
 
+cp assets/images/splash_v3_barbearia_coldre_v2.png build/web/boot-splash.png
+cp assets/images/brand_v3_segunda_logo.svg build/web/boot-logo.svg
+
 python3 - <<'PY'
 import re
 from pathlib import Path
