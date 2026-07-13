@@ -1,5 +1,9 @@
 # Motion - Welcome Experience
 
+> A especificação oficial da identidade V3 está em
+> `docs/brand/v3/MOTION_SYSTEM.md`. Este arquivo permanece como histórico da
+> experiência V2.
+
 Este documento descreve as animacoes previstas para a abertura do aplicativo.
 
 ## Splash

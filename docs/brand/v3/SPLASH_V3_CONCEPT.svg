@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 390 844" role="img" aria-labelledby="title desc">
+  <title id="title">Conceito da Splash V3</title>
+  <desc id="desc">Barbearia urbana premium com a segunda logo Clube da Régua sobreposta.</desc>
+  <defs>
+    <linearGradient id="overlay" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000" stop-opacity=".50"/>
+      <stop offset=".34" stop-color="#000" stop-opacity=".22"/>
+      <stop offset=".68" stop-color="#000" stop-opacity=".32"/>
+      <stop offset="1" stop-color="#050505" stop-opacity=".77"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+    <clipPath id="screen">
+      <rect width="390" height="844" rx="34"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#screen)">
+    <rect width="390" height="844" fill="#050505"/>
+    <image x="-42.5" y="0" width="475" height="844" preserveAspectRatio="xMidYMid slice" xlink:href="../../../apps/cliente/assets/images/splash_v3_barbearia_coldre_v2.png"/>
+    <rect width="390" height="844" fill="url(#overlay)"/>
+    <g opacity=".25" filter="url(#glow)">
+      <image x="134" y="45" width="122" height="148" preserveAspectRatio="xMidYMid meet" xlink:href="../../../assets/brand/v3/clube-da-regua-segunda-logo.svg"/>
+    </g>
+    <image x="137" y="48" width="116" height="140" preserveAspectRatio="xMidYMid meet" xlink:href="../../../assets/brand/v3/clube-da-regua-segunda-logo.svg"/>
+  </g>
+</svg>

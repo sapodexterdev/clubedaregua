@@ -3,6 +3,13 @@ class AppConstants {
   static const primaryColorHex = '#F3B200';
   static const brandLogoHorizontal = 'assets/images/brand_logo_horizontal.png';
   static const brandIconCr = 'assets/images/brand_icon_cr.png';
+  static const brandV3LogoPrincipal =
+      'assets/images/brand_v3_logo_principal.svg';
+  static const brandV3Crown = 'assets/images/brand_v3_coroa.svg';
+  static const brandV3SecondaryLogo =
+      'assets/images/brand_v3_segunda_logo.svg';
+  static const splashV3UrbanBarbershop =
+      'assets/images/splash_v3_barbearia_coldre_v2.png';
   static const splashBarberReference =
       'assets/images/splash_barber_reference.png';
   static const defaultAvatar =

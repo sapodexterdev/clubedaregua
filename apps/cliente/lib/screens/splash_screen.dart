@@ -1,10 +1,10 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/app_constants.dart';
-import '../providers/app_state.dart';
-import '../theme/app_colors.dart';
 import 'client/home_screen.dart';
 import 'onboarding_screen.dart';
 
@@ -19,47 +19,94 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _opacity;
-  late final Animation<double> _scale;
+    with TickerProviderStateMixin {
+  static const _displayDuration = Duration(milliseconds: 1760);
+  static const _exitDuration = Duration(milliseconds: 240);
+
+  late final AnimationController _pulseController;
+  late final Animation<double> _pulseScale;
+  late final Animation<double> _pulseGlow;
+
+  bool _exiting = false;
+  bool _backgroundPrecached = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+
+    _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 920),
     );
-    _opacity = TweenSequence<double>([
+    _pulseScale = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween(begin: 0.0, end: 1.0).chain(
-          CurveTween(curve: Curves.easeOutCubic),
-        ),
-        weight: 28,
+        tween: Tween<double>(begin: 1, end: 1.055)
+            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 10,
       ),
-      TweenSequenceItem(tween: ConstantTween<double>(1), weight: 52),
       TweenSequenceItem(
-        tween: Tween(begin: 1.0, end: 0.0).chain(
-          CurveTween(curve: Curves.easeInOut),
-        ),
-        weight: 20,
+        tween: Tween<double>(begin: 1.055, end: .985)
+            .chain(CurveTween(curve: Curves.easeInOutCubic)),
+        weight: 9,
       ),
-    ]).animate(_controller);
-    _scale = Tween<double>(begin: .96, end: 1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
-    );
+      TweenSequenceItem(
+        tween: Tween<double>(begin: .985, end: 1.032)
+            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 9,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.032, end: 1)
+            .chain(CurveTween(curve: Curves.easeInOutCubic)),
+        weight: 17,
+      ),
+      TweenSequenceItem(
+        tween: ConstantTween<double>(1),
+        weight: 55,
+      ),
+    ]).animate(_pulseController);
+
+    _pulseGlow = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: .10, end: .30), weight: 10),
+      TweenSequenceItem(tween: Tween(begin: .30, end: .12), weight: 9),
+      TweenSequenceItem(tween: Tween(begin: .12, end: .24), weight: 9),
+      TweenSequenceItem(tween: Tween(begin: .24, end: .10), weight: 17),
+      TweenSequenceItem(
+        tween: ConstantTween<double>(.10),
+        weight: 55,
+      ),
+    ]).animate(_pulseController);
+
+    _pulseController.repeat();
     _start();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_backgroundPrecached) return;
+    _backgroundPrecached = true;
+    precacheImage(
+      const AssetImage(AppConstants.splashV3UrbanBarbershop),
+      context,
+    );
   }
 
   Future<void> _start() async {
     final prefsFuture = SharedPreferences.getInstance();
-    final dataFuture = context.read<AppState>().loadInitialData();
-    await _controller.forward();
-    final prefs = await prefsFuture;
-    await dataFuture;
+
+    final results = await Future.wait<Object?>([
+      prefsFuture,
+      Future<void>.delayed(_displayDuration),
+    ]);
+
     if (!mounted) return;
 
+    setState(() => _exiting = true);
+    await Future<void>.delayed(_exitDuration);
+
+    if (!mounted) return;
+
+    final prefs = results.first as SharedPreferences;
     final hasSeenOnboarding =
         prefs.getBool(SplashScreen.onboardingSeenKey) ?? false;
     Navigator.pushReplacementNamed(
@@ -70,79 +117,128 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
-    _controller.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final reduceMotion = MediaQuery.of(context).disableAnimations;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, _) {
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment.center,
-                    radius: .82,
-                    colors: [
-                      Color(0xFF18181B),
-                      Color(0xFF09090B),
-                    ],
-                  ),
-                ),
-              ),
-              Center(
-                child: Opacity(
-                  opacity: _opacity.value,
-                  child: Transform.scale(
-                    scale: _scale.value,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          DecoratedBox(
-                            decoration: BoxDecoration(
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.orange.withOpacity(.14),
-                                  blurRadius: 38,
-                                  spreadRadius: 1,
-                                ),
-                              ],
-                            ),
-                            child: Image.asset(
-                              AppConstants.brandLogoHorizontal,
-                              width: 280,
-                              fit: BoxFit.contain,
-                            ),
+      backgroundColor: const Color(0xFF050505),
+      body: AnimatedOpacity(
+        opacity: _exiting ? 0 : 1,
+        duration: _exitDuration,
+        curve: Curves.easeOut,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              AppConstants.splashV3UrbanBarbershop,
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+              filterQuality: FilterQuality.high,
+              gaplessPlayback: true,
+              excludeFromSemantics: true,
+            ),
+            const _CinematicOverlay(),
+            SafeArea(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final logoWidth = (constraints.maxWidth * .34)
+                      .clamp(112.0, 164.0)
+                      .toDouble();
+
+                  return Align(
+                    alignment: const Alignment(0, -.72),
+                    child: AnimatedBuilder(
+                      animation: _pulseController,
+                      builder: (context, _) {
+                        final scale = reduceMotion ? 1.0 : _pulseScale.value;
+                        final glow = reduceMotion ? .10 : _pulseGlow.value;
+
+                        return Transform.scale(
+                          scale: scale,
+                          child: _PulsingSecondaryLogo(
+                            width: logoWidth,
+                            glowOpacity: glow,
                           ),
-                          const SizedBox(height: 30),
-                          const Text(
-                            'Tecnologia que eleva o nivel da sua barbearia.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: AppColors.text,
-                              fontSize: 13,
-                              height: 1.5,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
-            ],
-          );
-        },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CinematicOverlay extends StatelessWidget {
+  const _CinematicOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return const DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0x80000000),
+            Color(0x38000000),
+            Color(0x52000000),
+            Color(0xC4050505),
+          ],
+          stops: [0, .34, .68, 1],
+        ),
+      ),
+    );
+  }
+}
+
+class _PulsingSecondaryLogo extends StatelessWidget {
+  const _PulsingSecondaryLogo({
+    required this.width,
+    required this.glowOpacity,
+  });
+
+  final double width;
+  final double glowOpacity;
+
+  @override
+  Widget build(BuildContext context) {
+    final logo = SvgPicture.asset(
+      AppConstants.brandV3SecondaryLogo,
+      width: width,
+      fit: BoxFit.contain,
+      excludeFromSemantics: true,
+    );
+
+    return Semantics(
+      image: true,
+      label: 'Clube da Régua carregando',
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          ImageFiltered(
+            imageFilter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+            child: Opacity(
+              opacity: glowOpacity,
+              child: SvgPicture.asset(
+                AppConstants.brandV3SecondaryLogo,
+                width: width * 1.035,
+                fit: BoxFit.contain,
+                excludeFromSemantics: true,
+              ),
+            ),
+          ),
+          logo,
+        ],
       ),
     );
   }

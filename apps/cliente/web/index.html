@@ -6,7 +6,7 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="Clube da Regua - app premium de barbearia e agendamento.">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#F4F4F4">
+  <meta name="theme-color" content="#000000">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -18,8 +18,8 @@
   <style>
     html,
     body {
-      background: #F4F4F4;
-      color: #151515;
+      background: #000000;
+      color: #FFFFFF;
       font-family: Arial, Helvetica, sans-serif;
       height: 100%;
       margin: 0;
@@ -27,11 +27,12 @@
       width: 100%;
     }
 
-    #boot-status {
+    #boot-splash {
       align-items: center;
+      background:
+        linear-gradient(180deg, rgba(0, 0, 0, .50), rgba(0, 0, 0, .24) 45%, rgba(5, 5, 5, .78)),
+        url('assets/assets/images/splash_v3_barbearia_coldre_v2.png') center / cover no-repeat;
       display: flex;
-      flex-direction: column;
-      gap: 14px;
       height: 100%;
       justify-content: center;
       left: 0;
@@ -44,54 +45,74 @@
       z-index: 1;
     }
 
-    #boot-status.is-hidden {
+    #boot-splash.is-hidden {
       opacity: 0;
       visibility: hidden;
     }
 
-    #boot-status strong {
-      color: #FF6B2C;
-      font-size: 26px;
-      font-weight: 900;
+    #boot-logo {
+      animation: heartbeat 920ms ease-in-out infinite;
+      filter: drop-shadow(0 0 16px rgba(243, 178, 0, .28));
+      margin-top: -42%;
+      width: clamp(112px, 34vw, 164px);
     }
 
-    #boot-status span {
-      color: #8A8A8A;
-      font-size: 14px;
-      max-width: 300px;
+    @keyframes heartbeat {
+      0%, 45%, 100% { transform: scale(1); }
+      10% { transform: scale(1.055); }
+      19% { transform: scale(.985); }
+      28% { transform: scale(1.032); }
     }
 
-    #boot-status button {
-      background: #FF6B2C;
+    #boot-error {
+      align-items: center;
+      background: rgba(5, 5, 5, .92);
+      bottom: 0;
+      color: #FFFFFF;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      justify-content: center;
+      left: 0;
+      padding: 24px;
+      position: absolute;
+      right: 0;
+      text-align: center;
+    }
+
+    #reload-button {
+      background: #F3B200;
       border: 0;
       border-radius: 999px;
-      color: #FFFFFF;
+      color: #09090B;
       cursor: pointer;
       font-size: 15px;
       font-weight: 800;
-      margin-top: 8px;
       pointer-events: auto;
       padding: 14px 22px;
     }
   </style>
 </head>
 <body>
-  <div id="boot-status">
-    <strong>Clube da Regua</strong>
-    <span id="boot-message">Carregando aplicativo...</span>
-    <button id="reload-button" type="button" hidden>Atualizar app</button>
+  <div id="boot-splash">
+    <img id="boot-logo" src="assets/assets/images/brand_v3_segunda_logo.svg" alt="">
+    <div id="boot-error" hidden>
+      <span id="boot-message"></span>
+      <button id="reload-button" type="button">Atualizar app</button>
+    </div>
   </div>
   <script>
     const bootMessage = document.getElementById('boot-message');
+    const bootError = document.getElementById('boot-error');
     const reloadButton = document.getElementById('reload-button');
 
     function showBootError(message) {
       bootMessage.textContent = message;
-      reloadButton.hidden = false;
+      bootError.hidden = false;
     }
 
     function hideBootStatus() {
-      document.getElementById('boot-status')?.classList.add('is-hidden');
+      document.getElementById('boot-splash')?.classList.add('is-hidden');
     }
 
     reloadButton.addEventListener('click', async () => {
@@ -124,8 +145,8 @@
     const observer = new MutationObserver(() => {
       const flutterReady = document.querySelector('flutter-view, flt-glass-pane, flt-scene-host');
       if (flutterReady) {
-        hideBootStatus();
         observer.disconnect();
+        setTimeout(hideBootStatus, 500);
       }
     });
     observer.observe(document.body, { childList: true, subtree: true });
