@@ -86,11 +86,11 @@
     }
 
     #boot-logo {
-      animation: heartbeat 920ms ease-in-out infinite;
-      filter: drop-shadow(0 0 16px rgba(243, 178, 0, .28));
-      position: absolute;
-      top: 8%;
-      width: clamp(112px, 34vw, 164px);
+      animation: loading-pulse 1800ms ease-in-out infinite;
+      filter: drop-shadow(0 0 12px rgba(243, 178, 0, .24));
+      opacity: .28;
+      position: relative;
+      width: clamp(76px, 22vw, 108px);
       z-index: 2;
     }
 
@@ -103,11 +103,15 @@
       }
     }
 
-    @keyframes heartbeat {
-      0%, 45%, 100% { transform: scale(1); }
-      10% { transform: scale(1.055); }
-      19% { transform: scale(.985); }
-      28% { transform: scale(1.032); }
+    @keyframes loading-pulse {
+      0%, 100% {
+        opacity: .28;
+        transform: scale(.96);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1);
+      }
     }
 
   </style>
