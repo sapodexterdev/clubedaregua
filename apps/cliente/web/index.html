@@ -47,9 +47,7 @@
 
     #boot-phone {
       align-items: center;
-      background:
-        linear-gradient(180deg, rgba(0, 0, 0, .50), rgba(0, 0, 0, .24) 45%, rgba(5, 5, 5, .78)),
-        url('boot-splash.png') center / cover no-repeat;
+      background: #050505;
       border: 2px solid #FFFFFF;
       border-radius: 44px;
       display: flex;
@@ -58,6 +56,29 @@
       overflow: hidden;
       position: relative;
       width: 430px;
+    }
+
+    #boot-phone::after {
+      background: linear-gradient(
+        180deg,
+        rgba(0, 0, 0, .50),
+        rgba(0, 0, 0, .24) 45%,
+        rgba(5, 5, 5, .78)
+      );
+      content: '';
+      inset: 0;
+      pointer-events: none;
+      position: absolute;
+      z-index: 1;
+    }
+
+    #boot-background {
+      height: 100%;
+      inset: 0;
+      object-fit: cover;
+      object-position: center;
+      position: absolute;
+      width: 100%;
     }
 
     #boot-splash.is-hidden {
@@ -71,6 +92,7 @@
       position: absolute;
       top: 8%;
       width: clamp(112px, 34vw, 164px);
+      z-index: 2;
     }
 
     @media (max-width: 520px) {
@@ -94,6 +116,7 @@
 <body>
   <div id="boot-splash">
     <div id="boot-phone">
+      <img id="boot-background" src="boot-splash.png" alt="">
       <img id="boot-logo" src="boot-logo.svg" alt="">
     </div>
   </div>
