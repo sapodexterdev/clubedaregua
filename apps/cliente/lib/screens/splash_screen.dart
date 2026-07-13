@@ -69,7 +69,7 @@ class _SplashScreenState extends State<SplashScreen>
         weight: 17,
       ),
       TweenSequenceItem(
-        tween: const ConstantTween<double>(1),
+        tween: ConstantTween<double>(1),
         weight: 55,
       ),
     ]).animate(_pulseController);
@@ -80,7 +80,7 @@ class _SplashScreenState extends State<SplashScreen>
       TweenSequenceItem(tween: Tween(begin: .12, end: .24), weight: 9),
       TweenSequenceItem(tween: Tween(begin: .24, end: .10), weight: 17),
       TweenSequenceItem(
-        tween: const ConstantTween<double>(.10),
+        tween: ConstantTween<double>(.10),
         weight: 55,
       ),
     ]).animate(_pulseController);
