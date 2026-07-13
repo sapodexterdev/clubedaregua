@@ -1,5 +1,6 @@
 import 'dart:ui' show ImageFilter;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -96,7 +97,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     final results = await Future.wait<Object?>([
       prefsFuture,
-      Future<void>.delayed(_displayDuration),
+      Future<void>.delayed(kIsWeb ? Duration.zero : _displayDuration),
     ]);
 
     if (!mounted) return;
