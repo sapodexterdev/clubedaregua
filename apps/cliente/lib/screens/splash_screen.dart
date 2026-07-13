@@ -2,11 +2,9 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/app_constants.dart';
-import '../providers/app_state.dart';
 import 'client/home_screen.dart';
 import 'onboarding_screen.dart';
 
@@ -22,14 +20,12 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
-  static const _minimumDuration = Duration(milliseconds: 1800);
+  static const _displayDuration = Duration(milliseconds: 1760);
   static const _exitDuration = Duration(milliseconds: 240);
 
   late final AnimationController _pulseController;
-  late final AnimationController _backgroundController;
   late final Animation<double> _pulseScale;
   late final Animation<double> _pulseGlow;
-  late final Animation<double> _backgroundScale;
 
   bool _exiting = false;
   bool _backgroundPrecached = false;
@@ -42,11 +38,6 @@ class _SplashScreenState extends State<SplashScreen>
       vsync: this,
       duration: const Duration(milliseconds: 920),
     );
-    _backgroundController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 6000),
-    );
-
     _pulseScale = TweenSequence<double>([
       TweenSequenceItem(
         tween: Tween<double>(begin: 1, end: 1.055)
@@ -85,15 +76,7 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     ]).animate(_pulseController);
 
-    _backgroundScale = Tween<double>(begin: 1.02, end: 1.065).animate(
-      CurvedAnimation(
-        parent: _backgroundController,
-        curve: Curves.easeInOut,
-      ),
-    );
-
     _pulseController.repeat();
-    _backgroundController.forward();
     _start();
   }
 
@@ -110,12 +93,10 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _start() async {
     final prefsFuture = SharedPreferences.getInstance();
-    final dataFuture = context.read<AppState>().loadInitialData();
 
     final results = await Future.wait<Object?>([
       prefsFuture,
-      dataFuture,
-      Future<void>.delayed(_minimumDuration),
+      Future<void>.delayed(_displayDuration),
     ]);
 
     if (!mounted) return;
@@ -137,7 +118,6 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void dispose() {
     _pulseController.dispose();
-    _backgroundController.dispose();
     super.dispose();
   }
 
@@ -154,21 +134,13 @@ class _SplashScreenState extends State<SplashScreen>
         child: Stack(
           fit: StackFit.expand,
           children: [
-            AnimatedBuilder(
-              animation: _backgroundController,
-              builder: (context, child) {
-                return Transform.scale(
-                  scale: reduceMotion ? 1.02 : _backgroundScale.value,
-                  child: child,
-                );
-              },
-              child: Image.asset(
-                AppConstants.splashV3UrbanBarbershop,
-                fit: BoxFit.cover,
-                alignment: const Alignment(0, -.08),
-                filterQuality: FilterQuality.high,
-                excludeFromSemantics: true,
-              ),
+            Image.asset(
+              AppConstants.splashV3UrbanBarbershop,
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+              filterQuality: FilterQuality.high,
+              gaplessPlayback: true,
+              excludeFromSemantics: true,
             ),
             const _CinematicOverlay(),
             SafeArea(
