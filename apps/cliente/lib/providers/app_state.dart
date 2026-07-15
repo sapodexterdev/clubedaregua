@@ -375,10 +375,10 @@ class AppState extends ChangeNotifier {
               .where((service) => service.barberShopId == source[index].id)
               .toList(),
           rating: _shopRating(source[index], barbersData),
-          reviewCount: 80 + (index * 37),
+          reviewCount: 0,
           distanceKm: _distanceFromDevice(source[index]),
-          nextSlot: _nextSlot(index),
-          isOpen: DateTime.now().hour >= 8 && DateTime.now().hour < 20,
+          nextSlot: source[index].currentHoursDetail,
+          isOpen: source[index].isOpenNow,
           neighborhood: source[index].address.isEmpty
               ? source[index].city
               : source[index].address.split(',').first,
@@ -433,11 +433,6 @@ class AppState extends ChangeNotifier {
     final total = shopBarbers.fold<double>(0, (sum, item) => sum + item.rating);
     final rating = total / shopBarbers.length;
     return double.parse(rating.toStringAsFixed(1));
-  }
-
-  String _nextSlot(int index) {
-    const slots = ['Hoje 14:30', 'Hoje 16:00', 'Amanha 09:00', 'Amanha 11:30'];
-    return slots[index % slots.length];
   }
 
   Barber? _preserveSelectedBarber(Barber? current) {

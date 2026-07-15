@@ -749,18 +749,65 @@ class _LargeCardContent extends StatelessWidget {
               borderRadius: BorderRadius.circular(11),
               child: AspectRatio(
                 aspectRatio: 16 / 9,
-                child: Image.network(coverUrl, fit: BoxFit.cover),
+                child: Image.network(
+                  coverUrl,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, progress) {
+                    if (progress == null) return child;
+                    return Container(
+                      color: AppColors.elevated,
+                      alignment: Alignment.center,
+                      child: const CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.orange,
+                      ),
+                    );
+                  },
+                  errorBuilder: (_, __, ___) => Image.asset(
+                    AppConstants.splashBarberReference,
+                    fit: BoxFit.cover,
+                  ),
+                ),
               ),
             ),
-            Positioned(
-              right: 8,
-              bottom: 8,
-              child: _RatingBadge(rating: shop.rating),
-            ),
+            if (shop.reviewCount >= 5)
+              Positioned(
+                right: 8,
+                bottom: 8,
+                child: _RatingBadge(rating: shop.rating),
+              ),
           ],
         ),
         const SizedBox(height: 8),
         _ShopMainInfo(shop: shop),
+        if (shop.services.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final service in shop.services.take(3))
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.elevated,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  child: Text(
+                    service.name,
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
         const SizedBox(height: 8),
         Row(
           children: [
@@ -882,7 +929,9 @@ class _ShopMainInfo extends StatelessWidget {
             const Icon(Icons.star_rounded, color: AppColors.orange, size: 15),
             const SizedBox(width: 4),
             Text(
-              '${shop.rating} (${shop.reviewCount})',
+              shop.reviewCount > 0
+                  ? '${shop.rating} (${shop.reviewCount})'
+                  : '${shop.rating} · equipe',
               style: const TextStyle(
                 color: AppColors.text,
                 fontSize: 12,
@@ -904,7 +953,7 @@ class _ShopMainInfo extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          '${shop.statusLabel} agora - ${shop.nextSlot}',
+          '${shop.statusLabel} agora · ${shop.nextSlot}',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
