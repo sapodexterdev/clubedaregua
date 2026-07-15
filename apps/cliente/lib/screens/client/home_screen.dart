@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -32,7 +34,7 @@ class HomeScreen extends StatelessWidget {
           if (index == 1) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                  content: Text('Favoritos entram em uma proxima etapa.')),
+                  content: Text('Favoritos entram em uma próxima etapa.')),
             );
           }
           if (index == 2) Navigator.pushNamed(context, HistoryScreen.route);
@@ -51,11 +53,18 @@ class HomeScreen extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(22, 18, 22, 28),
                 children: [
-                  const _DiscoveryHeader(),
-                  const SizedBox(height: 18),
-                  _SearchAndFilter(onChanged: state.updateDiscoveryQuery),
-                  const SizedBox(height: 14),
-                  const _LocationPill(),
+                  _DiscoveryHeader(greeting: state.discoveryGreeting),
+                  const SizedBox(height: 24),
+                  _SearchAndFilter(
+                    onChanged: state.updateDiscoveryQuery,
+                    onFilterTap: () => _showFilters(context),
+                  ),
+                  const SizedBox(height: 12),
+                  _LocationPill(
+                    label: state.discoveryLocationLabel,
+                    locations: state.availableDiscoveryLocations,
+                    onSelected: state.selectDiscoveryLocation,
+                  ),
                   const SizedBox(height: 20),
                   if (state.isLoading && shops.isEmpty)
                     const _DiscoveryLoading()
@@ -67,12 +76,12 @@ class HomeScreen extends StatelessWidget {
                       shops: state.topRatedBarbershops,
                     ),
                     _DiscoverySection(
-                      title: 'Proximos horarios disponiveis',
+                      title: 'Próximos horários disponíveis',
                       shops: shops,
                       compact: true,
                     ),
                     _DiscoverySection(
-                      title: 'Perto de voce',
+                      title: 'Perto de você',
                       shops: state.nearbyBarbershops,
                     ),
                     _DiscoverySection(
@@ -89,36 +98,98 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
+
+  void _showFilters(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.card,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          top: false,
+          child: Consumer<AppState>(
+            builder: (context, state, _) {
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(24, 4, 24, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Filtros',
+                      style: TextStyle(
+                        color: AppColors.text,
+                        fontFamily: 'Barlow Condensed',
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      activeColor: AppColors.orange,
+                      title: const Text('Aberto agora'),
+                      value: state.discoveryOpenNowOnly,
+                      onChanged: state.setDiscoveryOpenNowOnly,
+                    ),
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      activeColor: AppColors.orange,
+                      title: const Text('Avaliação 4,5 ou superior'),
+                      value: state.discoveryHighlyRatedOnly,
+                      onChanged: state.setDiscoveryHighlyRatedOnly,
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: state.clearDiscoveryFilters,
+                        child: const Text('Limpar filtros'),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
 }
 
 class _DiscoveryHeader extends StatelessWidget {
-  const _DiscoveryHeader();
+  const _DiscoveryHeader({required this.greeting});
+
+  final String greeting;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Boa tarde, Rafael',
-                style: TextStyle(
+                greeting,
+                style: const TextStyle(
                   color: AppColors.muted,
                   fontSize: 13,
-                  fontWeight: FontWeight.w700,
+                  height: 1.38,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-              SizedBox(height: 10),
-              Text(
-                'Onde vamos dar\naquela renovada hoje?',
+              const SizedBox(height: 10),
+              const Text(
+                'Onde você quer dar\naquela renovada hoje?',
                 style: TextStyle(
                   color: AppColors.text,
-                  fontSize: 27,
-                  height: 1.06,
-                  fontWeight: FontWeight.w900,
+                  fontFamily: 'Barlow Condensed',
+                  fontSize: 32,
+                  height: 1.125,
+                  fontWeight: FontWeight.w700,
                   letterSpacing: 0,
                 ),
               ),
@@ -126,8 +197,8 @@ class _DiscoveryHeader extends StatelessWidget {
           ),
         ),
         Container(
-          width: 42,
-          height: 42,
+          width: 44,
+          height: 44,
           decoration: BoxDecoration(
             color: AppColors.card,
             shape: BoxShape.circle,
@@ -144,58 +215,162 @@ class _DiscoveryHeader extends StatelessWidget {
   }
 }
 
-class _SearchAndFilter extends StatelessWidget {
-  const _SearchAndFilter({required this.onChanged});
+class _SearchAndFilter extends StatefulWidget {
+  const _SearchAndFilter({
+    required this.onChanged,
+    required this.onFilterTap,
+  });
 
   final ValueChanged<String> onChanged;
+  final VoidCallback onFilterTap;
+
+  @override
+  State<_SearchAndFilter> createState() => _SearchAndFilterState();
+}
+
+class _SearchAndFilterState extends State<_SearchAndFilter> {
+  Timer? _debounce;
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _onChanged(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(
+      const Duration(milliseconds: 250),
+      () => widget.onChanged(value),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      onChanged: onChanged,
-      style: const TextStyle(color: AppColors.text),
-      cursorColor: AppColors.orange,
-      decoration: const InputDecoration(
-        prefixIcon: Icon(Icons.search_rounded, color: AppColors.muted),
-        suffixIcon: Icon(Icons.tune_rounded, color: AppColors.orange),
-        hintText: 'Buscar barbearias, servicos...',
+    return SizedBox(
+      height: 52,
+      child: TextField(
+        onChanged: _onChanged,
+        style: const TextStyle(color: AppColors.text),
+        cursorColor: AppColors.orange,
+        decoration: InputDecoration(
+          prefixIcon: const Icon(Icons.search_rounded, color: AppColors.muted),
+          suffixIcon: IconButton(
+            tooltip: 'Filtros',
+            onPressed: widget.onFilterTap,
+            icon: const Icon(Icons.tune_rounded, color: AppColors.orange),
+          ),
+          hintText: 'Buscar barbearias, serviços...',
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide.none,
+          ),
+        ),
       ),
     );
   }
 }
 
 class _LocationPill extends StatelessWidget {
-  const _LocationPill();
+  const _LocationPill({
+    required this.label,
+    required this.locations,
+    required this.onSelected,
+  });
+
+  final String label;
+  final List<String> locations;
+  final ValueChanged<String?> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const Icon(Icons.location_on_outlined,
-            color: AppColors.orange, size: 18),
-        const SizedBox(width: 7),
-        const Text(
-          'Uberaba, MG',
-          style: TextStyle(
-            color: AppColors.text,
-            fontSize: 13,
-            fontWeight: FontWeight.w800,
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () => _selectLocation(context),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.location_on_outlined,
+              color: AppColors.orange,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: AppColors.text,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: AppColors.muted,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _selectLocation(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.card,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  child: Text(
+                    'Escolha sua localização',
+                    style: TextStyle(
+                      color: AppColors.text,
+                      fontFamily: 'Barlow Condensed',
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(
+                    Icons.public_rounded,
+                    color: AppColors.orange,
+                  ),
+                  title: const Text('Todas as localizações'),
+                  onTap: () {
+                    onSelected('');
+                    Navigator.pop(context);
+                  },
+                ),
+                for (final location in locations)
+                  ListTile(
+                    leading: const Icon(
+                      Icons.location_on_outlined,
+                      color: AppColors.orange,
+                    ),
+                    title: Text(location),
+                    onTap: () {
+                      onSelected(location);
+                      Navigator.pop(context);
+                    },
+                  ),
+              ],
+            ),
           ),
-        ),
-        const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.muted),
-        const Spacer(),
-        IconButton(
-          tooltip: 'Filtros',
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                  content:
-                      Text('Filtros avancados entram em uma proxima etapa.')),
-            );
-          },
-          icon: const Icon(Icons.tune_rounded, color: AppColors.orange),
-        ),
-      ],
+        );
+      },
     );
   }
 }

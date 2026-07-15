@@ -30,20 +30,51 @@ class AppState extends ChangeNotifier {
   List<PublicBarbershop> publicBarbershops = const [];
   PublicBarbershop? selectedBarbershop;
   String discoveryQuery = '';
+  String? discoveryLocation;
+  String? currentUserName;
+  bool discoveryOpenNowOnly = false;
+  bool discoveryHighlyRatedOnly = false;
   bool isSignedIn = false;
   bool lastBookingRequestCreated = false;
 
   List<PublicBarbershop> get discoveredBarbershops {
     final query = discoveryQuery.trim().toLowerCase();
-    if (query.isEmpty) return publicBarbershops;
-
     return publicBarbershops.where((shop) {
+      if (discoveryLocation?.isNotEmpty == true &&
+          shop.identity.locationLabel != discoveryLocation) {
+        return false;
+      }
+      if (discoveryOpenNowOnly && !shop.isOpen) return false;
+      if (discoveryHighlyRatedOnly && shop.rating < 4.5) return false;
+      if (query.isEmpty) return true;
       final serviceNames = shop.services.map((item) => item.name).join(' ');
       return shop.identity.name.toLowerCase().contains(query) ||
           serviceNames.toLowerCase().contains(query) ||
           shop.neighborhood.toLowerCase().contains(query) ||
           shop.identity.city.toLowerCase().contains(query);
     }).toList();
+  }
+
+  List<String> get availableDiscoveryLocations {
+    final locations = publicBarbershops
+        .map((shop) => shop.identity.locationLabel)
+        .where((label) => label.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    return locations;
+  }
+
+  String get discoveryGreeting {
+    final name = currentUserName?.trim();
+    if (name == null || name.isEmpty) return 'Olá!';
+    return 'Olá, ${name.split(RegExp(r'\s+')).first}!';
+  }
+
+  String get discoveryLocationLabel {
+    if (discoveryLocation == null) return 'Definir localização';
+    if (discoveryLocation!.isEmpty) return 'Todas as localizações';
+    return discoveryLocation!;
   }
 
   List<PublicBarbershop> get topRatedBarbershops {
@@ -132,6 +163,7 @@ class AppState extends ChangeNotifier {
       shopIdentityData: fetchedShopIdentity,
       shopIdentitiesData: fetchedShopIdentities,
       signedInData: session != null,
+      userNameData: session?.user.name,
     );
     await refreshAvailableTimes();
 
@@ -147,6 +179,7 @@ class AppState extends ChangeNotifier {
     required ShopIdentity? shopIdentityData,
     required List<ShopIdentity> shopIdentitiesData,
     required bool signedInData,
+    required String? userNameData,
   }) {
     barbers = barbersData;
     categories = categoriesData;
@@ -154,6 +187,7 @@ class AppState extends ChangeNotifier {
     appointments = appointmentsData;
     shopIdentity = shopIdentityData;
     isSignedIn = signedInData;
+    currentUserName = userNameData;
     publicBarbershops = _buildPublicBarbershops(
       shopIdentitiesData.isEmpty && shopIdentityData != null
           ? [shopIdentityData]
@@ -170,6 +204,27 @@ class AppState extends ChangeNotifier {
 
   void updateDiscoveryQuery(String value) {
     discoveryQuery = value;
+    notifyListeners();
+  }
+
+  void selectDiscoveryLocation(String? value) {
+    discoveryLocation = value;
+    notifyListeners();
+  }
+
+  void setDiscoveryOpenNowOnly(bool value) {
+    discoveryOpenNowOnly = value;
+    notifyListeners();
+  }
+
+  void setDiscoveryHighlyRatedOnly(bool value) {
+    discoveryHighlyRatedOnly = value;
+    notifyListeners();
+  }
+
+  void clearDiscoveryFilters() {
+    discoveryOpenNowOnly = false;
+    discoveryHighlyRatedOnly = false;
     notifyListeners();
   }
 

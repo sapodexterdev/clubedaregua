@@ -1,23 +1,47 @@
-# UI-006 - Home Publica
+# UI-006 — Home Pública
 
 ## Objetivo
 
-Documentar a especificacao visual final da Home Publica do app Cliente.
+Ser a principal experiência de descoberta do app Cliente, permitindo explorar
+barbearias antes de criar uma conta.
 
 ## Status
 
-Em especificacao.
+Aprovada para implementação por blocos.
 
-## Tela Relacionada
+## Posição no fluxo
 
-Home Publica da experiencia discovery first.
+`Explorar Barbearias → Home Pública → Perfil da Barbearia → Ver Horários`
 
-## Dependencias
+## Fonte de verdade
 
-- `docs/brand/Brand_Kit_v2.png`
-- `docs/experience/welcome/`
-- `docs/ux/UX-002-Descobrir-Barbearias/`
+1. `docs/brand/v3/BRAND_FOUNDATIONS.md`;
+2. `docs/brand/v3/MOTION_SYSTEM.md`;
+3. `spec.md` desta tela;
+4. `docs/ux/UX-002-Descobrir-Barbearias/` para regras funcionais.
 
-## Observacoes
+O board antigo continua como referência de arquitetura da informação. Logo V2,
+navalha, Bebas Neue, dourado antigo e valores fixos do mockup não devem ser
+copiados para o aplicativo V3.
 
-Esta tela deve permitir exploracao sem login e apresentar barbearias com clareza visual.
+## Dependências
+
+- serviço de descoberta de barbearias;
+- localização atual ou cidade selecionada;
+- busca e filtros funcionais;
+- fallback local aprovado para capas;
+- Barlow Condensed e Inter empacotadas;
+- componentes V3 de card, chip, busca e navegação inferior.
+
+## Estratégia de revisão
+
+A Home será validada em blocos, nesta ordem:
+
+1. cabeçalho, busca e localização;
+2. categorias;
+3. card grande;
+4. cards compactos e seções;
+5. estados de carregamento, vazio e erro;
+6. navegação inferior e responsividade.
+
+Cada bloco deve ser aprovado antes do próximo.
