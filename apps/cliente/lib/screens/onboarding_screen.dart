@@ -219,25 +219,15 @@ class _WelcomeSlide extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(24, 28, 24, 168),
                 child: Column(
                   children: [
-                    if (data.showLogo)
-                      Center(
-                        child: SvgPicture.asset(
-                          AppConstants.brandV3LogoPrincipal,
-                          width: 190,
-                          fit: BoxFit.contain,
-                          excludeFromSemantics: true,
-                        ),
-                      )
-                    else
-                      const SizedBox(height: 42),
+                    const SizedBox(height: 42),
                     const Spacer(),
                     if (data.showLogo)
                       Semantics(
                         image: true,
-                        label: 'Símbolo premium Clube da Régua',
+                        label: 'Clube da Régua',
                         child: SvgPicture.asset(
-                          AppConstants.brandV3Crown,
-                          width: 64,
+                          AppConstants.brandV3LogoPrincipal,
+                          width: 180,
                           fit: BoxFit.contain,
                           excludeFromSemantics: true,
                         ),
@@ -248,7 +238,13 @@ class _WelcomeSlide extends StatelessWidget {
                         color: AppColors.orange,
                         size: data.discoverV3 ? 40 : 52,
                       ),
-                    SizedBox(height: data.discoverV3 ? 20 : 24),
+                    SizedBox(
+                      height: data.showLogo
+                          ? 20
+                          : data.discoverV3
+                              ? 20
+                              : 24,
+                    ),
                     AnimatedOpacity(
                       opacity: selected ? 1 : .55,
                       duration: const Duration(milliseconds: 250),
