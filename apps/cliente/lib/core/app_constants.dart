@@ -10,6 +10,8 @@ class AppConstants {
       'assets/images/brand_v3_segunda_logo.svg';
   static const splashV3UrbanBarbershop =
       'assets/images/splash_v3_barbearia_coldre_v2.png';
+  static const onboardingV3Discover =
+      'assets/images/onboarding_v3_descobrir.webp';
   static const splashBarberReference =
       'assets/images/splash_barber_reference.png';
   static const defaultAvatar =

@@ -18,7 +18,7 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  static const _pageCount = 4;
+  static const _pageCount = 3;
   final _controller = PageController();
   Timer? _timer;
   int _page = 0;
@@ -26,22 +26,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _slides = const [
     _WelcomeSlideData(
       icon: Icons.location_on_outlined,
-      title: 'Descubra as melhores\nbarbearias perto de voce.',
-      subtitle: 'Compare opcoes, veja avaliacoes e encontre seu proximo corte.',
-      imageUrl: AppConstants.heroBarbershop,
-    ),
-    _WelcomeSlideData(
-      icon: Icons.people_outline_rounded,
-      title: 'Escolha o barbeiro ideal\npara o seu estilo.',
+      title: 'Encontre as melhores\nbarbearias perto de você.',
       subtitle:
-          'Conheca profissionais, especialidades e notas antes de marcar.',
-      imageUrl: AppConstants.promoBarber,
-      showBarbers: true,
+          'Avaliações reais, horários disponíveis e tudo o que você precisa para escolher bem.',
+      imageAsset: AppConstants.onboardingV3Discover,
+      discoverV3: true,
     ),
     _WelcomeSlideData(
       icon: Icons.calendar_month_outlined,
-      title: 'Agende seu horario\nem poucos segundos.',
-      subtitle: 'Selecione data, horario e siga sem complicacao.',
+      title: 'Agende seu horário\nem poucos segundos.',
+      subtitle: 'Selecione data, horário e siga sem complicação.',
       imageUrl: AppConstants.heroBarbershop,
       showSlots: true,
     ),
@@ -49,7 +43,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       icon: Icons.workspace_premium_outlined,
       title: 'Pronto para renovar\nseu visual?',
       subtitle:
-          'O Clube da Regua conecta voce as melhores barbearias da cidade.',
+          'O Clube da Régua conecta você às melhores barbearias da cidade.',
       imageUrl: AppConstants.promoBarber,
       showLogo: true,
     ),
@@ -75,6 +69,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     await prefs.setBool(SplashScreen.onboardingSeenKey, true);
     if (!mounted) return;
     Navigator.pushReplacementNamed(context, HomeScreen.route);
+  }
+
+  void _skipToExplore() {
+    _timer?.cancel();
+    _controller.animateToPage(
+      _pageCount - 1,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  void _continue() {
+    _timer?.cancel();
+    if (_page == _pageCount - 1) {
+      _finish();
+      return;
+    }
+    _controller.animateToPage(
+      _page + 1,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   @override
@@ -105,26 +121,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           SafeArea(
             child: Align(
               alignment: Alignment.topRight,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
-                child: TextButton(
-                  onPressed: _finish,
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.text,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                  ),
-                  child: const Text(
-                    'Pular',
-                    style: TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                ),
-              ),
+              child: _page < _pageCount - 1
+                  ? Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
+                      child: TextButton(
+                        onPressed: _skipToExplore,
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.text,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                        ),
+                        child: const Text(
+                          'Pular',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    )
+                  : const SizedBox.shrink(),
             ),
           ),
           _WelcomeFooter(
             page: _page,
             pageCount: _pageCount,
-            onTap: _finish,
+            onTap: _continue,
           ),
         ],
       ),
@@ -137,7 +155,9 @@ class _WelcomeSlideData {
     required this.icon,
     required this.title,
     required this.subtitle,
-    required this.imageUrl,
+    this.imageUrl,
+    this.imageAsset,
+    this.discoverV3 = false,
     this.showBarbers = false,
     this.showSlots = false,
     this.showLogo = false,
@@ -146,7 +166,9 @@ class _WelcomeSlideData {
   final IconData icon;
   final String title;
   final String subtitle;
-  final String imageUrl;
+  final String? imageUrl;
+  final String? imageAsset;
+  final bool discoverV3;
   final bool showBarbers;
   final bool showSlots;
   final bool showLogo;
@@ -171,31 +193,29 @@ class _WelcomeSlide extends StatelessWidget {
         return Stack(
           fit: StackFit.expand,
           children: [
-            Transform.scale(
-              scale: scale,
-              child: Image.network(
-                data.imageUrl,
-                fit: BoxFit.cover,
-                color: Colors.black.withOpacity(.66),
-                colorBlendMode: BlendMode.darken,
-              ),
-            ),
-            const DecoratedBox(
+            Transform.scale(scale: scale, child: _background()),
+            DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    Color(0x880D0D0D),
-                    Color(0xAA0D0D0D),
-                    AppColors.background,
-                  ],
+                  colors: data.discoverV3
+                      ? const [
+                          Color(0x5C050505),
+                          Color(0x7A09090B),
+                          Color(0xF009090B),
+                        ]
+                      : const [
+                          Color(0x880D0D0D),
+                          Color(0xAA0D0D0D),
+                          AppColors.background,
+                        ],
                 ),
               ),
             ),
             SafeArea(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(30, 28, 30, 160),
+                padding: const EdgeInsets.fromLTRB(24, 28, 24, 168),
                 child: Column(
                   children: [
                     if (data.showLogo)
@@ -223,8 +243,12 @@ class _WelcomeSlide extends StatelessWidget {
                             Icon(data.icon, color: AppColors.orange, size: 52),
                       )
                     else
-                      Icon(data.icon, color: AppColors.orange, size: 52),
-                    const SizedBox(height: 24),
+                      Icon(
+                        data.icon,
+                        color: AppColors.orange,
+                        size: data.discoverV3 ? 40 : 52,
+                      ),
+                    SizedBox(height: data.discoverV3 ? 20 : 24),
                     AnimatedOpacity(
                       opacity: selected ? 1 : .55,
                       duration: const Duration(milliseconds: 250),
@@ -235,21 +259,22 @@ class _WelcomeSlide extends StatelessWidget {
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               color: AppColors.text,
-                              fontSize: 26,
-                              height: 1.08,
-                              fontWeight: FontWeight.w900,
+                              fontFamily: 'Barlow Condensed',
+                              fontSize: 32,
+                              height: 1.125,
+                              fontWeight: FontWeight.w700,
                               letterSpacing: 0,
                             ),
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 12),
                           Text(
                             data.subtitle,
                             textAlign: TextAlign.center,
                             style: const TextStyle(
-                              color: AppColors.text,
+                              color: AppColors.muted,
                               fontSize: 14,
-                              height: 1.45,
-                              fontWeight: FontWeight.w700,
+                              height: 1.43,
+                              fontWeight: FontWeight.w400,
                             ),
                           ),
                         ],
@@ -266,6 +291,22 @@ class _WelcomeSlide extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+
+  Widget _background() {
+    if (data.imageAsset != null) {
+      return Image.asset(
+        data.imageAsset!,
+        fit: BoxFit.cover,
+        alignment: Alignment.topCenter,
+      );
+    }
+    return Image.network(
+      data.imageUrl!,
+      fit: BoxFit.cover,
+      color: Colors.black.withOpacity(.66),
+      colorBlendMode: BlendMode.darken,
     );
   }
 }
@@ -353,41 +394,47 @@ class _WelcomeFooter extends StatelessWidget {
             children: [
               SizedBox(
                 width: double.infinity,
-                height: 62,
-                child: FilledButton.icon(
+                height: 56,
+                child: FilledButton(
                   onPressed: onTap,
-                  icon: const Icon(Icons.search_rounded, size: 31),
-                  label: const Text('ENCONTRAR BARBEARIAS'),
+                  child: Text(
+                    page == pageCount - 1
+                        ? 'EXPLORAR BARBEARIAS'
+                        : 'CONTINUAR',
+                  ),
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.orange,
                     foregroundColor: AppColors.onGold,
                     textStyle: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w900,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
                       letterSpacing: .2,
                     ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
                 ),
               ),
               const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(pageCount, (index) {
-                  final selected = index == page;
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 250),
-                    width: selected ? 24 : 9,
-                    height: 9,
-                    margin: const EdgeInsets.symmetric(horizontal: 5),
-                    decoration: BoxDecoration(
-                      color: selected ? AppColors.orange : AppColors.muted,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  );
-                }),
+              Semantics(
+                label: 'Etapa ${page + 1} de $pageCount',
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(pageCount, (index) {
+                    final selected = index == page;
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 250),
+                      width: selected ? 24 : 9,
+                      height: 9,
+                      margin: const EdgeInsets.symmetric(horizontal: 5),
+                      decoration: BoxDecoration(
+                        color: selected ? AppColors.orange : AppColors.stroke,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    );
+                  }),
+                ),
               ),
             ],
           ),
