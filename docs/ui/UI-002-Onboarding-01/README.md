@@ -38,3 +38,10 @@ referências históricas de composição e não devem fornecer ativos para o app
 
 A tela só deve ser implementada depois da aprovação do conteúdo e da direção
 visual. Alterações futuras precisam atualizar esta documentação no mesmo PR.
+
+## Revisão no preview web
+
+Em produção, o onboarding aparece apenas na primeira utilização. Para revisar
+o fluxo repetidamente na prévia web, acrescentar `?preview=onboarding` à URL.
+Esse parâmetro não altera a preferência salva nem o comportamento normal do
+aplicativo.
