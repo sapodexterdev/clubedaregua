@@ -34,6 +34,7 @@ class AppState extends ChangeNotifier {
   List<PublicBarbershop> publicBarbershops = const [];
   PublicBarbershop? selectedBarbershop;
   String discoveryQuery = '';
+  String? discoveryCategoryId;
   String? discoveryLocation;
   String? currentUserName;
   bool discoveryOpenNowOnly = false;
@@ -60,6 +61,12 @@ class AppState extends ChangeNotifier {
       }
       if (discoveryOpenNowOnly && !shop.isOpen) return false;
       if (discoveryHighlyRatedOnly && shop.rating < 4.5) return false;
+      if (discoveryCategoryId != null &&
+          !shop.services.any(
+            (service) => service.categoryId == discoveryCategoryId,
+          )) {
+        return false;
+      }
       if (query.isEmpty) return true;
       final searchableText = _normalizedSearch([
         shop.identity.name,
@@ -74,6 +81,18 @@ class AppState extends ChangeNotifier {
   }
 
   bool get hasDiscoveryQuery => discoveryQuery.trim().isNotEmpty;
+
+  List<ServiceCategory> get discoveryCategories {
+    const order = ['corte', 'barba', 'combo', 'infantil', 'premium'];
+    final items = List<ServiceCategory>.of(categories);
+    items.sort((a, b) {
+      final aIndex = order.indexOf(_normalizedSearch(a.name));
+      final bIndex = order.indexOf(_normalizedSearch(b.name));
+      return (aIndex < 0 ? order.length : aIndex)
+          .compareTo(bIndex < 0 ? order.length : bIndex);
+    });
+    return items;
+  }
 
   List<String> get availableDiscoveryLocations {
     final locations = publicBarbershops
@@ -229,6 +248,12 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void toggleDiscoveryCategory(String categoryId) {
+    discoveryCategoryId =
+        discoveryCategoryId == categoryId ? null : categoryId;
+    notifyListeners();
+  }
+
   String _normalizedSearch(String value) {
     const accented = 'áàâãäéèêëíìîïóòôõöúùûüç';
     const plain = 'aaaaaeeeeiiiiooooouuuuc';
@@ -285,6 +310,7 @@ class AppState extends ChangeNotifier {
   void clearDiscoveryFilters() {
     discoveryOpenNowOnly = false;
     discoveryHighlyRatedOnly = false;
+    discoveryCategoryId = null;
     notifyListeners();
   }
 

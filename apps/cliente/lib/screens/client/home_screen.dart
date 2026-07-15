@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/app_constants.dart';
+import '../../models/service_category.dart';
 import '../../providers/app_state.dart';
 import '../../repositories/barber_repository.dart';
 import '../../screens/auth/login_screen.dart';
@@ -66,6 +67,12 @@ class HomeScreen extends StatelessWidget {
                     onSelected: state.selectDiscoveryLocation,
                     isLocating: state.isLocating,
                     onUseCurrentLocation: state.locateDevice,
+                  ),
+                  const SizedBox(height: 12),
+                  _DiscoveryCategories(
+                    categories: state.discoveryCategories,
+                    selectedId: state.discoveryCategoryId,
+                    onSelected: state.toggleDiscoveryCategory,
                   ),
                   const SizedBox(height: 20),
                   if (state.isLoading && shops.isEmpty)
@@ -415,6 +422,74 @@ class _LocationPill extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+class _DiscoveryCategories extends StatelessWidget {
+  const _DiscoveryCategories({
+    required this.categories,
+    required this.selectedId,
+    required this.onSelected,
+  });
+
+  final List<ServiceCategory> categories;
+  final String? selectedId;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    if (categories.isEmpty) return const SizedBox.shrink();
+
+    return SizedBox(
+      height: 44,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: categories.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final category = categories[index];
+          final selected = category.id == selectedId;
+          return FilterChip(
+            selected: selected,
+            onSelected: (_) => onSelected(category.id),
+            avatar: Icon(
+              _categoryIcon(category.name),
+              size: 18,
+              color: selected ? AppColors.orange : AppColors.muted,
+            ),
+            label: Text(category.name),
+            labelStyle: TextStyle(
+              color: selected ? AppColors.text : AppColors.muted,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+            backgroundColor: AppColors.card,
+            selectedColor: AppColors.card,
+            side: BorderSide(
+              color: selected ? AppColors.orange : AppColors.stroke,
+            ),
+            shape: const StadiumBorder(),
+            showCheckmark: false,
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+          );
+        },
+      ),
+    );
+  }
+
+  IconData _categoryIcon(String name) {
+    switch (name.trim().toLowerCase()) {
+      case 'barba':
+        return Icons.face_retouching_natural_rounded;
+      case 'combo':
+        return Icons.auto_awesome_rounded;
+      case 'infantil':
+        return Icons.child_care_rounded;
+      case 'premium':
+        return Icons.workspace_premium_outlined;
+      default:
+        return Icons.content_cut_rounded;
+    }
   }
 }
 
