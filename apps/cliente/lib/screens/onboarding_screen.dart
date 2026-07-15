@@ -36,8 +36,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _WelcomeSlideData(
       icon: Icons.calendar_month_outlined,
       title: 'Agende seu horário\nem poucos segundos.',
-      subtitle: 'Selecione data, horário e siga sem complicação.',
-      imageUrl: AppConstants.heroBarbershop,
+      subtitle:
+          'Escolha o serviço, o profissional e o melhor horário para você.',
+      imageAsset: AppConstants.onboardingV3Schedule,
+      scheduleV3: true,
       showSlots: true,
     ),
     _WelcomeSlideData(
@@ -159,6 +161,7 @@ class _WelcomeSlideData {
     this.imageUrl,
     this.imageAsset,
     this.discoverV3 = false,
+    this.scheduleV3 = false,
     this.showBarbers = false,
     this.showSlots = false,
     this.showLogo = false,
@@ -170,6 +173,7 @@ class _WelcomeSlideData {
   final String? imageUrl;
   final String? imageAsset;
   final bool discoverV3;
+  final bool scheduleV3;
   final bool showBarbers;
   final bool showSlots;
   final bool showLogo;
@@ -200,7 +204,7 @@ class _WelcomeSlide extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: data.discoverV3
+                  colors: data.discoverV3 || data.scheduleV3
                       ? const [
                           Color(0x5C050505),
                           Color(0x7A09090B),
@@ -236,14 +240,14 @@ class _WelcomeSlide extends StatelessWidget {
                       Icon(
                         data.icon,
                         color: AppColors.orange,
-                        size: data.discoverV3 ? 40 : 52,
+                        size: data.discoverV3 || data.scheduleV3 ? 40 : 52,
                       ),
                     SizedBox(
-                      height: data.showLogo
+                      height: data.showLogo ||
+                              data.discoverV3 ||
+                              data.scheduleV3
                           ? 20
-                          : data.discoverV3
-                              ? 20
-                              : 24,
+                          : 24,
                     ),
                     AnimatedOpacity(
                       opacity: selected ? 1 : .55,
@@ -342,14 +346,16 @@ class _SlotPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     const slots = ['09:00', '10:30', '15:00'];
     return Wrap(
-      spacing: 10,
+      spacing: 8,
       children: slots.map((slot) {
         final selected = slot == '15:00';
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+          constraints: const BoxConstraints(minHeight: 40),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
             color: selected ? AppColors.orange : AppColors.card,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: selected ? AppColors.orange : AppColors.stroke,
             ),
@@ -358,7 +364,9 @@ class _SlotPreview extends StatelessWidget {
             slot,
             style: TextStyle(
               color: selected ? AppColors.onGold : AppColors.text,
-              fontWeight: FontWeight.w900,
+              fontSize: 13,
+              height: 1.38,
+              fontWeight: FontWeight.w600,
             ),
           ),
         );

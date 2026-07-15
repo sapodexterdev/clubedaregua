@@ -1,23 +1,36 @@
-# UI-003 - Onboarding 02
+# UI-003 — Onboarding 02
 
 ## Objetivo
 
-Documentar a especificacao visual final da segunda tela de onboarding.
+Apresentar o agendamento simples como o segundo benefício do Clube da Régua.
 
 ## Status
 
-Em especificacao.
+Aprovada.
 
-## Tela Relacionada
+## Posição no fluxo
 
-Onboarding 02 - Escolha do barbeiro.
+`Splash → Onboarding 01 → Onboarding 02 → Explorar Barbearias → Home Pública`
 
-## Dependencias
+## Fonte de verdade
 
-- `docs/brand/Brand_Kit_v2.png`
-- `docs/experience/welcome/`
-- `docs/ux/UX-001-Primeiro-Acesso/`
+1. `docs/brand/v3/BRAND_FOUNDATIONS.md`;
+2. `docs/brand/v3/MOTION_SYSTEM.md`;
+3. `spec.md` desta tela;
+4. `docs/ux/UX-001-Primeiro-Acesso/` para regras funcionais.
 
-## Observacoes
+O board antigo serve apenas como referência de intenção. Logo V2, navalha,
+Bebas Neue, dourado antigo e imagens remotas não devem ser reutilizados.
 
-Esta tela deve reforcar confianca na escolha do profissional ideal.
+## Dependências
+
+- fotografia vertical exclusiva aprovada `onboarding_v3_agendar.webp`;
+- Barlow Condensed e Inter empacotadas no app;
+- ícone outline de calendário;
+- componente de horários V3;
+- CTA e indicador compartilhados com o Onboarding 01.
+
+## Regra de implementação
+
+Implementar somente após a aprovação desta especificação e da fotografia. Toda
+alteração visual futura deve atualizar a documentação no mesmo PR.

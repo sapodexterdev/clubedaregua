@@ -12,6 +12,8 @@ class AppConstants {
       'assets/images/splash_v3_barbearia_coldre_v2.png';
   static const onboardingV3Discover =
       'assets/images/onboarding_v3_descobrir.webp';
+  static const onboardingV3Schedule =
+      'assets/images/onboarding_v3_agendar.webp';
   static const splashBarberReference =
       'assets/images/splash_barber_reference.png';
   static const defaultAvatar =
