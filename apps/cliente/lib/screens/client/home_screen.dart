@@ -71,7 +71,9 @@ class HomeScreen extends StatelessWidget {
                   if (state.isLoading && shops.isEmpty)
                     const _DiscoveryLoading()
                   else if (shops.isEmpty)
-                    const _EmptyDiscovery()
+                    _EmptyDiscovery(isSearch: state.hasDiscoveryQuery)
+                  else if (state.hasDiscoveryQuery)
+                    _SearchResults(shops: shops)
                   else ...[
                     _DiscoverySection(
                       title: 'Mais bem avaliadas',
@@ -437,7 +439,10 @@ class _DiscoverySection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _SectionHeader(title: title),
+            _SectionHeader(
+              title: title,
+              onViewAll: () => _showAllBarbershops(context),
+            ),
             const SizedBox(height: 12),
             if (visible.isNotEmpty)
               _BarbershopCard(
@@ -455,7 +460,10 @@ class _DiscoverySection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SectionHeader(title: title),
+          _SectionHeader(
+            title: title,
+            onViewAll: () => _showAllBarbershops(context),
+          ),
           const SizedBox(height: 12),
           SizedBox(
             height: compact ? 150 : 292,
@@ -472,6 +480,128 @@ class _DiscoverySection extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showAllBarbershops(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.background,
+      builder: (context) => _AllBarbershopsSheet(
+        title: title,
+        shops: shops,
+      ),
+    );
+  }
+}
+
+class _SearchResults extends StatelessWidget {
+  const _SearchResults({required this.shops});
+
+  final List<PublicBarbershop> shops;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '${shops.length} ${shops.length == 1 ? 'resultado' : 'resultados'}',
+          style: const TextStyle(
+            color: AppColors.text,
+            fontFamily: 'Barlow Condensed',
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 12),
+        for (final shop in shops) ...[
+          _BarbershopCard(
+            shop: shop,
+            compact: false,
+            fullWidth: true,
+          ),
+          const SizedBox(height: 14),
+        ],
+      ],
+    );
+  }
+}
+
+class _AllBarbershopsSheet extends StatelessWidget {
+  const _AllBarbershopsSheet({
+    required this.title,
+    required this.shops,
+  });
+
+  final String title;
+  final List<PublicBarbershop> shops;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: .88,
+        minChildSize: .55,
+        maxChildSize: .96,
+        builder: (context, controller) {
+          return Column(
+            children: [
+              Container(
+                width: 42,
+                height: 4,
+                margin: const EdgeInsets.only(top: 10, bottom: 18),
+                decoration: BoxDecoration(
+                  color: AppColors.stroke,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 22),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          color: AppColors.text,
+                          fontFamily: 'Barlow Condensed',
+                          fontSize: 26,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Fechar',
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: AppColors.text,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+              Expanded(
+                child: ListView.separated(
+                  controller: controller,
+                  padding: const EdgeInsets.fromLTRB(22, 0, 22, 24),
+                  itemCount: shops.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) => _BarbershopCard(
+                    shop: shops[index],
+                    compact: true,
+                    fullWidth: true,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -590,9 +720,10 @@ class _LargeCardContent extends StatelessWidget {
 }
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title});
+  const _SectionHeader({required this.title, required this.onViewAll});
 
   final String title;
+  final VoidCallback onViewAll;
 
   @override
   Widget build(BuildContext context) {
@@ -614,12 +745,16 @@ class _SectionHeader extends StatelessWidget {
             ),
           ),
         ),
-        const Text(
-          'Ver todas',
-          style: TextStyle(
-            color: AppColors.orange,
-            fontSize: 11,
-            fontWeight: FontWeight.w900,
+        TextButton(
+          onPressed: onViewAll,
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.orange,
+            minimumSize: const Size(64, 44),
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+          ),
+          child: const Text(
+            'Ver todas',
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
           ),
         ),
       ],
@@ -681,7 +816,9 @@ class _ShopMainInfo extends StatelessWidget {
             ),
             const Spacer(),
             Text(
-              shop.distanceLabel,
+              shop.distanceKm.isFinite
+                  ? shop.distanceLabel
+                  : shop.identity.city,
               style: const TextStyle(
                 color: AppColors.muted,
                 fontSize: 12,
@@ -762,7 +899,9 @@ class _DiscoveryLoading extends StatelessWidget {
 }
 
 class _EmptyDiscovery extends StatelessWidget {
-  const _EmptyDiscovery();
+  const _EmptyDiscovery({required this.isSearch});
+
+  final bool isSearch;
 
   @override
   Widget build(BuildContext context) {
@@ -773,9 +912,14 @@ class _EmptyDiscovery extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.stroke),
       ),
-      child: const Text(
-        'Nenhuma barbearia encontrada para sua busca.',
-        style: TextStyle(color: AppColors.muted, fontWeight: FontWeight.w700),
+      child: Text(
+        isSearch
+            ? 'Nenhuma barbearia corresponde à sua busca.'
+            : 'Nenhuma barbearia encontrada nesta localização.',
+        style: const TextStyle(
+          color: AppColors.muted,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

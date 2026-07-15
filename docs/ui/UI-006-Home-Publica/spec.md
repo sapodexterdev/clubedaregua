@@ -56,6 +56,9 @@ ao perfil e aos horários disponíveis.
 - ícone de busca à esquerda;
 - botão de filtros à direita, com área de toque mínima de `44 px`;
 - busca filtra por nome da barbearia, serviço e bairro;
+- busca ignora diferenças entre letras acentuadas e não acentuadas;
+- enquanto houver texto, substituir as seções repetidas por uma lista única de
+  resultados encontrados;
 - aplicar atraso de `250 ms` antes de consultar o backend.
 
 ## Localização
@@ -103,6 +106,7 @@ Ordem inicial:
 - primeiro bloco de conteúdo;
 - exibir uma barbearia em card grande;
 - cabeçalho com `Ver todas`;
+- `Ver todas` abre uma listagem completa e navegável da seção;
 - ícone de estrela outline, sem usar fogo genérico em todas as seções.
 
 ### Próximos horários

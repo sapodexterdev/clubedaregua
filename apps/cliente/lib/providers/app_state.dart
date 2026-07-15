@@ -47,7 +47,7 @@ class AppState extends ChangeNotifier {
   bool lastBookingRequestCreated = false;
 
   List<PublicBarbershop> get discoveredBarbershops {
-    final query = discoveryQuery.trim().toLowerCase();
+    final query = _normalizedSearch(discoveryQuery);
     return publicBarbershops.where((shop) {
       if (useCurrentLocation &&
           (!shop.distanceKm.isFinite ||
@@ -61,13 +61,19 @@ class AppState extends ChangeNotifier {
       if (discoveryOpenNowOnly && !shop.isOpen) return false;
       if (discoveryHighlyRatedOnly && shop.rating < 4.5) return false;
       if (query.isEmpty) return true;
-      final serviceNames = shop.services.map((item) => item.name).join(' ');
-      return shop.identity.name.toLowerCase().contains(query) ||
-          serviceNames.toLowerCase().contains(query) ||
-          shop.neighborhood.toLowerCase().contains(query) ||
-          shop.identity.city.toLowerCase().contains(query);
+      final searchableText = _normalizedSearch([
+        shop.identity.name,
+        shop.identity.address,
+        shop.identity.city,
+        shop.identity.state,
+        shop.neighborhood,
+        ...shop.services.map((item) => item.name),
+      ].join(' '));
+      return searchableText.contains(query);
     }).toList();
   }
+
+  bool get hasDiscoveryQuery => discoveryQuery.trim().isNotEmpty;
 
   List<String> get availableDiscoveryLocations {
     final locations = publicBarbershops
@@ -221,6 +227,16 @@ class AppState extends ChangeNotifier {
   void updateDiscoveryQuery(String value) {
     discoveryQuery = value;
     notifyListeners();
+  }
+
+  String _normalizedSearch(String value) {
+    const accented = 'áàâãäéèêëíìîïóòôõöúùûüç';
+    const plain = 'aaaaaeeeeiiiiooooouuuuc';
+    var normalized = value.trim().toLowerCase();
+    for (var index = 0; index < accented.length; index++) {
+      normalized = normalized.replaceAll(accented[index], plain[index]);
+    }
+    return normalized;
   }
 
   void selectDiscoveryLocation(String? value) {
