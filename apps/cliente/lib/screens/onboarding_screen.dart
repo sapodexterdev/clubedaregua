@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/app_constants.dart';
@@ -219,28 +220,27 @@ class _WelcomeSlide extends StatelessWidget {
                 child: Column(
                   children: [
                     if (data.showLogo)
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Image.asset(
-                          AppConstants.brandLogoHorizontal,
-                          width: 216,
+                      Center(
+                        child: SvgPicture.asset(
+                          AppConstants.brandV3LogoPrincipal,
+                          width: 190,
                           fit: BoxFit.contain,
+                          excludeFromSemantics: true,
                         ),
                       )
                     else
                       const SizedBox(height: 42),
                     const Spacer(),
                     if (data.showLogo)
-                      Container(
-                        width: 112,
-                        height: 112,
-                        decoration: BoxDecoration(
-                          color: AppColors.orange.withOpacity(.12),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.orange, width: 2),
+                      Semantics(
+                        image: true,
+                        label: 'Símbolo premium Clube da Régua',
+                        child: SvgPicture.asset(
+                          AppConstants.brandV3Crown,
+                          width: 64,
+                          fit: BoxFit.contain,
+                          excludeFromSemantics: true,
                         ),
-                        child:
-                            Icon(data.icon, color: AppColors.orange, size: 52),
                       )
                     else
                       Icon(
