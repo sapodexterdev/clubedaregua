@@ -110,9 +110,13 @@ class _SplashScreenState extends State<SplashScreen>
     final prefs = results.first as SharedPreferences;
     final hasSeenOnboarding =
         prefs.getBool(SplashScreen.onboardingSeenKey) ?? false;
+    final forceOnboardingPreview = kIsWeb &&
+        Uri.base.queryParameters['preview'] == 'onboarding';
     Navigator.pushReplacementNamed(
       context,
-      hasSeenOnboarding ? HomeScreen.route : OnboardingScreen.route,
+      hasSeenOnboarding && !forceOnboardingPreview
+          ? HomeScreen.route
+          : OnboardingScreen.route,
     );
   }
 
