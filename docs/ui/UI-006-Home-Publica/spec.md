@@ -65,6 +65,15 @@ ao perfil e aos horários disponíveis.
 - texto dinâmico `{cidade}, {UF}`;
 - visitante sem permissão: `Definir localização`;
 - toque abre seletor de localização;
+- a permissão do dispositivo só deve ser solicitada após o toque em
+  `Usar minha localização`;
+- quando autorizada, considerar apenas barbearias com coordenadas confirmadas
+  em um raio inicial de `10 km`;
+- calcular e exibir a distância real entre o dispositivo e a barbearia;
+- não persistir as coordenadas precisas do visitante;
+- se a permissão for negada ou a localização falhar, manter a seleção manual
+  de cidade disponível;
+- barbearias sem latitude e longitude não entram no resultado por proximidade;
 - nunca fixar `Uberaba, MG` como localização universal.
 
 ## Categorias

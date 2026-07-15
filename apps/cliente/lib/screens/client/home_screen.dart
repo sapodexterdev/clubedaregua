@@ -64,6 +64,8 @@ class HomeScreen extends StatelessWidget {
                     label: state.discoveryLocationLabel,
                     locations: state.availableDiscoveryLocations,
                     onSelected: state.selectDiscoveryLocation,
+                    isLocating: state.isLocating,
+                    onUseCurrentLocation: state.locateDevice,
                   ),
                   const SizedBox(height: 20),
                   if (state.isLoading && shops.isEmpty)
@@ -276,11 +278,15 @@ class _LocationPill extends StatelessWidget {
     required this.label,
     required this.locations,
     required this.onSelected,
+    required this.isLocating,
+    required this.onUseCurrentLocation,
   });
 
   final String label;
   final List<String> locations;
   final ValueChanged<String?> onSelected;
+  final bool isLocating;
+  final Future<bool> Function() onUseCurrentLocation;
 
   @override
   Widget build(BuildContext context) {
@@ -343,6 +349,41 @@ class _LocationPill extends StatelessWidget {
                     ),
                   ),
                 ),
+                ListTile(
+                  enabled: !isLocating,
+                  leading: isLocating
+                      ? const SizedBox.square(
+                          dimension: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.orange,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.my_location_rounded,
+                          color: AppColors.orange,
+                        ),
+                  title: const Text('Usar minha localização'),
+                  subtitle: const Text('Mostrar barbearias em até 10 km'),
+                  onTap: () async {
+                    final navigator = Navigator.of(context);
+                    final messenger = ScaffoldMessenger.of(context);
+                    final success = await onUseCurrentLocation();
+                    if (!context.mounted) return;
+                    if (success) {
+                      navigator.pop();
+                    } else {
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Não foi possível acessar sua localização. Você pode escolher uma cidade abaixo.',
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                ),
+                const Divider(),
                 ListTile(
                   leading: const Icon(
                     Icons.public_rounded,

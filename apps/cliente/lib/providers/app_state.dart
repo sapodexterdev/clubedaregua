@@ -8,10 +8,14 @@ import '../repositories/appointment_repository.dart';
 import '../repositories/barber_repository.dart';
 import '../services/auth_service.dart';
 import '../services/mock_data.dart';
+import '../services/location_service.dart';
 
 class AppState extends ChangeNotifier {
+  static const discoveryRadiusKm = 10.0;
+
   final _barberRepository = BarberRepository();
   final _appointmentRepository = AppointmentRepository();
+  final _locationService = const LocationService();
 
   bool isLoading = false;
   String selectedTab = 'home';
@@ -34,12 +38,22 @@ class AppState extends ChangeNotifier {
   String? currentUserName;
   bool discoveryOpenNowOnly = false;
   bool discoveryHighlyRatedOnly = false;
+  bool isLocating = false;
+  bool useCurrentLocation = false;
+  String? locationError;
+  double? _deviceLatitude;
+  double? _deviceLongitude;
   bool isSignedIn = false;
   bool lastBookingRequestCreated = false;
 
   List<PublicBarbershop> get discoveredBarbershops {
     final query = discoveryQuery.trim().toLowerCase();
     return publicBarbershops.where((shop) {
+      if (useCurrentLocation &&
+          (!shop.distanceKm.isFinite ||
+              shop.distanceKm > discoveryRadiusKm)) {
+        return false;
+      }
       if (discoveryLocation?.isNotEmpty == true &&
           shop.identity.locationLabel != discoveryLocation) {
         return false;
@@ -72,6 +86,8 @@ class AppState extends ChangeNotifier {
   }
 
   String get discoveryLocationLabel {
+    if (isLocating) return 'Obtendo sua localização...';
+    if (useCurrentLocation) return 'Perto de você · até 10 km';
     if (discoveryLocation == null) return 'Definir localização';
     if (discoveryLocation!.isEmpty) return 'Todas as localizações';
     return discoveryLocation!;
@@ -208,8 +224,36 @@ class AppState extends ChangeNotifier {
   }
 
   void selectDiscoveryLocation(String? value) {
+    useCurrentLocation = false;
+    locationError = null;
     discoveryLocation = value;
     notifyListeners();
+  }
+
+  Future<bool> locateDevice() async {
+    if (isLocating) return false;
+    isLocating = true;
+    locationError = null;
+    notifyListeners();
+
+    try {
+      final position = await _locationService.determinePosition();
+      _deviceLatitude = position.latitude;
+      _deviceLongitude = position.longitude;
+      useCurrentLocation = true;
+      discoveryLocation = null;
+      publicBarbershops = _withRealDistances(publicBarbershops);
+      return true;
+    } catch (error) {
+      useCurrentLocation = false;
+      locationError = error is LocationException
+          ? error.message
+          : 'Não foi possível obter sua localização. Tente novamente.';
+      return false;
+    } finally {
+      isLocating = false;
+      notifyListeners();
+    }
   }
 
   void setDiscoveryOpenNowOnly(bool value) {
@@ -290,12 +334,43 @@ class AppState extends ChangeNotifier {
               .toList(),
           rating: _shopRating(source[index], barbersData),
           reviewCount: 80 + (index * 37),
-          distanceKm: 1.2 + (index * .8),
+          distanceKm: _distanceFromDevice(source[index]),
           nextSlot: _nextSlot(index),
           isOpen: DateTime.now().hour >= 8 && DateTime.now().hour < 20,
           neighborhood: source[index].address.isEmpty
               ? source[index].city
               : source[index].address.split(',').first,
+        ),
+    ];
+  }
+
+  double _distanceFromDevice(ShopIdentity shop) {
+    final latitude = _deviceLatitude;
+    final longitude = _deviceLongitude;
+    if (latitude == null || longitude == null || !shop.hasCoordinates) {
+      return double.infinity;
+    }
+    return _locationService.distanceKm(
+      fromLatitude: latitude,
+      fromLongitude: longitude,
+      toLatitude: shop.latitude!,
+      toLongitude: shop.longitude!,
+    );
+  }
+
+  List<PublicBarbershop> _withRealDistances(List<PublicBarbershop> shops) {
+    return [
+      for (final shop in shops)
+        PublicBarbershop(
+          identity: shop.identity,
+          barbers: shop.barbers,
+          services: shop.services,
+          rating: shop.rating,
+          reviewCount: shop.reviewCount,
+          distanceKm: _distanceFromDevice(shop.identity),
+          nextSlot: shop.nextSlot,
+          isOpen: shop.isOpen,
+          neighborhood: shop.neighborhood,
         ),
     ];
   }

@@ -90,6 +90,8 @@ create table if not exists public.barber_shops (
   address text,
   city text,
   state text,
+  latitude double precision,
+  longitude double precision,
   country text not null default 'BR',
   timezone text not null default 'America/Sao_Paulo',
   currency text not null default 'BRL',
@@ -99,7 +101,11 @@ create table if not exists public.barber_shops (
   closing_time time,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  constraint barber_shops_latitude_range
+    check (latitude is null or latitude between -90 and 90),
+  constraint barber_shops_longitude_range
+    check (longitude is null or longitude between -180 and 180)
 );
 
 create table if not exists public.shop_settings (

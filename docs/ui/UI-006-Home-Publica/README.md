@@ -28,6 +28,7 @@ copiados para o aplicativo V3.
 
 - serviço de descoberta de barbearias;
 - localização atual ou cidade selecionada;
+- descoberta real em um raio inicial de 10 km, com permissão explícita;
 - busca e filtros funcionais;
 - fallback local aprovado para capas;
 - Barlow Condensed e Inter empacotadas;

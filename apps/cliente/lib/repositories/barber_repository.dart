@@ -17,6 +17,8 @@ class ShopIdentity {
     required this.address,
     required this.city,
     required this.state,
+    this.latitude,
+    this.longitude,
     required this.secondaryColor,
     required this.bookingIntervalMinutes,
     required this.bookingDaysAhead,
@@ -36,6 +38,8 @@ class ShopIdentity {
   final String address;
   final String city;
   final String state;
+  final double? latitude;
+  final double? longitude;
   final String secondaryColor;
   final int bookingIntervalMinutes;
   final int bookingDaysAhead;
@@ -47,6 +51,8 @@ class ShopIdentity {
     final parts = [city, state].where((part) => part.trim().isNotEmpty);
     return parts.isEmpty ? 'Barbearia parceira' : parts.join(' - ');
   }
+
+  bool get hasCoordinates => latitude != null && longitude != null;
 
   factory ShopIdentity.fromRows({
     required Map<String, dynamic> shop,
@@ -68,6 +74,8 @@ class ShopIdentity {
       address: shop['address']?.toString() ?? '',
       city: shop['city']?.toString() ?? '',
       state: shop['state']?.toString() ?? '',
+      latitude: _asDouble(shop['latitude']),
+      longitude: _asDouble(shop['longitude']),
       secondaryColor: settingsJson['secondary_color']?.toString() ?? '#F3B200',
       bookingIntervalMinutes: int.tryParse(
               settings?['booking_interval_minutes']?.toString() ?? '') ??
@@ -84,6 +92,11 @@ class ShopIdentity {
       minCancelHours:
           int.tryParse(settings?['min_cancel_hours']?.toString() ?? '') ?? 2,
     );
+  }
+
+  static double? _asDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '');
   }
 }
 
@@ -119,7 +132,9 @@ class PublicBarbershop {
     return 'R\$ $min - R\$ $max';
   }
 
-  String get distanceLabel => '${distanceKm.toStringAsFixed(1)} km';
+  String get distanceLabel => distanceKm.isFinite
+      ? '${distanceKm.toStringAsFixed(1)} km'
+      : 'Distância indisponível';
   String get statusLabel => isOpen ? 'Aberto' : 'Fechado';
 }
 
@@ -179,7 +194,7 @@ class BarberRepository {
     try {
       final shops = await _rest.getRows(
         'barber_shops',
-        select: 'id,name,phone,whatsapp,address,city,state,logo_url,cover_url',
+        select: 'id,name,phone,whatsapp,address,city,state,latitude,longitude,logo_url,cover_url',
         filters: {
           'is_active': 'eq.true',
           if (barberShopId != null && barberShopId.isNotEmpty)
@@ -235,7 +250,7 @@ class BarberRepository {
     try {
       final shops = await _rest.getRows(
         'barber_shops',
-        select: 'id,name,phone,whatsapp,address,city,state,logo_url,cover_url',
+        select: 'id,name,phone,whatsapp,address,city,state,latitude,longitude,logo_url,cover_url',
         filters: const {'is_active': 'eq.true'},
         order: 'name.asc',
       );
