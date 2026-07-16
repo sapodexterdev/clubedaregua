@@ -75,6 +75,7 @@ class HomeScreen extends StatelessWidget {
                   _DiscoveryHeader(greeting: state.discoveryGreeting),
                   const SizedBox(height: 24),
                   _SearchAndFilter(
+                    value: state.discoveryQuery,
                     onChanged: state.updateDiscoveryQuery,
                     onFilterTap: () => _showFilters(context),
                   ),
@@ -95,8 +96,13 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(height: 20),
                   if (state.isLoading && shops.isEmpty)
                     const _DiscoveryLoading()
+                  else if (state.discoveryLoadError != null && shops.isEmpty)
+                    _DiscoveryError(onRetry: state.loadInitialData)
                   else if (shops.isEmpty)
-                    _EmptyDiscovery(isSearch: state.hasDiscoveryQuery)
+                    _EmptyDiscovery(
+                      isSearch: state.hasDiscoveryQuery,
+                      onClear: state.clearDiscoveryFilters,
+                    )
                   else if (state.hasDiscoveryQuery)
                     _SearchResults(shops: shops)
                   else ...[
@@ -251,10 +257,12 @@ class _DiscoveryHeader extends StatelessWidget {
 
 class _SearchAndFilter extends StatefulWidget {
   const _SearchAndFilter({
+    required this.value,
     required this.onChanged,
     required this.onFilterTap,
   });
 
+  final String value;
   final ValueChanged<String> onChanged;
   final VoidCallback onFilterTap;
 
@@ -264,10 +272,29 @@ class _SearchAndFilter extends StatefulWidget {
 
 class _SearchAndFilterState extends State<_SearchAndFilter> {
   Timer? _debounce;
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.value);
+  }
+
+  @override
+  void didUpdateWidget(covariant _SearchAndFilter oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.value != _controller.text) {
+      _controller.value = TextEditingValue(
+        text: widget.value,
+        selection: TextSelection.collapsed(offset: widget.value.length),
+      );
+    }
+  }
 
   @override
   void dispose() {
     _debounce?.cancel();
+    _controller.dispose();
     super.dispose();
   }
 
@@ -284,6 +311,7 @@ class _SearchAndFilterState extends State<_SearchAndFilter> {
     return SizedBox(
       height: 52,
       child: TextField(
+        controller: _controller,
         onChanged: _onChanged,
         style: const TextStyle(color: AppColors.text),
         cursorColor: AppColors.orange,
@@ -1140,19 +1168,79 @@ class _DiscoveryLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 80),
-      child: Center(
-        child: CircularProgressIndicator(color: AppColors.orange),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SkeletonBox(width: 156, height: 18),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppColors.card,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.stroke),
+          ),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AspectRatio(
+                aspectRatio: 16 / 9,
+                child: _SkeletonBox(width: double.infinity, height: 180),
+              ),
+              SizedBox(height: 12),
+              _SkeletonBox(width: 210, height: 18),
+              SizedBox(height: 10),
+              _SkeletonBox(width: 150, height: 12),
+              SizedBox(height: 14),
+              _SkeletonBox(width: double.infinity, height: 40),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        const _SkeletonBox(width: 130, height: 18),
+        const SizedBox(height: 12),
+        const Row(
+          children: [
+            Expanded(child: _SkeletonBox(width: 280, height: 138)),
+            SizedBox(width: 12),
+            SizedBox(
+              width: 44,
+              child: _SkeletonBox(width: 44, height: 138),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _SkeletonBox extends StatelessWidget {
+  const _SkeletonBox({required this.width, required this.height});
+
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: AppColors.elevated,
+        borderRadius: BorderRadius.circular(10),
       ),
     );
   }
 }
 
 class _EmptyDiscovery extends StatelessWidget {
-  const _EmptyDiscovery({required this.isSearch});
+  const _EmptyDiscovery({
+    required this.isSearch,
+    required this.onClear,
+  });
 
   final bool isSearch;
+  final VoidCallback onClear;
 
   @override
   Widget build(BuildContext context) {
@@ -1163,14 +1251,84 @@ class _EmptyDiscovery extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.stroke),
       ),
-      child: Text(
-        isSearch
-            ? 'Nenhuma barbearia corresponde à sua busca.'
-            : 'Nenhuma barbearia encontrada nesta localização.',
-        style: const TextStyle(
-          color: AppColors.muted,
-          fontWeight: FontWeight.w700,
-        ),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.search_off_rounded,
+            color: AppColors.muted,
+            size: 34,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            isSearch
+                ? 'Nenhuma barbearia corresponde à sua busca.'
+                : 'Nenhuma barbearia encontrada nesta localização.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppColors.text,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Tente alterar a busca, os filtros ou a localização.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppColors.muted, fontSize: 12),
+          ),
+          const SizedBox(height: 14),
+          OutlinedButton(
+            onPressed: onClear,
+            child: const Text('Limpar filtros'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DiscoveryError extends StatelessWidget {
+  const _DiscoveryError({required this.onRetry});
+
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.stroke),
+      ),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.cloud_off_outlined,
+            color: AppColors.muted,
+            size: 36,
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Não foi possível carregar as barbearias.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppColors.text,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Verifique sua conexão e tente novamente.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppColors.muted, fontSize: 12),
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Tentar novamente'),
+          ),
+        ],
       ),
     );
   }

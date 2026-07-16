@@ -18,6 +18,7 @@ class AppState extends ChangeNotifier {
   final _locationService = const LocationService();
 
   bool isLoading = false;
+  String? discoveryLoadError;
   String selectedTab = 'home';
   Barber? selectedBarber = MockData.barbers.first;
   ServiceItem? selectedService = MockData.services.first;
@@ -176,6 +177,7 @@ class AppState extends ChangeNotifier {
     if (isLoading) return;
 
     isLoading = true;
+    discoveryLoadError = null;
     notifyListeners();
 
     final barbersFuture = _barberRepository.fetchBarbers();
@@ -189,15 +191,24 @@ class AppState extends ChangeNotifier {
     final fetchedCategories = await categoriesFuture;
     final fetchedServices = await servicesFuture;
     final fetchedAppointments = await appointmentsFuture;
-    final fetchedShopIdentities = await shopsFuture;
+    List<ShopIdentity> fetchedShopIdentities;
+    try {
+      fetchedShopIdentities = await shopsFuture;
+    } catch (_) {
+      fetchedShopIdentities = const [];
+      discoveryLoadError =
+          'Não foi possível carregar as barbearias. Verifique sua conexão.';
+    }
     final session = await sessionFuture;
     final fetchedShopIdentity = fetchedShopIdentities.isNotEmpty
         ? fetchedShopIdentities.first
-        : await _barberRepository.fetchShopIdentity(
-            barberShopId: fetchedBarbers.isEmpty
-                ? null
-                : fetchedBarbers.first.barberShopId,
-          );
+        : discoveryLoadError != null
+            ? null
+            : await _barberRepository.fetchShopIdentity(
+                barberShopId: fetchedBarbers.isEmpty
+                    ? null
+                    : fetchedBarbers.first.barberShopId,
+              );
 
     _applyData(
       barbersData: fetchedBarbers,
@@ -311,6 +322,7 @@ class AppState extends ChangeNotifier {
   }
 
   void clearDiscoveryFilters() {
+    discoveryQuery = '';
     discoveryOpenNowOnly = false;
     discoveryHighlyRatedOnly = false;
     discoveryCategoryId = null;
@@ -343,29 +355,7 @@ class AppState extends ChangeNotifier {
     List<Barber> barbersData,
     List<ServiceItem> servicesData,
   ) {
-    final source = identities.isEmpty
-        ? [
-            const ShopIdentity(
-              id: MockData.demoShopId,
-              name: 'Barbearia Elite',
-              logoUrl: '',
-              coverUrl: '',
-              phone: '',
-              whatsapp: '',
-              email: '',
-              instagram: '@barbeariaelite',
-              address: 'Centro',
-              city: 'Sao Paulo',
-              state: 'SP',
-              secondaryColor: '#F3B200',
-              bookingIntervalMinutes: 30,
-              bookingDaysAhead: 30,
-              minNoticeMinutes: 60,
-              maxDelayMinutes: 15,
-              minCancelHours: 2,
-            ),
-          ]
-        : identities;
+    final source = identities;
 
     return [
       for (var index = 0; index < source.length; index++)

@@ -319,7 +319,7 @@ class BarberRepository {
       }
       return identities;
     } catch (_) {
-      return const [];
+      rethrow;
     }
   }
 
