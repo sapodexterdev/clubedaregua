@@ -11,6 +11,7 @@ import '../../screens/auth/login_screen.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/premium_bottom_nav.dart';
 import 'barbershop_profile_screen.dart';
+import 'favorites_screen.dart';
 import 'history_screen.dart';
 import 'profile_screen.dart';
 
@@ -28,18 +29,21 @@ class HomeScreen extends StatelessWidget {
         onTap: (index) {
           final state = context.read<AppState>();
           if (index == 0) return;
+          final destination = switch (index) {
+            1 => FavoritesScreen.route,
+            2 => HistoryScreen.route,
+            3 => ProfileScreen.route,
+            _ => HomeScreen.route,
+          };
           if (!state.isSignedIn) {
-            Navigator.pushNamed(context, LoginScreen.route);
+            Navigator.pushNamed(
+              context,
+              LoginScreen.route,
+              arguments: destination,
+            );
             return;
           }
-          if (index == 1) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                  content: Text('Favoritos entram em uma próxima etapa.')),
-            );
-          }
-          if (index == 2) Navigator.pushNamed(context, HistoryScreen.route);
-          if (index == 3) Navigator.pushNamed(context, ProfileScreen.route);
+          Navigator.pushNamed(context, destination);
         },
       ),
       body: SafeArea(

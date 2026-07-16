@@ -35,37 +35,43 @@ class PremiumBottomNav extends StatelessWidget {
             final selected = currentIndex == index;
 
             return Expanded(
-              child: InkWell(
-                onTap: () => onTap(index),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  padding: const EdgeInsets.only(top: 8, bottom: 6),
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? AppColors.orange.withOpacity(.08)
-                        : Colors.transparent,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        item.icon,
-                        color: selected ? AppColors.orange : AppColors.muted,
-                        size: 23,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        item.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+              child: Semantics(
+                button: true,
+                selected: selected,
+                label: item.label,
+                child: InkWell(
+                  onTap: () => onTap(index),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    padding: const EdgeInsets.only(top: 8, bottom: 6),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? AppColors.orange.withOpacity(.08)
+                          : Colors.transparent,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          item.icon,
                           color: selected ? AppColors.orange : AppColors.muted,
-                          fontSize: 11,
-                          fontWeight:
-                              selected ? FontWeight.w900 : FontWeight.w700,
+                          size: 23,
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 4),
+                        Text(
+                          item.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color:
+                                selected ? AppColors.orange : AppColors.muted,
+                            fontSize: 11,
+                            fontWeight:
+                                selected ? FontWeight.w900 : FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

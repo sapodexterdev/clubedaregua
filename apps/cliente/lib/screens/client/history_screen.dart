@@ -5,6 +5,9 @@ import '../../providers/app_state.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/premium_bottom_nav.dart';
+import 'favorites_screen.dart';
+import 'home_screen.dart';
+import 'profile_screen.dart';
 
 class HistoryScreen extends StatelessWidget {
   const HistoryScreen({super.key});
@@ -16,9 +19,18 @@ class HistoryScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Histórico')),
       bottomNavigationBar: PremiumBottomNav(
-        currentIndex: 1,
+        currentIndex: 2,
         onTap: (index) {
-          if (index == 0) Navigator.pop(context);
+          final route = switch (index) {
+            0 => HomeScreen.route,
+            1 => FavoritesScreen.route,
+            2 => HistoryScreen.route,
+            3 => ProfileScreen.route,
+            _ => HomeScreen.route,
+          };
+          if (route != HistoryScreen.route) {
+            Navigator.pushReplacementNamed(context, route);
+          }
         },
       ),
       body: Consumer<AppState>(

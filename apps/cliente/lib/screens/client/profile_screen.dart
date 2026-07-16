@@ -9,6 +9,9 @@ import '../../services/mock_data.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/metric_card.dart';
 import '../../widgets/premium_bottom_nav.dart';
+import 'favorites_screen.dart';
+import 'history_screen.dart';
+import 'home_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -24,7 +27,16 @@ class ProfileScreen extends StatelessWidget {
       bottomNavigationBar: PremiumBottomNav(
         currentIndex: 3,
         onTap: (index) {
-          if (index == 0) Navigator.pop(context);
+          final route = switch (index) {
+            0 => HomeScreen.route,
+            1 => FavoritesScreen.route,
+            2 => HistoryScreen.route,
+            3 => ProfileScreen.route,
+            _ => HomeScreen.route,
+          };
+          if (route != ProfileScreen.route) {
+            Navigator.pushReplacementNamed(context, route);
+          }
         },
       ),
       body: isSignedIn
