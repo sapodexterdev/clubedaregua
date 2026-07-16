@@ -101,26 +101,33 @@ Ordem inicial:
 
 ## Seções
 
-### Mais bem avaliadas
+### Destaque para você
 
 - primeiro bloco de conteúdo;
 - exibir uma barbearia em card grande;
 - cabeçalho com `Ver todas`;
 - `Ver todas` abre uma listagem completa e navegável da seção;
-- ícone de estrela outline, sem usar fogo genérico em todas as seções.
+- usar dados reais da unidade e não inventar avaliações ou disponibilidade;
+- ícone Premium outline, sem usar fogo genérico em todas as seções.
 
-### Próximos horários
+### Abertas agora
 
 - cards horizontais compactos;
-- mostrar nome, nota, distância, status e próximo horário;
-- ordenar pelo horário disponível mais próximo;
-- título completo: `Próximos horários disponíveis`.
+- mostrar somente unidades abertas conforme os horários cadastrados;
+- mostrar nome, nota da equipe, distância ou bairro, horário e faixa de preço;
+- não anunciar próximo horário antes de consultar disponibilidade real.
 
 ### Perto de você
 
-- cards grandes ou lista vertical;
+- cards horizontais compactos;
 - ordenar por distância quando a localização estiver disponível;
-- sem localização, ocultar a seção e apresentar ação para definir cidade.
+- sem localização precisa, ocultar esta seção.
+
+### Outras barbearias
+
+- reunir unidades restantes que ainda não apareceram nas seções anteriores;
+- usar cards horizontais compactos;
+- ocultar a seção quando não houver itens restantes.
 
 Não exibir seções duplicadas quando todas contiverem exatamente as mesmas
 barbearias.

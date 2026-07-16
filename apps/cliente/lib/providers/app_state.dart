@@ -130,6 +130,9 @@ class AppState extends ChangeNotifier {
     return items;
   }
 
+  List<PublicBarbershop> get openBarbershops =>
+      discoveredBarbershops.where((shop) => shop.isOpen).toList();
+
   List<PublicBarbershop> get popularBarbershops {
     final items = List<PublicBarbershop>.of(discoveredBarbershops)
       ..sort((a, b) => b.reviewCount.compareTo(a.reviewCount));

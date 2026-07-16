@@ -46,6 +46,24 @@ class HomeScreen extends StatelessWidget {
         child: Consumer<AppState>(
           builder: (context, state, _) {
             final shops = state.discoveredBarbershops;
+            final topRated = state.topRatedBarbershops;
+            final featured = topRated.isEmpty ? null : topRated.first;
+            final usedIds = <String>{
+              if (featured != null) featured.identity.id,
+            };
+            final openShops = state.openBarbershops
+                .where((shop) => !usedIds.contains(shop.identity.id))
+                .toList();
+            usedIds.addAll(openShops.map((shop) => shop.identity.id));
+            final nearbyShops = state.useCurrentLocation
+                ? state.nearbyBarbershops
+                    .where((shop) => !usedIds.contains(shop.identity.id))
+                    .toList()
+                : const <PublicBarbershop>[];
+            usedIds.addAll(nearbyShops.map((shop) => shop.identity.id));
+            final otherShops = shops
+                .where((shop) => !usedIds.contains(shop.identity.id))
+                .toList();
 
             return RefreshIndicator(
               color: AppColors.orange,
@@ -82,24 +100,29 @@ class HomeScreen extends StatelessWidget {
                   else if (state.hasDiscoveryQuery)
                     _SearchResults(shops: shops)
                   else ...[
-                    _DiscoverySection(
-                      title: 'Mais bem avaliadas',
-                      shops: state.topRatedBarbershops,
-                    ),
-                    _DiscoverySection(
-                      title: 'Próximos horários disponíveis',
-                      shops: shops,
-                      compact: true,
-                    ),
-                    _DiscoverySection(
-                      title: 'Perto de você',
-                      shops: state.nearbyBarbershops,
-                    ),
-                    _DiscoverySection(
-                      title: 'Mais procuradas',
-                      shops: state.popularBarbershops,
-                      compact: true,
-                    ),
+                    if (featured != null)
+                      _DiscoverySection(
+                        title: 'Destaque para você',
+                        shops: [featured],
+                      ),
+                    if (openShops.isNotEmpty)
+                      _DiscoverySection(
+                        title: 'Abertas agora',
+                        shops: openShops,
+                        compact: true,
+                      ),
+                    if (nearbyShops.isNotEmpty)
+                      _DiscoverySection(
+                        title: 'Perto de você',
+                        shops: nearbyShops,
+                        compact: true,
+                      ),
+                    if (otherShops.isNotEmpty)
+                      _DiscoverySection(
+                        title: 'Outras barbearias',
+                        shops: otherShops,
+                        compact: true,
+                      ),
                   ],
                 ],
               ),
@@ -516,6 +539,7 @@ class _DiscoverySection extends StatelessWidget {
           children: [
             _SectionHeader(
               title: title,
+              icon: _sectionIcon,
               onViewAll: () => _showAllBarbershops(context),
             ),
             const SizedBox(height: 12),
@@ -537,6 +561,7 @@ class _DiscoverySection extends StatelessWidget {
         children: [
           _SectionHeader(
             title: title,
+            icon: _sectionIcon,
             onViewAll: () => _showAllBarbershops(context),
           ),
           const SizedBox(height: 12),
@@ -569,6 +594,13 @@ class _DiscoverySection extends StatelessWidget {
         shops: shops,
       ),
     );
+  }
+
+  IconData get _sectionIcon {
+    if (title == 'Abertas agora') return Icons.schedule_rounded;
+    if (title == 'Perto de você') return Icons.near_me_outlined;
+    if (title == 'Outras barbearias') return Icons.storefront_outlined;
+    return Icons.workspace_premium_outlined;
   }
 }
 
@@ -842,17 +874,22 @@ class _LargeCardContent extends StatelessWidget {
 }
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, required this.onViewAll});
+  const _SectionHeader({
+    required this.title,
+    required this.icon,
+    required this.onViewAll,
+  });
 
   final String title;
+  final IconData icon;
   final VoidCallback onViewAll;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Icon(
-          Icons.local_fire_department_rounded,
+        Icon(
+          icon,
           color: AppColors.orange,
           size: 15,
         ),
@@ -891,11 +928,101 @@ class _CompactCardContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final coverUrl = shop.identity.coverUrl.isEmpty
+        ? AppConstants.heroBarbershop
+        : shop.identity.coverUrl;
     return Row(
       children: [
-        _RatingBadge(rating: shop.rating),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: SizedBox(
+            width: 72,
+            height: 104,
+            child: Image.network(
+              coverUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Image.asset(
+                AppConstants.splashBarberReference,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+        ),
         const SizedBox(width: 12),
-        Expanded(child: _ShopMainInfo(shop: shop)),
+        Expanded(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                shop.identity.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.text,
+                  fontSize: 14,
+                  height: 1.15,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 7),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.star_rounded,
+                    color: AppColors.orange,
+                    size: 14,
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    shop.rating.toStringAsFixed(1),
+                    style: const TextStyle(
+                      color: AppColors.text,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      shop.distanceKm.isFinite
+                          ? shop.distanceLabel
+                          : shop.neighborhood,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '${shop.statusLabel} · ${shop.nextSlot}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: shop.isOpen ? AppColors.success : AppColors.muted,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                shop.priceRange,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.orange,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
         const Icon(Icons.chevron_right_rounded, color: AppColors.orange),
       ],
     );
