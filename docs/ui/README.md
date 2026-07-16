@@ -48,6 +48,7 @@ Implementacao
 - `UI-004-Onboarding-03`
 - `UI-005-Onboarding-04`
 - `UI-006-Home-Publica`
+- `UI-007-Perfil-Barbearia`
 
 ## Regra de Implementacao
 
