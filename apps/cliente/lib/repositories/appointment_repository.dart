@@ -134,7 +134,7 @@ class AppointmentRepository {
 
       return times.toSet().toList()..sort();
     } catch (_) {
-      return const [];
+      rethrow;
     }
   }
 

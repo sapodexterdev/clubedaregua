@@ -18,7 +18,9 @@ class AppState extends ChangeNotifier {
   final _locationService = const LocationService();
 
   bool isLoading = false;
+  bool isLoadingAvailability = false;
   String? discoveryLoadError;
+  String? availabilityError;
   String selectedTab = 'home';
   Barber? selectedBarber = MockData.barbers.first;
   ServiceItem? selectedService = MockData.services.first;
@@ -45,6 +47,7 @@ class AppState extends ChangeNotifier {
   String? locationError;
   double? _deviceLatitude;
   double? _deviceLongitude;
+  int _availabilityRequestId = 0;
   bool isSignedIn = false;
   bool lastBookingRequestCreated = false;
 
@@ -167,8 +170,9 @@ class AppState extends ChangeNotifier {
 
   List<ServiceItem> get servicesForSelectedBarber {
     final barber = selectedBarber;
-    if (barber == null || barber.serviceIds.isEmpty) return services;
-    return services
+    final source = selectedBarbershop?.services ?? services;
+    if (barber == null || barber.serviceIds.isEmpty) return source;
+    return source
         .where((service) => barber.serviceIds.contains(service.id))
         .toList();
   }
@@ -532,25 +536,41 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> refreshAvailableTimes() async {
+    final requestId = ++_availabilityRequestId;
     final barber = selectedBarber;
     final service = selectedService;
     if (barber == null || service == null) {
       availableTimes = const [];
+      availabilityError = null;
       notifyListeners();
       return;
     }
 
-    final times = await _appointmentRepository.fetchAvailableTimes(
-      barberId: barber.id,
-      barberShopId: barber.barberShopId,
-      date: selectedDate,
-      durationMinutes: service.durationMinutes,
-    );
-    availableTimes = _filterTimesBySettings(times);
-    if (!availableTimes.contains(selectedTime)) {
-      selectedTime = availableTimes.isEmpty ? '' : availableTimes.first;
-    }
+    isLoadingAvailability = true;
+    availabilityError = null;
+    availableTimes = const [];
+    selectedTime = '';
     notifyListeners();
+    try {
+      final times = await _appointmentRepository.fetchAvailableTimes(
+        barberId: barber.id,
+        barberShopId: barber.barberShopId,
+        date: selectedDate,
+        durationMinutes: service.durationMinutes,
+      );
+      if (requestId != _availabilityRequestId) return;
+      availableTimes = _filterTimesBySettings(times);
+      selectedTime = availableTimes.isEmpty ? '' : availableTimes.first;
+    } catch (_) {
+      if (requestId != _availabilityRequestId) return;
+      availableTimes = const [];
+      availabilityError = 'Não foi possível consultar os horários.';
+    } finally {
+      if (requestId == _availabilityRequestId) {
+        isLoadingAvailability = false;
+        notifyListeners();
+      }
+    }
   }
 
   bool _selectedDateIsAllowed() {

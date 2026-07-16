@@ -1,694 +1,208 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../models/barber.dart';
+import '../../models/service_item.dart';
 import '../../providers/app_state.dart';
-import '../../screens/auth/login_screen.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/service_card.dart';
 import 'appointment_screen.dart';
 
-class BarberDetailsScreen extends StatefulWidget {
+class BarberDetailsScreen extends StatelessWidget {
   const BarberDetailsScreen({super.key});
 
   static const route = '/barber-details';
 
   @override
-  State<BarberDetailsScreen> createState() => _BarberDetailsScreenState();
-}
-
-class _BarberDetailsScreenState extends State<BarberDetailsScreen> {
-  int selectedTab = 0;
-
-  @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(
       builder: (context, state, _) {
-        final barber = state.selectedBarber ??
-            (state.barbers.isEmpty ? null : state.barbers.last);
-
-        if (barber == null) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+        final shop = state.selectedBarbershop;
+        if (shop == null) {
+          return Scaffold(
+            backgroundColor: AppColors.background,
+            appBar: AppBar(backgroundColor: AppColors.background),
+            body: const _MissingSelection(
+              message: 'Escolha uma barbearia para consultar os horários.',
+            ),
           );
         }
 
+        final services = state.servicesForSelectedBarber;
+        final canContinue = state.selectedService != null &&
+            state.selectedBarber != null &&
+            state.selectedTime.isNotEmpty &&
+            !state.isLoadingAvailability;
+
         return Scaffold(
           backgroundColor: AppColors.background,
-          body: Stack(
+          appBar: AppBar(
+            backgroundColor: AppColors.background,
+            foregroundColor: AppColors.text,
+            elevation: 0,
+            title: const Text(
+              'Escolha seu horário',
+              style: TextStyle(
+                fontFamily: 'Barlow Condensed',
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          bottomNavigationBar: _ContinueBar(
+            enabled: canContinue,
+            onPressed: () => Navigator.pushNamed(
+              context,
+              AppointmentScreen.route,
+            ),
+          ),
+          body: ListView(
+            padding: const EdgeInsets.fromLTRB(22, 8, 22, 32),
             children: [
-              SizedBox(
-                height: 330,
-                width: double.infinity,
-                child: Image.network(barber.imageUrl, fit: BoxFit.cover),
+              _ShopContext(
+                name: shop.identity.name,
+                location: shop.identity.locationLabel,
               ),
-              Positioned(
-                left: 22,
-                right: 22,
-                top: 42,
-                child: Row(
-                  children: [
-                    _CircleButton(
-                      icon: Icons.chevron_left_rounded,
-                      onTap: () => Navigator.pop(context),
+              const SizedBox(height: 28),
+              _StepHeader(
+                number: 1,
+                title: 'Escolha o serviço',
+                caption: state.selectedService == null
+                    ? 'Selecione uma opção para continuar'
+                    : _serviceCaption(state.selectedService!),
+              ),
+              const SizedBox(height: 12),
+              if (services.isEmpty)
+                const _EmptyBlock('Nenhum serviço disponível para a equipe.')
+              else
+                ...services.map(
+                  (service) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: ServiceCard(
+                      service: service,
+                      isSelected: state.selectedService?.id == service.id,
+                      onTap: () => state.selectService(service),
                     ),
-                    const Spacer(),
-                    _CircleButton(
-                      icon: Icons.more_horiz_rounded,
-                      onTap: () {},
-                    ),
-                  ],
+                  ),
                 ),
+              const SizedBox(height: 22),
+              _StepHeader(
+                number: 2,
+                title: 'Escolha o profissional',
+                caption: state.selectedBarber?.name ??
+                    'Selecione quem fará o atendimento',
               ),
-              DraggableScrollableSheet(
-                initialChildSize: .68,
-                minChildSize: .68,
-                maxChildSize: .92,
-                builder: (context, controller) {
-                  return Container(
-                    decoration: const BoxDecoration(
-                      color: AppColors.background,
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(34),
-                      ),
-                    ),
-                    child: ListView(
-                      controller: controller,
-                      padding: const EdgeInsets.fromLTRB(24, 28, 24, 28),
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    barber.name,
-                                    style: const TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 14),
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.star_rounded,
-                                          color: Color(0xFFFFB000), size: 20),
-                                      const SizedBox(width: 5),
-                                      Text(
-                                        '${barber.rating} (116)',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 14),
-                                      Flexible(
-                                        child: Text(
-                                          barber.shopName,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            color: AppColors.orange,
-                                            fontWeight: FontWeight.w800,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            InkWell(
-                              borderRadius: BorderRadius.circular(29),
-                              onTap: () {
-                                if (!state.isSignedIn) {
-                                  Navigator.pushNamed(
-                                    context,
-                                    LoginScreen.route,
-                                  );
-                                  return;
-                                }
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Favorito salvo.'),
-                                  ),
-                                );
-                              },
-                              child: Container(
-                                width: 58,
-                                height: 58,
-                                decoration: BoxDecoration(
-                                  color: AppColors.card,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: AppColors.stroke),
-                                ),
-                                child: const Icon(
-                                  Icons.favorite_border_rounded,
-                                  color: AppColors.orange,
-                                  size: 28,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 54),
-                        Row(
-                          children: [
-                            _PillTab(
-                              label: 'Agendar',
-                              selected: selectedTab == 0,
-                              onTap: () => setState(() => selectedTab = 0),
-                            ),
-                            const SizedBox(width: 12),
-                            _PillTab(
-                              label: 'Sobre',
-                              selected: selectedTab == 1,
-                              onTap: () => setState(() => selectedTab = 1),
-                            ),
-                            const SizedBox(width: 12),
-                            _PillTab(
-                              label: 'Avaliações',
-                              selected: selectedTab == 2,
-                              onTap: () => setState(() => selectedTab = 2),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 34),
-                        if (selectedTab == 0)
-                          _BookingTab(state: state)
-                        else if (selectedTab == 1)
-                          _AboutTab(
-                            bio: barber.bio,
-                            shopName: barber.shopName,
-                          )
-                        else
-                          _ReviewsTab(rating: barber.rating),
-                      ],
-                    ),
-                  );
-                },
+              const SizedBox(height: 12),
+              if (shop.barbers.isEmpty)
+                const _EmptyBlock('Nenhum profissional disponível.')
+              else
+                _BarberStrip(
+                  barbers: shop.barbers,
+                  selected: state.selectedBarber,
+                  onSelected: state.selectBarber,
+                ),
+              const SizedBox(height: 28),
+              _StepHeader(
+                number: 3,
+                title: 'Escolha a data',
+                caption: _longDate(state.selectedDate),
               ),
+              const SizedBox(height: 12),
+              _DateStrip(
+                selectedDate: state.selectedDate,
+                daysAhead: shop.identity.bookingDaysAhead,
+                onSelected: state.selectDate,
+              ),
+              const SizedBox(height: 28),
+              _StepHeader(
+                number: 4,
+                title: 'Escolha o horário',
+                caption: state.selectedTime.isEmpty
+                    ? 'Horários livres para a data selecionada'
+                    : 'Selecionado às ${state.selectedTime}',
+              ),
+              const SizedBox(height: 14),
+              _Availability(
+                loading: state.isLoadingAvailability,
+                error: state.availabilityError,
+                times: state.availableTimes,
+                selectedTime: state.selectedTime,
+                onSelected: state.selectTime,
+                onRetry: state.refreshAvailableTimes,
+              ),
+              if (canContinue) ...[
+                const SizedBox(height: 26),
+                _BookingSummary(
+                  service: state.selectedService!,
+                  barber: state.selectedBarber!,
+                  date: state.selectedDate,
+                  time: state.selectedTime,
+                ),
+              ],
             ],
           ),
         );
       },
     );
   }
-}
 
-class _CircleButton extends StatelessWidget {
-  const _CircleButton({required this.icon, required this.onTap});
-
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(28),
-      onTap: onTap,
-      child: Container(
-        width: 54,
-        height: 54,
-        decoration: BoxDecoration(
-          color: AppColors.card,
-          shape: BoxShape.circle,
-          border: Border.all(color: AppColors.stroke),
-        ),
-        child: Icon(icon, color: AppColors.text, size: 28),
-      ),
-    );
+  String _serviceCaption(ServiceItem service) {
+    return '${service.durationMinutes} min · R\$ ${service.price.toStringAsFixed(0)}';
   }
 }
 
-class _PillTab extends StatelessWidget {
-  const _PillTab({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
+class _ShopContext extends StatelessWidget {
+  const _ShopContext({required this.name, required this.location});
 
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(29),
-        onTap: onTap,
-        child: Container(
-          height: 58,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: selected ? AppColors.orange : AppColors.card,
-            borderRadius: BorderRadius.circular(29),
-            border: Border.all(
-              color: selected ? AppColors.orange : AppColors.stroke,
-            ),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: selected ? AppColors.onGold : AppColors.muted,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BookingTab extends StatelessWidget {
-  const _BookingTab({required this.state});
-
-  final AppState state;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          _monthLabel(state.selectedDate),
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 18),
-        _CalendarStrip(
-          selectedDate: state.selectedDate,
-          onSelected: state.selectDate,
-        ),
-        const SizedBox(height: 32),
-        const Text(
-          'Horários',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 18),
-        _TimeStrip(
-          times: state.availableTimes,
-          selectedTime: state.selectedTime,
-          onSelected: state.selectTime,
-        ),
-        const SizedBox(height: 36),
-        _BookingSummary(
-          date: state.selectedDate,
-          time: state.selectedTime,
-        ),
-        const SizedBox(height: 22),
-        SizedBox(
-          height: 74,
-          child: ElevatedButton(
-            onPressed: state.availableTimes.isEmpty
-                ? null
-                : () => Navigator.pushNamed(
-                      context,
-                      AppointmentScreen.route,
-                    ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.orange,
-              foregroundColor: AppColors.onGold,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(36),
-              ),
-            ),
-            child: const Text(
-              'Agendar agora',
-              style: TextStyle(
-                fontSize: 19,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  String _monthLabel(DateTime date) {
-    const months = [
-      'janeiro',
-      'fevereiro',
-      'março',
-      'abril',
-      'maio',
-      'junho',
-      'julho',
-      'agosto',
-      'setembro',
-      'outubro',
-      'novembro',
-      'dezembro',
-    ];
-
-    final month = months[date.month - 1];
-    return '${month[0].toUpperCase()}${month.substring(1)} ${date.year}';
-  }
-}
-
-class _CalendarStrip extends StatelessWidget {
-  const _CalendarStrip({
-    required this.selectedDate,
-    required this.onSelected,
-  });
-
-  final DateTime selectedDate;
-  final ValueChanged<DateTime> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final today = DateTime.now();
-    final days = List.generate(
-      10,
-      (index) => DateTime(today.year, today.month, today.day + index),
-    );
-
-    return SizedBox(
-      height: 92,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: days.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
-        itemBuilder: (context, index) {
-          final day = days[index];
-          final selected = DateUtils.isSameDay(day, selectedDate);
-
-          return InkWell(
-            borderRadius: BorderRadius.circular(28),
-            onTap: () => onSelected(day),
-            child: Container(
-              width: 54,
-              decoration: BoxDecoration(
-                color: selected ? AppColors.orange : AppColors.background,
-                borderRadius: BorderRadius.circular(28),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    _weekdayLabel(day.weekday),
-                    style: TextStyle(
-                      color: selected ? AppColors.onGold : AppColors.muted,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Container(
-                    width: 42,
-                    height: 42,
-                    alignment: Alignment.center,
-                    decoration: const BoxDecoration(
-                      color: AppColors.card,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      day.day.toString().padLeft(2, '0'),
-                      style: TextStyle(
-                        color: selected ? AppColors.orange : AppColors.text,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  String _weekdayLabel(int weekday) {
-    const labels = {
-      DateTime.monday: 'Seg',
-      DateTime.tuesday: 'Ter',
-      DateTime.wednesday: 'Qua',
-      DateTime.thursday: 'Qui',
-      DateTime.friday: 'Sex',
-      DateTime.saturday: 'Sáb',
-      DateTime.sunday: 'Dom',
-    };
-
-    return labels[weekday] ?? '';
-  }
-}
-
-class _TimeStrip extends StatelessWidget {
-  const _TimeStrip({
-    required this.times,
-    required this.selectedTime,
-    required this.onSelected,
-  });
-
-  final List<String> times;
-  final String selectedTime;
-  final ValueChanged<String> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    if (times.isEmpty) {
-      return const Text(
-        'Nenhum horario disponivel para esta data.',
-        style: TextStyle(color: AppColors.muted, fontWeight: FontWeight.w700),
-      );
-    }
-
-    return SizedBox(
-      height: 52,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: times.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
-          final time = times[index];
-          final selected = time == selectedTime;
-
-          return InkWell(
-            borderRadius: BorderRadius.circular(26),
-            onTap: () => onSelected(time),
-            child: Container(
-              width: 94,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: selected ? AppColors.orange : AppColors.background,
-                borderRadius: BorderRadius.circular(26),
-              ),
-              child: Text(
-                time,
-                style: TextStyle(
-                  color: selected ? AppColors.onGold : AppColors.muted,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _BookingSummary extends StatelessWidget {
-  const _BookingSummary({
-    required this.date,
-    required this.time,
-  });
-
-  final DateTime date;
-  final String time;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 18,
-        vertical: 18,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(28),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.calendar_month_outlined, color: AppColors.text),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              _dateLabel(date),
-              style: const TextStyle(fontWeight: FontWeight.w800),
-            ),
-          ),
-          Text(
-            time.isEmpty ? '-' : '$time - ${_endTime(time)}',
-            style: const TextStyle(color: AppColors.muted),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _dateLabel(DateTime date) {
-    const months = [
-      'janeiro',
-      'fevereiro',
-      'março',
-      'abril',
-      'maio',
-      'junho',
-      'julho',
-      'agosto',
-      'setembro',
-      'outubro',
-      'novembro',
-      'dezembro',
-    ];
-
-    const weekdays = {
-      DateTime.monday: 'Segunda-feira',
-      DateTime.tuesday: 'Terça-feira',
-      DateTime.wednesday: 'Quarta-feira',
-      DateTime.thursday: 'Quinta-feira',
-      DateTime.friday: 'Sexta-feira',
-      DateTime.saturday: 'Sábado',
-      DateTime.sunday: 'Domingo',
-    };
-
-    return '${weekdays[date.weekday]}, ${date.day} de ${months[date.month - 1]}';
-  }
-
-  String _endTime(String value) {
-    if (value.length < 5) return '';
-    final parts = value.split(':');
-    final hour = int.parse(parts[0]);
-    final minute = int.parse(parts[1]);
-    final start = DateTime(2025, 1, 1, hour, minute);
-    final end = start.add(const Duration(hours: 1));
-    final endHour = end.hour.toString().padLeft(2, '0');
-    final endMinute = end.minute.toString().padLeft(2, '0');
-    return '$endHour:$endMinute';
-  }
-}
-
-class _AboutTab extends StatelessWidget {
-  const _AboutTab({
-    required this.bio,
-    required this.shopName,
-  });
-
-  final String bio;
-  final String shopName;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Sobre o profissional',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
-        ),
-        const SizedBox(height: 14),
-        Text(
-          bio,
-          style: const TextStyle(
-            color: AppColors.muted,
-            height: 1.55,
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 24),
-        _InfoTile(
-          icon: Icons.storefront_rounded,
-          title: shopName,
-          subtitle: 'Atendimento com horário marcado e experiência premium.',
-        ),
-        const SizedBox(height: 12),
-        const _InfoTile(
-          icon: Icons.verified_rounded,
-          title: 'Especialista verificado',
-          subtitle: 'Profissional ativo na plataforma Clube da Régua.',
-        ),
-      ],
-    );
-  }
-}
-
-class _ReviewsTab extends StatelessWidget {
-  const _ReviewsTab({required this.rating});
-
-  final double rating;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '$rating de 5,0',
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'Baseado em 116 avaliações',
-          style: TextStyle(color: AppColors.muted, fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 20),
-        const _ReviewTile(
-          name: 'Lucas Almeida',
-          comment: 'Corte muito bem feito, atendimento rápido e pontual.',
-        ),
-        const SizedBox(height: 12),
-        const _ReviewTile(
-          name: 'Pedro Henrique',
-          comment: 'Ambiente limpo, profissional cuidadoso e acabamento ótimo.',
-        ),
-      ],
-    );
-  }
-}
-
-class _InfoTile extends StatelessWidget {
-  const _InfoTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
+  final String name;
+  final String location;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(22),
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.stroke),
       ),
       child: Row(
         children: [
-          Icon(icon, color: AppColors.orange),
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: AppColors.orange.withOpacity(.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.storefront_outlined,
+              color: AppColors.orange,
+            ),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: const TextStyle(fontWeight: FontWeight.w900)),
-                const SizedBox(height: 4),
                 Text(
-                  subtitle,
-                  style: const TextStyle(color: AppColors.muted),
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.text,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  location,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 11,
+                  ),
                 ),
               ],
             ),
@@ -699,40 +213,456 @@ class _InfoTile extends StatelessWidget {
   }
 }
 
-class _ReviewTile extends StatelessWidget {
-  const _ReviewTile({
-    required this.name,
-    required this.comment,
+class _StepHeader extends StatelessWidget {
+  const _StepHeader({
+    required this.number,
+    required this.title,
+    required this.caption,
   });
 
-  final String name;
-  final String comment;
+  final int number;
+  final String title;
+  final String caption;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 26,
+          height: 26,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(
+            color: AppColors.orange,
+            shape: BoxShape.circle,
+          ),
+          child: Text(
+            '$number',
+            style: const TextStyle(
+              color: AppColors.onGold,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: AppColors.text,
+                  fontFamily: 'Barlow Condensed',
+                  fontSize: 22,
+                  height: 1,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                caption,
+                style: const TextStyle(color: AppColors.muted, fontSize: 11),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BarberStrip extends StatelessWidget {
+  const _BarberStrip({
+    required this.barbers,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final List<Barber> barbers;
+  final Barber? selected;
+  final ValueChanged<Barber> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 122,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: barbers.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, index) {
+          final barber = barbers[index];
+          final isSelected = selected?.id == barber.id;
+          return InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () => onSelected(barber),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: 112,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.orange.withOpacity(.1)
+                    : AppColors.card,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isSelected ? AppColors.orange : AppColors.stroke,
+                ),
+              ),
+              child: Column(
+                children: [
+                  CircleAvatar(
+                    radius: 27,
+                    backgroundColor: AppColors.elevated,
+                    backgroundImage: barber.imageUrl.isEmpty
+                        ? null
+                        : NetworkImage(barber.imageUrl),
+                    child: barber.imageUrl.isEmpty
+                        ? const Icon(
+                            Icons.person_outline_rounded,
+                            color: AppColors.orange,
+                          )
+                        : null,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    barber.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.text,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _DateStrip extends StatelessWidget {
+  const _DateStrip({
+    required this.selectedDate,
+    required this.daysAhead,
+    required this.onSelected,
+  });
+
+  final DateTime selectedDate;
+  final int daysAhead;
+  final ValueChanged<DateTime> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final count = (daysAhead.clamp(0, 60) + 1).toInt();
+    final days = List.generate(
+      count,
+      (index) => today.add(Duration(days: index)),
+    );
+
+    return SizedBox(
+      height: 78,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: days.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final date = days[index];
+          final selected = DateUtils.isSameDay(date, selectedDate);
+          return InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => onSelected(date),
+            child: Container(
+              width: 58,
+              decoration: BoxDecoration(
+                color: selected ? AppColors.orange : AppColors.card,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: selected ? AppColors.orange : AppColors.stroke,
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    _weekday(date.weekday),
+                    style: TextStyle(
+                      color: selected ? AppColors.onGold : AppColors.muted,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    '${date.day}'.padLeft(2, '0'),
+                    style: TextStyle(
+                      color: selected ? AppColors.onGold : AppColors.text,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _Availability extends StatelessWidget {
+  const _Availability({
+    required this.loading,
+    required this.error,
+    required this.times,
+    required this.selectedTime,
+    required this.onSelected,
+    required this.onRetry,
+  });
+
+  final bool loading;
+  final String? error;
+  final List<String> times;
+  final String selectedTime;
+  final ValueChanged<String> onSelected;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return const SizedBox(
+        height: 90,
+        child: Center(
+          child: CircularProgressIndicator(
+            color: AppColors.orange,
+            strokeWidth: 2,
+          ),
+        ),
+      );
+    }
+    if (error != null) {
+      return _StateBlock(
+        icon: Icons.cloud_off_outlined,
+        message: error!,
+        actionLabel: 'Tentar novamente',
+        onAction: onRetry,
+      );
+    }
+    if (times.isEmpty) {
+      return const _StateBlock(
+        icon: Icons.event_busy_outlined,
+        message: 'Nenhum horário disponível para esta data.',
+      );
+    }
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final time in times)
+          ChoiceChip(
+            label: Text(time),
+            selected: time == selectedTime,
+            onSelected: (_) => onSelected(time),
+            selectedColor: AppColors.orange,
+            backgroundColor: AppColors.card,
+            side: BorderSide(
+              color: time == selectedTime
+                  ? AppColors.orange
+                  : AppColors.stroke,
+            ),
+            labelStyle: TextStyle(
+              color: time == selectedTime ? AppColors.onGold : AppColors.text,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _BookingSummary extends StatelessWidget {
+  const _BookingSummary({
+    required this.service,
+    required this.barber,
+    required this.date,
+    required this.time,
+  });
+
+  final ServiceItem service;
+  final Barber barber;
+  final DateTime date;
+  final String time;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(22),
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.stroke),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(name, style: const TextStyle(fontWeight: FontWeight.w900)),
-              const Spacer(),
-              const Icon(Icons.star_rounded,
-                  color: Color(0xFFFFB000), size: 18),
-              const SizedBox(width: 4),
-              const Text('5,0', style: TextStyle(fontWeight: FontWeight.w800)),
-            ],
+          const Text(
+            'Seu horário',
+            style: TextStyle(
+              color: AppColors.orange,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+            ),
           ),
-          const SizedBox(height: 8),
-          Text(comment, style: const TextStyle(color: AppColors.muted)),
+          const SizedBox(height: 10),
+          Text(
+            '${service.name} com ${barber.name}',
+            style: const TextStyle(
+              color: AppColors.text,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            '${_longDate(date)} às $time · R\$ ${service.price.toStringAsFixed(0)}',
+            style: const TextStyle(color: AppColors.muted, fontSize: 12),
+          ),
         ],
       ),
     );
   }
+}
+
+class _ContinueBar extends StatelessWidget {
+  const _ContinueBar({required this.enabled, required this.onPressed});
+
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
+        decoration: const BoxDecoration(
+          color: AppColors.background,
+          border: Border(top: BorderSide(color: AppColors.stroke)),
+        ),
+        child: FilledButton(
+          onPressed: enabled ? onPressed : null,
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(54),
+            backgroundColor: AppColors.orange,
+            foregroundColor: AppColors.onGold,
+          ),
+          child: const Text('CONTINUAR'),
+        ),
+      ),
+    );
+  }
+}
+
+class _StateBlock extends StatelessWidget {
+  const _StateBlock({
+    required this.icon,
+    required this.message,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  final IconData icon;
+  final String message;
+  final String? actionLabel;
+  final Future<void> Function()? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.stroke),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: AppColors.muted, size: 28),
+          const SizedBox(height: 9),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.muted, fontSize: 12),
+          ),
+          if (onAction != null && actionLabel != null) ...[
+            const SizedBox(height: 10),
+            TextButton(onPressed: onAction, child: Text(actionLabel!)),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyBlock extends StatelessWidget {
+  const _EmptyBlock(this.message);
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return _StateBlock(icon: Icons.info_outline_rounded, message: message);
+  }
+}
+
+class _MissingSelection extends StatelessWidget {
+  const _MissingSelection({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: _StateBlock(
+          icon: Icons.calendar_month_outlined,
+          message: message,
+        ),
+      ),
+    );
+  }
+}
+
+String _weekday(int weekday) {
+  const labels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+  return labels[weekday - 1];
+}
+
+String _longDate(DateTime date) {
+  const months = [
+    'jan',
+    'fev',
+    'mar',
+    'abr',
+    'mai',
+    'jun',
+    'jul',
+    'ago',
+    'set',
+    'out',
+    'nov',
+    'dez',
+  ];
+  return '${_weekday(date.weekday)}, ${date.day} de ${months[date.month - 1]}';
 }
