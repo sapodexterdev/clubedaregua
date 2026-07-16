@@ -1,4 +1,5 @@
 import '../models/appointment.dart';
+import '../services/auth_service.dart';
 import '../services/mock_data.dart';
 import '../services/supabase_rest_service.dart';
 
@@ -9,7 +10,19 @@ class AppointmentRepository {
   final SupabaseRestService _rest;
 
   Future<List<Appointment>> fetchAppointments() async {
-    return MockData.appointments;
+    if (!_rest.isConfigured) return const [];
+    final session = await _authenticatedSession();
+    if (session == null) return const [];
+
+    final rows = await _rest.getRows(
+      'booking_requests',
+      select:
+          'id,requested_date,requested_time,status,total_price,barbers(name),services(name),barber_shops(name)',
+      filters: {'client_id': 'eq.${session.user.id}'},
+      order: 'requested_date.desc,requested_time.desc',
+      accessToken: session.accessToken,
+    );
+    return rows.map(Appointment.fromMap).toList();
   }
 
   Future<bool> createAppointment({
@@ -26,6 +39,8 @@ class AppointmentRepository {
     if (!_rest.isConfigured || barberShopId.isEmpty) return false;
 
     try {
+      final session = await _authenticatedSession();
+      if (session == null) return false;
       final hasConflict = await hasBookingConflict(
         barberId: barberId,
         date: date,
@@ -35,6 +50,7 @@ class AppointmentRepository {
 
       return await _rest.insertRow('booking_requests', {
         'barber_shop_id': barberShopId,
+        'client_id': session.user.id,
         'barber_id': barberId,
         'service_id': serviceId,
         'requested_date': _dateOnly(date),
@@ -44,7 +60,7 @@ class AppointmentRepository {
         'total_price': total,
         'notes':
             'Solicitacao criada pelo PWA Cliente. Pagamento: $paymentMethodLabel',
-      });
+      }, accessToken: session.accessToken);
     } catch (_) {
       return false;
     }
@@ -160,14 +176,35 @@ class AppointmentRepository {
     }
   }
 
-  Future<void> cancelAppointment(String appointmentId) async {
-    return;
+  Future<bool> cancelAppointment(String appointmentId) async {
+    if (!_rest.isConfigured || appointmentId.isEmpty) return false;
+    final session = await _authenticatedSession();
+    if (session == null) return false;
+    return _rest.updateRows(
+      'booking_requests',
+      data: const {'status': 'cancelled'},
+      filters: {
+        'id': 'eq.$appointmentId',
+        'client_id': 'eq.${session.user.id}',
+        'status': 'in.(new,contacted)',
+      },
+      accessToken: session.accessToken,
+    );
   }
 
   String _dateOnly(DateTime value) {
     final month = value.month.toString().padLeft(2, '0');
     final day = value.day.toString().padLeft(2, '0');
     return '${value.year}-$month-$day';
+  }
+
+  Future<AuthSession?> _authenticatedSession() async {
+    final auth = AuthService();
+    var session = auth.currentSession ?? await auth.restoreSession();
+    if (session?.isExpired == true) {
+      session = await auth.refreshSession();
+    }
+    return session;
   }
 
   Future<List<_Interval>> _blockedIntervals({

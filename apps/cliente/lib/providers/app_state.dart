@@ -19,8 +19,10 @@ class AppState extends ChangeNotifier {
 
   bool isLoading = false;
   bool isLoadingAvailability = false;
+  bool isLoadingAppointments = false;
   String? discoveryLoadError;
   String? availabilityError;
+  String? appointmentsLoadError;
   String selectedTab = 'home';
   Barber? selectedBarber = MockData.barbers.first;
   ServiceItem? selectedService = MockData.services.first;
@@ -31,7 +33,7 @@ class AppState extends ChangeNotifier {
   List<Barber> barbers = List.of(MockData.barbers);
   List<ServiceCategory> categories = List.of(MockData.categories);
   List<ServiceItem> services = List.of(MockData.services);
-  List<Appointment> appointments = List.of(MockData.appointments);
+  List<Appointment> appointments = const [];
   List<String> availableTimes = List.of(MockData.times);
   ShopIdentity? shopIdentity;
   List<PublicBarbershop> publicBarbershops = const [];
@@ -182,6 +184,7 @@ class AppState extends ChangeNotifier {
 
     isLoading = true;
     discoveryLoadError = null;
+    appointmentsLoadError = null;
     notifyListeners();
 
     final barbersFuture = _barberRepository.fetchBarbers();
@@ -194,7 +197,13 @@ class AppState extends ChangeNotifier {
     final fetchedBarbers = await barbersFuture;
     final fetchedCategories = await categoriesFuture;
     final fetchedServices = await servicesFuture;
-    final fetchedAppointments = await appointmentsFuture;
+    List<Appointment> fetchedAppointments;
+    try {
+      fetchedAppointments = await appointmentsFuture;
+    } catch (_) {
+      fetchedAppointments = const [];
+      appointmentsLoadError = 'Não foi possível carregar sua agenda.';
+    }
     List<ShopIdentity> fetchedShopIdentities;
     try {
       fetchedShopIdentities = await shopsFuture;
@@ -490,15 +499,42 @@ class AppState extends ChangeNotifier {
       paymentMethodLabel: paymentMethodLabel,
     );
 
-    appointments = await _appointmentRepository.fetchAppointments();
+    if (lastBookingRequestCreated) {
+      try {
+        appointments = await _appointmentRepository.fetchAppointments();
+        appointmentsLoadError = null;
+      } catch (_) {
+        appointmentsLoadError = 'Não foi possível atualizar sua agenda.';
+      }
+    }
     notifyListeners();
     return lastBookingRequestCreated;
   }
 
-  Future<void> cancelAppointment(String appointmentId) async {
-    await _appointmentRepository.cancelAppointment(appointmentId);
-    appointments = await _appointmentRepository.fetchAppointments();
+  Future<bool> cancelAppointment(String appointmentId) async {
+    try {
+      final cancelled =
+          await _appointmentRepository.cancelAppointment(appointmentId);
+      if (cancelled) await refreshAppointments();
+      return cancelled;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> refreshAppointments() async {
+    if (isLoadingAppointments) return;
+    isLoadingAppointments = true;
+    appointmentsLoadError = null;
     notifyListeners();
+    try {
+      appointments = await _appointmentRepository.fetchAppointments();
+    } catch (_) {
+      appointmentsLoadError = 'Não foi possível carregar sua agenda.';
+    } finally {
+      isLoadingAppointments = false;
+      notifyListeners();
+    }
   }
 
   void selectBarber(Barber barber) {

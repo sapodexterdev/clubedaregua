@@ -17,6 +17,7 @@ class SupabaseRestService {
     Map<String, String> filters = const {},
     String? order,
     int? limit,
+    String? accessToken,
   }) async {
     if (!isConfigured) return const [];
 
@@ -36,7 +37,8 @@ class SupabaseRestService {
           uri,
           headers: {
             'apikey': SupabaseConfig.anonKey,
-            'authorization': 'Bearer ${SupabaseConfig.anonKey}',
+            'authorization':
+                'Bearer ${accessToken ?? SupabaseConfig.anonKey}',
           },
         )
         .timeout(_requestTimeout);
@@ -56,8 +58,9 @@ class SupabaseRestService {
 
   Future<bool> insertRow(
     String table,
-    Map<String, dynamic> data,
-  ) async {
+    Map<String, dynamic> data, {
+    String? accessToken,
+  }) async {
     if (!isConfigured) return false;
 
     final uri = Uri.parse('${SupabaseConfig.url}/rest/v1/$table');
@@ -67,9 +70,10 @@ class SupabaseRestService {
           uri,
           headers: {
             'apikey': SupabaseConfig.anonKey,
-            'authorization': 'Bearer ${SupabaseConfig.anonKey}',
+            'authorization':
+                'Bearer ${accessToken ?? SupabaseConfig.anonKey}',
             'content-type': 'application/json',
-            'prefer': 'return=minimal',
+            'prefer': 'return=representation',
           },
           body: jsonEncode(data),
         )
@@ -79,7 +83,40 @@ class SupabaseRestService {
       throw StateError('Supabase REST ${response.statusCode}: ${response.body}');
     }
 
-    return true;
+    final decoded = jsonDecode(response.body);
+    return decoded is List && decoded.isNotEmpty;
+  }
+
+  Future<bool> updateRows(
+    String table, {
+    required Map<String, dynamic> data,
+    required Map<String, String> filters,
+    String? accessToken,
+  }) async {
+    if (!isConfigured) return false;
+
+    final uri = Uri.parse('${SupabaseConfig.url}/rest/v1/$table').replace(
+      queryParameters: filters,
+    );
+    final response = await http
+        .patch(
+          uri,
+          headers: {
+            'apikey': SupabaseConfig.anonKey,
+            'authorization':
+                'Bearer ${accessToken ?? SupabaseConfig.anonKey}',
+            'content-type': 'application/json',
+            'prefer': 'return=representation',
+          },
+          body: jsonEncode(data),
+        )
+        .timeout(_requestTimeout);
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw StateError('Supabase REST ${response.statusCode}: ${response.body}');
+    }
+    final decoded = jsonDecode(response.body);
+    return decoded is List && decoded.isNotEmpty;
   }
 
   Future<bool> exists(

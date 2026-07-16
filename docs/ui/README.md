@@ -52,6 +52,7 @@ Implementacao
 - `UI-008-Ver-Horarios`
 - `UI-009-Revisar-Agendamento`
 - `UI-010-Solicitacao-Enviada`
+- `UI-011-Agenda`
 
 ## Regra de Implementacao
 
