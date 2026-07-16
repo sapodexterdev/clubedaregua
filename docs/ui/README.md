@@ -51,6 +51,7 @@ Implementacao
 - `UI-007-Perfil-Barbearia`
 - `UI-008-Ver-Horarios`
 - `UI-009-Revisar-Agendamento`
+- `UI-010-Solicitacao-Enviada`
 
 ## Regra de Implementacao
 
