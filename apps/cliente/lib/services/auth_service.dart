@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/supabase_config.dart';
+import 'auth_callback_url.dart';
 
 class AuthService {
   static const _sessionKey = 'clubedaregua.client.session';
@@ -14,6 +15,9 @@ class AuthService {
   bool get isSignedIn => _currentSession?.accessToken.isNotEmpty == true;
 
   Future<AuthSession?> restoreSession() async {
+    final callbackSession = await _consumeAuthCallback();
+    if (callbackSession != null) return callbackSession;
+
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_sessionKey);
     if (raw == null || raw.isEmpty) return null;
@@ -68,7 +72,9 @@ class AuthService {
     _ensureConfigured();
 
     final response = await http.post(
-      Uri.parse('${SupabaseConfig.url}/auth/v1/signup'),
+      Uri.parse('${SupabaseConfig.url}/auth/v1/signup').replace(
+        queryParameters: {'redirect_to': _publicAppRedirectUrl()},
+      ),
       headers: _authHeaders,
       body: jsonEncode({
         'email': email.trim(),
@@ -119,7 +125,9 @@ class AuthService {
     _ensureConfigured();
 
     final response = await http.post(
-      Uri.parse('${SupabaseConfig.url}/auth/v1/recover'),
+      Uri.parse('${SupabaseConfig.url}/auth/v1/recover').replace(
+        queryParameters: {'redirect_to': _publicAppRedirectUrl()},
+      ),
       headers: _authHeaders,
       body: jsonEncode({'email': email.trim()}),
     );
@@ -149,6 +157,61 @@ class AuthService {
     _currentSession = session;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_sessionKey, jsonEncode(session.toMap()));
+  }
+
+  Future<AuthSession?> _consumeAuthCallback() async {
+    final fragment = Uri.base.fragment;
+    if (fragment.isEmpty) return null;
+
+    final parameters = Uri.splitQueryString(fragment);
+    final callbackError = parameters['error_description'];
+    if (callbackError != null && callbackError.isNotEmpty) {
+      clearAuthCallbackUrl();
+      return null;
+    }
+
+    final accessToken = parameters['access_token'];
+    final refreshToken = parameters['refresh_token'];
+    if (accessToken == null ||
+        accessToken.isEmpty ||
+        refreshToken == null ||
+        refreshToken.isEmpty) {
+      return null;
+    }
+
+    _ensureConfigured();
+    final response = await http.get(
+      Uri.parse('${SupabaseConfig.url}/auth/v1/user'),
+      headers: {
+        'apikey': SupabaseConfig.anonKey,
+        'authorization': 'Bearer $accessToken',
+      },
+    );
+    if (!_isSuccess(response)) throw AuthException.fromResponse(response);
+
+    final session = AuthSession.fromMap({
+      'access_token': accessToken,
+      'refresh_token': refreshToken,
+      'expires_in': int.tryParse(parameters['expires_in'] ?? '') ?? 3600,
+      'user': jsonDecode(response.body),
+    });
+    await _saveSession(session);
+    clearAuthCallbackUrl();
+    return session;
+  }
+
+  String _publicAppRedirectUrl() {
+    final current = Uri.base;
+    if (current.scheme != 'http' && current.scheme != 'https') {
+      return current.toString();
+    }
+    return Uri(
+      scheme: current.scheme,
+      host: current.host,
+      port: current.hasPort ? current.port : null,
+      path: '/',
+      queryParameters: const {'email_confirmed': '1'},
+    ).toString();
   }
 
   void _ensureConfigured() {
