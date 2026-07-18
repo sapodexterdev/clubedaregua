@@ -173,6 +173,7 @@ class _InlineRefreshError extends StatelessWidget {
           ],
         ),
       );
+}
 
 class _NotificationCard extends StatelessWidget {
   const _NotificationCard({required this.item, required this.onTap});
