@@ -250,7 +250,6 @@ create table if not exists public.appointments (
   created_by uuid references public.users(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique (barber_id, starts_at),
   check (ends_at > starts_at)
 );
 
@@ -494,6 +493,9 @@ create index if not exists idx_schedules_barber on public.schedules(barber_id, w
 create index if not exists idx_appointments_shop_starts on public.appointments(barber_shop_id, starts_at);
 create index if not exists idx_appointments_client on public.appointments(client_id, starts_at);
 create index if not exists idx_appointments_barber_starts on public.appointments(barber_id, starts_at);
+create unique index if not exists idx_appointments_active_start_unique
+on public.appointments(barber_id, starts_at)
+where status in ('pending', 'confirmed');
 create index if not exists idx_reviews_shop on public.reviews(barber_shop_id, barber_id);
 create index if not exists idx_notifications_user on public.notifications(user_id, is_read);
 create unique index if not exists idx_coupons_shop_code on public.coupons(barber_shop_id, lower(code));

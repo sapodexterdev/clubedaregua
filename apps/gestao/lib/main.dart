@@ -846,6 +846,7 @@ class ManagementSession extends ChangeNotifier {
   String? errorMessage;
   bool isBookingRequestsLoading = false;
   String? bookingRequestsError;
+  String? bookingRequestActionError;
   List<BookingRequest> bookingRequests = [];
   List<TeamBarber> teamBarbers = [];
   List<ScheduleEntry> scheduleEntries = [];
@@ -1846,7 +1847,7 @@ class ManagementSession extends ChangeNotifier {
     if (token == null) return;
 
     isBookingRequestsLoading = true;
-    bookingRequestsError = null;
+    bookingRequestActionError = null;
     notifyListeners();
 
     try {
@@ -1887,11 +1888,12 @@ class ManagementSession extends ChangeNotifier {
           else
             request,
       ];
-      bookingRequestsError = null;
+      bookingRequestActionError = null;
       await fetchScheduleEntries();
     } catch (error) {
-      bookingRequestsError = _cleanErrorMessage(error);
-      rethrow;
+      final cleanMessage = _cleanErrorMessage(error);
+      bookingRequestActionError = cleanMessage;
+      throw StateError(cleanMessage);
     } finally {
       isBookingRequestsLoading = false;
       notifyListeners();
@@ -2206,6 +2208,17 @@ class ManagementSession extends ChangeNotifier {
         message.contains('management_client_appointments') ||
         message.contains('PGRST205')) {
       return 'Execute o script supabase/issue_006_customer_management.sql no Supabase e atualize a tela. Ele cria as views necessarias para listar clientes.';
+    }
+
+    if ((message.contains('409') || message.contains('23505')) &&
+        (message.contains('appointments_barber_id_starts_at_key') ||
+            message.contains('duplicate key value'))) {
+      return 'Este horário já possui um atendimento na agenda. Recuse ou cancele esta solicitação e oriente o cliente a escolher outro horário.';
+    }
+
+    if (message.toLowerCase().contains('horario escolhido ja esta ocupado') ||
+        message.toLowerCase().contains('hor�rio escolhido j� est� ocupado')) {
+      return 'Este horário já possui um atendimento na agenda. Recuse ou cancele esta solicitação e oriente o cliente a escolher outro horário.';
     }
 
     return switch (message) {
@@ -2724,7 +2737,7 @@ class _ManagementTab {
 const _barberTabs = [
   _ManagementTab(
     label: 'Pedidos',
-    title: 'Solicita��es recebidas',
+    title: 'Solicitações recebidas',
     icon: Icons.inbox_outlined,
     selectedIcon: Icons.inbox_rounded,
     child: _BookingRequestsPage(),
@@ -2762,7 +2775,7 @@ const _barberTabs = [
 const _adminTabs = [
   _ManagementTab(
     label: 'Pedidos',
-    title: 'Solicita��es recebidas',
+    title: 'Solicitações recebidas',
     icon: Icons.inbox_outlined,
     selectedIcon: Icons.inbox_rounded,
     child: _BookingRequestsPage(),
@@ -3170,7 +3183,7 @@ class _BookingRequestsPage extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 22),
-            const _SectionTitle('Novas solicitacoes'),
+            const _SectionTitle('Novas solicitações'),
             const SizedBox(height: 12),
             if (session.isBookingRequestsLoading) ...[
               const LinearProgressIndicator(color: SharedAppColors.orange),
@@ -3179,16 +3192,24 @@ class _BookingRequestsPage extends StatelessWidget {
             if (session.bookingRequestsError != null)
               _InlineNotice(
                 icon: Icons.warning_amber_rounded,
-                title: 'N�o foi poss�vel carregar',
+                title: 'Não foi possível carregar',
                 subtitle: session.bookingRequestsError!,
               )
-            else if (requests.isEmpty)
+            else if (session.bookingRequestActionError != null) ...[
+              _InlineNotice(
+                icon: Icons.event_busy_rounded,
+                title: 'Não foi possível aceitar a solicitação',
+                subtitle: session.bookingRequestActionError!,
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (requests.isEmpty && session.bookingRequestsError == null)
               const _InlineNotice(
                 icon: Icons.inbox_rounded,
                 title: 'Nenhum pedido por enquanto',
-                subtitle: 'As solicitacoes do app cliente aparecerao aqui.',
+                subtitle: 'As solicitações do app cliente aparecerão aqui.',
               )
-            else
+            else if (requests.isNotEmpty)
               for (final request in requests)
                 _BookingRequestTile(
                   request: request,
@@ -3267,8 +3288,12 @@ class _BookingRequestsPage extends StatelessWidget {
       await action();
     } catch (error) {
       if (!context.mounted) return;
+      final message = error
+          .toString()
+          .replaceFirst(RegExp(r'^\s*Bad state:\s*', caseSensitive: false), '')
+          .replaceFirst(RegExp(r'^\s*Exception:\s*', caseSensitive: false), '');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
+        SnackBar(content: Text(message)),
       );
     }
   }
