@@ -54,6 +54,7 @@ Implementacao
 - `UI-010-Solicitacao-Enviada`
 - `UI-011-Agenda`
 - `UI-012-Favoritos`
+- `UI-013-Perfil-Cliente`
 
 ## Regra de Implementacao
 

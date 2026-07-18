@@ -6,6 +6,7 @@ import '../models/service_category.dart';
 import '../models/service_item.dart';
 import '../repositories/appointment_repository.dart';
 import '../repositories/barber_repository.dart';
+import '../repositories/client_profile_repository.dart';
 import '../repositories/favorite_repository.dart';
 import '../services/auth_service.dart';
 import '../services/mock_data.dart';
@@ -16,6 +17,7 @@ class AppState extends ChangeNotifier {
 
   final _barberRepository = BarberRepository();
   final _appointmentRepository = AppointmentRepository();
+  final _clientProfileRepository = const ClientProfileRepository();
   final _favoriteRepository = FavoriteRepository();
   final _locationService = const LocationService();
 
@@ -23,10 +25,12 @@ class AppState extends ChangeNotifier {
   bool isLoadingAvailability = false;
   bool isLoadingAppointments = false;
   bool isLoadingFavorites = false;
+  bool isLoadingClientProfile = false;
   String? discoveryLoadError;
   String? availabilityError;
   String? appointmentsLoadError;
   String? favoritesLoadError;
+  String? clientProfileError;
   String selectedTab = 'home';
   Barber? selectedBarber = MockData.barbers.first;
   ServiceItem? selectedService = MockData.services.first;
@@ -46,6 +50,8 @@ class AppState extends ChangeNotifier {
   String? discoveryCategoryId;
   String? discoveryLocation;
   String? currentUserName;
+  String? currentUserEmail;
+  String? currentUserPhone;
   bool discoveryOpenNowOnly = false;
   bool discoveryHighlyRatedOnly = false;
   bool isLocating = false;
@@ -200,6 +206,7 @@ class AppState extends ChangeNotifier {
     discoveryLoadError = null;
     appointmentsLoadError = null;
     favoritesLoadError = null;
+    clientProfileError = null;
     notifyListeners();
 
     final barbersFuture = _barberRepository.fetchBarbers();
@@ -236,6 +243,14 @@ class AppState extends ChangeNotifier {
       favoritesLoadError = 'Não foi possível carregar seus favoritos.';
     }
     final session = await sessionFuture;
+    ClientProfile? clientProfile;
+    if (session != null) {
+      try {
+        clientProfile = await _clientProfileRepository.fetchProfile();
+      } catch (_) {
+        clientProfileError = 'Não foi possível carregar os dados da conta.';
+      }
+    }
     final fetchedShopIdentity = fetchedShopIdentities.isNotEmpty
         ? fetchedShopIdentities.first
         : discoveryLoadError != null
@@ -254,8 +269,10 @@ class AppState extends ChangeNotifier {
       shopIdentityData: fetchedShopIdentity,
       shopIdentitiesData: fetchedShopIdentities,
       signedInData: session != null,
-      userNameData: session?.user.name,
+      userNameData: clientProfile?.fullName ?? session?.user.name,
     );
+    currentUserEmail = clientProfile?.email ?? session?.user.email;
+    currentUserPhone = clientProfile?.phone;
     _favoriteShopIds
       ..clear()
       ..addAll(fetchedFavoriteIds);
@@ -579,6 +596,64 @@ class AppState extends ChangeNotifier {
       isLoadingFavorites = false;
       notifyListeners();
     }
+  }
+
+  Future<void> refreshClientProfile() async {
+    if (!isSignedIn || isLoadingClientProfile) return;
+    isLoadingClientProfile = true;
+    clientProfileError = null;
+    notifyListeners();
+    try {
+      final profile = await _clientProfileRepository.fetchProfile();
+      if (profile != null) {
+        currentUserName = profile.fullName;
+        currentUserEmail = profile.email;
+        currentUserPhone = profile.phone;
+      }
+    } catch (_) {
+      clientProfileError = 'Não foi possível carregar os dados da conta.';
+    } finally {
+      isLoadingClientProfile = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> updateClientProfile({
+    required String fullName,
+    required String phone,
+  }) async {
+    if (!isSignedIn || isLoadingClientProfile) return false;
+    isLoadingClientProfile = true;
+    clientProfileError = null;
+    notifyListeners();
+    try {
+      final updated = await _clientProfileRepository.updateProfile(
+        fullName: fullName,
+        phone: phone,
+      );
+      if (updated) {
+        currentUserName = fullName.trim();
+        currentUserPhone = phone.trim();
+      }
+      return updated;
+    } catch (_) {
+      clientProfileError = 'Não foi possível salvar seus dados.';
+      return false;
+    } finally {
+      isLoadingClientProfile = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> signOut() async {
+    await AuthService().signOut();
+    isSignedIn = false;
+    currentUserName = null;
+    currentUserEmail = null;
+    currentUserPhone = null;
+    appointments = const [];
+    _favoriteShopIds.clear();
+    notifyListeners();
   }
 
   Future<bool> toggleFavorite(PublicBarbershop shop) async {
