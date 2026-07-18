@@ -837,6 +837,7 @@ class ShopConfiguration {
 
 class ManagementSession extends ChangeNotifier {
   String? _accessToken;
+  String? _refreshToken;
   String? _userId;
   String? _barberShopId;
   String? barberShopName;
@@ -967,12 +968,14 @@ class ManagementSession extends ChangeNotifier {
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       _accessToken = data['access_token']?.toString();
+      _refreshToken = data['refresh_token']?.toString();
       final user = data['user'];
       if (user is Map) _userId = user['id']?.toString();
       email = emailValue.trim();
       await refreshManagementData();
     } catch (error) {
       _accessToken = null;
+      _refreshToken = null;
       errorMessage = _cleanErrorMessage(error);
     } finally {
       isLoading = false;
@@ -998,31 +1001,18 @@ class ManagementSession extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final uri = Uri.parse(
-        '${GestaoSupabaseConfig.url}/rest/v1/booking_requests',
-      ).replace(queryParameters: {
-        'select':
-            'id,customer_name,customer_phone,requested_date,requested_time,status,total_price,notes,updated_at,barbers(name),services(name)',
-        'order': 'created_at.desc',
-        'limit': '20',
-      });
-
-      final response = await http.get(
-        uri,
-        headers: {
-          'apikey': GestaoSupabaseConfig.anonKey,
-          'authorization': 'Bearer $token',
+      final rows = await _getRestRows(
+        token,
+        'booking_requests',
+        query: {
+          'select':
+              'id,customer_name,customer_phone,requested_date,requested_time,status,total_price,notes,updated_at,barbers(name),services(name)',
+          'order': 'created_at.desc',
+          'limit': '20',
         },
       );
-
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw StateError('N�o foi poss�vel carregar os pedidos.');
-      }
-
-      final rows = jsonDecode(response.body) as List<dynamic>;
       bookingRequests = rows
-          .whereType<Map>()
-          .map((row) => BookingRequest.fromMap(Map<String, dynamic>.from(row)))
+          .map((row) => BookingRequest.fromMap(row))
           .toList();
       bookingRequestsError = null;
     } catch (error) {
@@ -1932,6 +1922,7 @@ class ManagementSession extends ChangeNotifier {
 
   void signOut() {
     _accessToken = null;
+    _refreshToken = null;
     _userId = null;
     _barberShopId = null;
     barberShopName = null;
@@ -2028,7 +2019,10 @@ class ManagementSession extends ChangeNotifier {
     final uri = Uri.parse('${GestaoSupabaseConfig.url}/rest/v1/$table')
         .replace(queryParameters: query);
 
-    final response = await http.get(uri, headers: _restHeaders(token));
+    final response = await _requestWithRefresh(
+      token,
+      (accessToken) => http.get(uri, headers: _restHeaders(accessToken)),
+    );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw StateError(
@@ -2051,10 +2045,13 @@ class ManagementSession extends ChangeNotifier {
   }) async {
     final uri = Uri.parse('${GestaoSupabaseConfig.url}/rest/v1/$table');
 
-    final response = await http.post(
-      uri,
-      headers: _restHeaders(token, preferRepresentation: true),
-      body: jsonEncode(data),
+    final response = await _requestWithRefresh(
+      token,
+      (accessToken) => http.post(
+        uri,
+        headers: _restHeaders(accessToken, preferRepresentation: true),
+        body: jsonEncode(data),
+      ),
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -2080,10 +2077,13 @@ class ManagementSession extends ChangeNotifier {
     final uri = Uri.parse('${GestaoSupabaseConfig.url}/rest/v1/$table')
         .replace(queryParameters: query);
 
-    final response = await http.patch(
-      uri,
-      headers: _restHeaders(token, preferRepresentation: true),
-      body: jsonEncode(data),
+    final response = await _requestWithRefresh(
+      token,
+      (accessToken) => http.patch(
+        uri,
+        headers: _restHeaders(accessToken, preferRepresentation: true),
+        body: jsonEncode(data),
+      ),
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -2108,10 +2108,13 @@ class ManagementSession extends ChangeNotifier {
     final uri = Uri.parse(
       '${GestaoSupabaseConfig.url}/rest/v1/rpc/$functionName',
     );
-    final response = await http.post(
-      uri,
-      headers: _restHeaders(token),
-      body: jsonEncode(data),
+    final response = await _requestWithRefresh(
+      token,
+      (accessToken) => http.post(
+        uri,
+        headers: _restHeaders(accessToken),
+        body: jsonEncode(data),
+      ),
     );
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw StateError(
@@ -2130,12 +2133,48 @@ class ManagementSession extends ChangeNotifier {
     final uri = Uri.parse('${GestaoSupabaseConfig.url}/rest/v1/$table')
         .replace(queryParameters: query);
 
-    final response = await http.delete(uri, headers: _restHeaders(token));
+    final response = await _requestWithRefresh(
+      token,
+      (accessToken) => http.delete(uri, headers: _restHeaders(accessToken)),
+    );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw StateError(
           'Supabase REST ${response.statusCode}: ${response.body}');
     }
+  }
+
+  Future<http.Response> _requestWithRefresh(
+    String token,
+    Future<http.Response> Function(String accessToken) request,
+  ) async {
+    var response = await request(token);
+    if (response.statusCode != 401) return response;
+    final refreshedToken = await _refreshAccessToken();
+    if (refreshedToken == null || refreshedToken.isEmpty) return response;
+    response = await request(refreshedToken);
+    return response;
+  }
+
+  Future<String?> _refreshAccessToken() async {
+    final refreshToken = _refreshToken;
+    if (refreshToken == null || refreshToken.isEmpty) return null;
+    final uri = Uri.parse(
+      '${GestaoSupabaseConfig.url}/auth/v1/token',
+    ).replace(queryParameters: {'grant_type': 'refresh_token'});
+    final response = await http.post(
+      uri,
+      headers: {
+        'apikey': GestaoSupabaseConfig.anonKey,
+        'content-type': 'application/json',
+      },
+      body: jsonEncode({'refresh_token': refreshToken}),
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) return null;
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    _accessToken = data['access_token']?.toString();
+    _refreshToken = data['refresh_token']?.toString() ?? refreshToken;
+    return _accessToken;
   }
 
   Map<String, String> _restHeaders(
