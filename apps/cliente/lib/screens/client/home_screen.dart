@@ -16,10 +16,47 @@ import 'history_screen.dart';
 import 'notifications_screen.dart';
 import 'profile_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   static const route = '/home';
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+  Timer? _notificationRefreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshNotificationCount();
+    });
+    _notificationRefreshTimer = Timer.periodic(
+      const Duration(seconds: 8),
+      (_) => _refreshNotificationCount(),
+    );
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _notificationRefreshTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refreshNotificationCount();
+  }
+
+  void _refreshNotificationCount() {
+    if (!mounted) return;
+    context.read<AppState>().refreshNotifications();
+  }
 
   @override
   Widget build(BuildContext context) {
