@@ -14,14 +14,8 @@ class AppointmentConfirmationScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<AppState>(
       builder: (context, state, _) {
-        final shop = state.selectedBarbershop;
-        final service = state.selectedService;
-        final barber = state.selectedBarber;
-        final hasReceipt = state.lastBookingRequestCreated &&
-            shop != null &&
-            service != null &&
-            barber != null &&
-            state.selectedTime.isNotEmpty;
+        final receipt = state.lastBookingReceipt;
+        final hasReceipt = state.lastBookingRequestCreated && receipt != null;
 
         return Scaffold(
           backgroundColor: AppColors.background,
@@ -57,12 +51,12 @@ class AppointmentConfirmationScreen extends StatelessWidget {
                       const Center(child: _PendingBadge()),
                       const SizedBox(height: 26),
                       _ReceiptCard(
-                        shopName: shop.identity.name,
-                        serviceName: service.name,
-                        barberName: barber.name,
-                        date: state.selectedDate,
-                        time: state.selectedTime,
-                        total: service.price,
+                        shopName: receipt!.shopName,
+                        serviceName: receipt.serviceName,
+                        barberName: receipt.barberName,
+                        date: receipt.date,
+                        time: receipt.time,
+                        total: receipt.total,
                       ),
                       const SizedBox(height: 26),
                       const _NextSteps(),

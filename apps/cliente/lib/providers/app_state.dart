@@ -70,6 +70,7 @@ class AppState extends ChangeNotifier {
   final Set<String> _favoriteUpdates = <String>{};
   bool isSignedIn = false;
   bool lastBookingRequestCreated = false;
+  BookingReceipt? lastBookingReceipt;
 
   int get unreadNotificationCount =>
       notifications.where((item) => !item.isRead).length;
@@ -544,16 +545,19 @@ class AppState extends ChangeNotifier {
   }) async {
     final barber = selectedBarber;
     final service = selectedService;
-    if (barber == null || service == null) return false;
+    final shop = selectedBarbershop;
+    if (barber == null || service == null || shop == null) return false;
     if (!_selectedDateIsAllowed()) return false;
+    final requestedDate = selectedDate;
+    final requestedTime = selectedTime;
     await refreshAvailableTimes();
-    if (!availableTimes.contains(selectedTime)) return false;
+    if (!availableTimes.contains(requestedTime)) return false;
 
     lastBookingRequestCreated = await _appointmentRepository.createAppointment(
       barberId: barber.id,
       serviceId: service.id,
-      date: selectedDate,
-      time: selectedTime,
+      date: requestedDate,
+      time: requestedTime,
       total: service.price,
       barberShopId: barber.barberShopId,
       customerName: customerName,
@@ -562,6 +566,14 @@ class AppState extends ChangeNotifier {
     );
 
     if (lastBookingRequestCreated) {
+      lastBookingReceipt = BookingReceipt(
+        shopName: shop.identity.name,
+        serviceName: service.name,
+        barberName: barber.name,
+        date: requestedDate,
+        time: requestedTime,
+        total: service.price,
+      );
       try {
         appointments = await _appointmentRepository.fetchAppointments();
         appointmentsLoadError = null;
@@ -894,4 +906,22 @@ class AppState extends ChangeNotifier {
       _ => name,
     };
   }
+}
+
+class BookingReceipt {
+  const BookingReceipt({
+    required this.shopName,
+    required this.serviceName,
+    required this.barberName,
+    required this.date,
+    required this.time,
+    required this.total,
+  });
+
+  final String shopName;
+  final String serviceName;
+  final String barberName;
+  final DateTime date;
+  final String time;
+  final double total;
 }

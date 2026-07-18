@@ -24,6 +24,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
   var _selectedPaymentMethod = PaymentMethod.pix;
   var _isSubmitting = false;
   var _seededName = false;
+  var _seededPhone = false;
 
   @override
   void dispose() {
@@ -47,6 +48,10 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
         if (!_seededName) {
           _seededName = true;
           _nameController.text = state.currentUserName?.trim() ?? '';
+        }
+        if (!_seededPhone) {
+          _seededPhone = true;
+          _phoneController.text = state.currentUserPhone?.trim() ?? '';
         }
 
         return Scaffold(
