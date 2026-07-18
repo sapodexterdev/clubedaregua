@@ -80,7 +80,7 @@ class HomeScreen extends StatelessWidget {
                   _DiscoveryHeader(
                     greeting: state.discoveryGreeting,
                     unreadCount: state.unreadNotificationCount,
-                    onNotificationsTap: () {
+                    onNotificationsTap: () async {
                       if (!state.isSignedIn) {
                         Navigator.pushNamed(
                           context,
@@ -89,6 +89,8 @@ class HomeScreen extends StatelessWidget {
                         );
                         return;
                       }
+                      await state.refreshNotifications();
+                      if (!context.mounted) return;
                       Navigator.pushNamed(context, NotificationsScreen.route);
                     },
                   ),
