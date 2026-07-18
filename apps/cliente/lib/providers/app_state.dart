@@ -550,7 +550,7 @@ class AppState extends ChangeNotifier {
     if (!_selectedDateIsAllowed()) return false;
     final requestedDate = selectedDate;
     final requestedTime = selectedTime;
-    await refreshAvailableTimes();
+    await refreshAvailableTimes(preserveSelectedTime: true);
     if (!availableTimes.contains(requestedTime)) return false;
 
     lastBookingRequestCreated = await _appointmentRepository.createAppointment(
@@ -811,7 +811,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> refreshAvailableTimes() async {
+  Future<void> refreshAvailableTimes({bool preserveSelectedTime = false}) async {
     final requestId = ++_availabilityRequestId;
     final barber = selectedBarber;
     final service = selectedService;
@@ -825,7 +825,8 @@ class AppState extends ChangeNotifier {
     isLoadingAvailability = true;
     availabilityError = null;
     availableTimes = const [];
-    selectedTime = '';
+    final previousSelectedTime = selectedTime;
+    if (!preserveSelectedTime) selectedTime = '';
     notifyListeners();
     try {
       final times = await _appointmentRepository.fetchAvailableTimes(
@@ -836,7 +837,11 @@ class AppState extends ChangeNotifier {
       );
       if (requestId != _availabilityRequestId) return;
       availableTimes = _filterTimesBySettings(times);
-      selectedTime = availableTimes.isEmpty ? '' : availableTimes.first;
+      selectedTime = preserveSelectedTime
+          ? previousSelectedTime
+          : availableTimes.isEmpty
+              ? ''
+              : availableTimes.first;
     } catch (_) {
       if (requestId != _availabilityRequestId) return;
       availableTimes = const [];
