@@ -18,6 +18,7 @@ class NotificationRepository {
       order: 'created_at.desc',
       limit: 100,
       accessToken: session.accessToken,
+      preventCache: true,
     );
     return rows.map((row) {
       return NotificationItem(
