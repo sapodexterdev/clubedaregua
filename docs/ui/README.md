@@ -53,6 +53,7 @@ Implementacao
 - `UI-009-Revisar-Agendamento`
 - `UI-010-Solicitacao-Enviada`
 - `UI-011-Agenda`
+- `UI-012-Favoritos`
 
 ## Regra de Implementacao
 

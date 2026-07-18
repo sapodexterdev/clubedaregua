@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/app_constants.dart';
 import '../../providers/app_state.dart';
 import '../../repositories/barber_repository.dart';
+import '../../screens/auth/login_screen.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/service_card.dart';
 import 'barber_details_screen.dart';
@@ -32,7 +33,28 @@ class BarbershopProfileScreen extends StatelessWidget {
           bottomNavigationBar: _ScheduleBar(shop: shop),
           body: CustomScrollView(
             slivers: [
-              _CoverAppBar(shop: shop),
+              _CoverAppBar(
+                shop: shop,
+                favorite: state.isFavorite(shop.identity.id),
+                updating: state.isFavoriteUpdating(shop.identity.id),
+                onFavorite: () async {
+                  if (!state.isSignedIn) {
+                    Navigator.pushNamed(
+                      context,
+                      LoginScreen.route,
+                      arguments: BarbershopProfileScreen.route,
+                    );
+                    return;
+                  }
+                  final success = await state.toggleFavorite(shop);
+                  if (!context.mounted || success) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Não foi possível atualizar o favorito.'),
+                    ),
+                  );
+                },
+              ),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(22, 4, 22, 34),
@@ -120,9 +142,17 @@ class BarbershopProfileScreen extends StatelessWidget {
 }
 
 class _CoverAppBar extends StatelessWidget {
-  const _CoverAppBar({required this.shop});
+  const _CoverAppBar({
+    required this.shop,
+    required this.favorite,
+    required this.updating,
+    required this.onFavorite,
+  });
 
   final PublicBarbershop shop;
+  final bool favorite;
+  final bool updating;
+  final VoidCallback onFavorite;
 
   @override
   Widget build(BuildContext context) {
@@ -141,6 +171,18 @@ class _CoverAppBar extends StatelessWidget {
           onTap: () => Navigator.maybePop(context),
         ),
       ),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.all(8),
+          child: _RoundAction(
+            tooltip: favorite ? 'Remover dos favoritos' : 'Favoritar',
+            icon: favorite
+                ? Icons.favorite_rounded
+                : Icons.favorite_border_rounded,
+            onTap: updating ? () {} : onFavorite,
+          ),
+        ),
+      ],
       flexibleSpace: FlexibleSpaceBar(
         stretchModes: const [StretchMode.zoomBackground],
         background: Stack(

@@ -6,6 +6,7 @@ import '../models/service_category.dart';
 import '../models/service_item.dart';
 import '../repositories/appointment_repository.dart';
 import '../repositories/barber_repository.dart';
+import '../repositories/favorite_repository.dart';
 import '../services/auth_service.dart';
 import '../services/mock_data.dart';
 import '../services/location_service.dart';
@@ -15,14 +16,17 @@ class AppState extends ChangeNotifier {
 
   final _barberRepository = BarberRepository();
   final _appointmentRepository = AppointmentRepository();
+  final _favoriteRepository = FavoriteRepository();
   final _locationService = const LocationService();
 
   bool isLoading = false;
   bool isLoadingAvailability = false;
   bool isLoadingAppointments = false;
+  bool isLoadingFavorites = false;
   String? discoveryLoadError;
   String? availabilityError;
   String? appointmentsLoadError;
+  String? favoritesLoadError;
   String selectedTab = 'home';
   Barber? selectedBarber = MockData.barbers.first;
   ServiceItem? selectedService = MockData.services.first;
@@ -50,6 +54,8 @@ class AppState extends ChangeNotifier {
   double? _deviceLatitude;
   double? _deviceLongitude;
   int _availabilityRequestId = 0;
+  final Set<String> _favoriteShopIds = <String>{};
+  final Set<String> _favoriteUpdates = <String>{};
   bool isSignedIn = false;
   bool lastBookingRequestCreated = false;
 
@@ -87,6 +93,14 @@ class AppState extends ChangeNotifier {
   }
 
   bool get hasDiscoveryQuery => discoveryQuery.trim().isNotEmpty;
+
+  List<PublicBarbershop> get favoriteBarbershops => publicBarbershops
+      .where((shop) => _favoriteShopIds.contains(shop.identity.id))
+      .toList();
+
+  bool isFavorite(String shopId) => _favoriteShopIds.contains(shopId);
+
+  bool isFavoriteUpdating(String shopId) => _favoriteUpdates.contains(shopId);
 
   List<ServiceCategory> get discoveryCategories {
     const order = ['corte', 'barba', 'combo', 'infantil', 'premium'];
@@ -185,12 +199,14 @@ class AppState extends ChangeNotifier {
     isLoading = true;
     discoveryLoadError = null;
     appointmentsLoadError = null;
+    favoritesLoadError = null;
     notifyListeners();
 
     final barbersFuture = _barberRepository.fetchBarbers();
     final categoriesFuture = _barberRepository.fetchCategories();
     final servicesFuture = _barberRepository.fetchServices();
     final appointmentsFuture = _appointmentRepository.fetchAppointments();
+    final favoritesFuture = _favoriteRepository.fetchFavoriteShopIds();
     final shopsFuture = _barberRepository.fetchShopIdentities();
     final sessionFuture = AuthService().restoreSession();
 
@@ -211,6 +227,13 @@ class AppState extends ChangeNotifier {
       fetchedShopIdentities = const [];
       discoveryLoadError =
           'Não foi possível carregar as barbearias. Verifique sua conexão.';
+    }
+    Set<String> fetchedFavoriteIds;
+    try {
+      fetchedFavoriteIds = await favoritesFuture;
+    } catch (_) {
+      fetchedFavoriteIds = <String>{};
+      favoritesLoadError = 'Não foi possível carregar seus favoritos.';
     }
     final session = await sessionFuture;
     final fetchedShopIdentity = fetchedShopIdentities.isNotEmpty
@@ -233,6 +256,9 @@ class AppState extends ChangeNotifier {
       signedInData: session != null,
       userNameData: session?.user.name,
     );
+    _favoriteShopIds
+      ..clear()
+      ..addAll(fetchedFavoriteIds);
     await refreshAvailableTimes();
 
     isLoading = false;
@@ -533,6 +559,53 @@ class AppState extends ChangeNotifier {
       appointmentsLoadError = 'Não foi possível carregar sua agenda.';
     } finally {
       isLoadingAppointments = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> refreshFavorites() async {
+    if (isLoadingFavorites) return;
+    isLoadingFavorites = true;
+    favoritesLoadError = null;
+    notifyListeners();
+    try {
+      final ids = await _favoriteRepository.fetchFavoriteShopIds();
+      _favoriteShopIds
+        ..clear()
+        ..addAll(ids);
+    } catch (_) {
+      favoritesLoadError = 'Não foi possível carregar seus favoritos.';
+    } finally {
+      isLoadingFavorites = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> toggleFavorite(PublicBarbershop shop) async {
+    final shopId = shop.identity.id;
+    if (!isSignedIn || shopId.isEmpty || _favoriteUpdates.contains(shopId)) {
+      return false;
+    }
+    _favoriteUpdates.add(shopId);
+    favoritesLoadError = null;
+    notifyListeners();
+    try {
+      final removing = _favoriteShopIds.contains(shopId);
+      final success = removing
+          ? await _favoriteRepository.removeFavorite(shopId)
+          : await _favoriteRepository.addFavorite(shopId);
+      if (!success) return false;
+      if (removing) {
+        _favoriteShopIds.remove(shopId);
+      } else {
+        _favoriteShopIds.add(shopId);
+      }
+      return true;
+    } catch (_) {
+      favoritesLoadError = 'Não foi possível atualizar o favorito.';
+      return false;
+    } finally {
+      _favoriteUpdates.remove(shopId);
       notifyListeners();
     }
   }
