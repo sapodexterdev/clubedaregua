@@ -247,6 +247,7 @@ class TeamBarber {
 class ScheduleEntry {
   const ScheduleEntry({
     required this.id,
+    required this.appointmentId,
     required this.time,
     required this.client,
     required this.service,
@@ -256,6 +257,7 @@ class ScheduleEntry {
   });
 
   final String id;
+  final String? appointmentId;
   final String time;
   final String client;
   final String service;
@@ -266,6 +268,7 @@ class ScheduleEntry {
   factory ScheduleEntry.fromBookingRequest(Map<String, dynamic> map) {
     return ScheduleEntry(
       id: 'request-${map['id']}',
+      appointmentId: null,
       time: _timeOnly(map['requested_time']?.toString() ?? ''),
       client: map['customer_name']?.toString() ?? 'Cliente',
       service: map['services']?['name']?.toString() ?? 'Servico',
@@ -279,6 +282,7 @@ class ScheduleEntry {
     final startsAt = map['starts_at']?.toString() ?? '';
     return ScheduleEntry(
       id: 'appointment-${map['id']}',
+      appointmentId: map['id']?.toString(),
       time: startsAt.length >= 16 ? startsAt.substring(11, 16) : '',
       client: 'Cliente agendado',
       service: map['services']?['name']?.toString() ?? 'Servico',
@@ -289,6 +293,10 @@ class ScheduleEntry {
           : 'Sem observacoes.',
     );
   }
+
+  bool get canComplete =>
+      appointmentId != null &&
+      (status == 'Pendente' || status == 'Confirmado');
 
   static String _timeOnly(String value) {
     if (value.length >= 5) return value.substring(0, 5);
@@ -1102,6 +1110,7 @@ class ManagementSession extends ChangeNotifier {
         'barber_shop_id': 'eq.$shopId',
         'requested_date': 'eq.$date',
         'status': 'eq.converted',
+        'appointment_id': 'is.null',
         'order': 'requested_time.asc',
       };
       if (barberId != null && barberId.isNotEmpty) {
@@ -1851,6 +1860,16 @@ class ManagementSession extends ChangeNotifier {
     notifyListeners();
 
     try {
+      if (status == 'converted') {
+        await _postRpc(
+          token,
+          'accept_booking_request',
+          data: {'p_request_id': id},
+        );
+        await fetchBookingRequests();
+        await fetchScheduleEntries();
+        return;
+      }
       final current = _bookingRequestById(id);
       final updatedAt = DateTime.now().toUtc().toIso8601String();
       final nextNotes = _notesWithReason(current?.notes ?? '', reason);
@@ -1885,6 +1904,28 @@ class ManagementSession extends ChangeNotifier {
       rethrow;
     } finally {
       isBookingRequestsLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> completeAppointment(String appointmentId) async {
+    final token = _accessToken;
+    if (token == null || appointmentId.isEmpty) return;
+    isScheduleLoading = true;
+    scheduleError = null;
+    notifyListeners();
+    try {
+      await _postRpc(
+        token,
+        'complete_appointment',
+        data: {'p_appointment_id': appointmentId},
+      );
+      await fetchScheduleEntries();
+    } catch (error) {
+      scheduleError = _cleanErrorMessage(error);
+      rethrow;
+    } finally {
+      isScheduleLoading = false;
       notifyListeners();
     }
   }
@@ -2057,6 +2098,28 @@ class ManagementSession extends ChangeNotifier {
         .whereType<Map>()
         .map((row) => Map<String, dynamic>.from(row))
         .toList();
+  }
+
+  Future<dynamic> _postRpc(
+    String token,
+    String functionName, {
+    required Map<String, dynamic> data,
+  }) async {
+    final uri = Uri.parse(
+      '${GestaoSupabaseConfig.url}/rest/v1/rpc/$functionName',
+    );
+    final response = await http.post(
+      uri,
+      headers: _restHeaders(token),
+      body: jsonEncode(data),
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw StateError(
+        'Supabase RPC ${response.statusCode}: ${response.body}',
+      );
+    }
+    if (response.body.trim().isEmpty) return null;
+    return jsonDecode(response.body);
   }
 
   Future<void> _deleteRestRows(
@@ -2906,6 +2969,38 @@ class _BarberAgendaPage extends StatelessWidget {
                 label: 'Obs.',
                 value: entry.notes,
               ),
+              if (entry.canComplete) ...[
+                const SizedBox(height: 18),
+                FilledButton.icon(
+                  onPressed: () async {
+                    final navigator = Navigator.of(context);
+                    final messenger = ScaffoldMessenger.of(context);
+                    try {
+                      await context
+                          .read<ManagementSession>()
+                          .completeAppointment(entry.appointmentId!);
+                      if (!context.mounted) return;
+                      navigator.pop();
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('Atendimento concluido.'),
+                        ),
+                      );
+                    } catch (_) {
+                      if (!context.mounted) return;
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Nao foi possivel concluir o atendimento.',
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.task_alt_rounded),
+                  label: const Text('Concluir atendimento'),
+                ),
+              ],
             ],
           ),
         );

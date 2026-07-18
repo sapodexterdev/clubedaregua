@@ -56,6 +56,7 @@ Implementacao
 - `UI-012-Favoritos`
 - `UI-013-Perfil-Cliente`
 - `UI-014-Notificacoes`
+- `UI-015-Conversao-Agendamento`
 
 ## Regra de Implementacao
 
