@@ -18,14 +18,11 @@ class SupabaseRestService {
     String? order,
     int? limit,
     String? accessToken,
-    bool preventCache = false,
   }) async {
     if (!isConfigured) return const [];
 
     final query = <String, String>{
-      'select': preventCache
-          ? '_fresh_${DateTime.now().microsecondsSinceEpoch}:id,$select'
-          : select,
+      'select': select,
       ...filters,
       if (order != null) 'order': order,
       if (limit != null) 'limit': limit.toString(),

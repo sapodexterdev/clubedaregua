@@ -73,14 +73,6 @@ begin
   set status = 'converted', appointment_id = created_appointment_id
   where id = request_row.id;
 
-  if request_row.client_id is not null then
-    insert into public.notifications (barber_shop_id, user_id, title, message, data)
-    values (
-      request_row.barber_shop_id, request_row.client_id, 'Agendamento confirmado',
-      'Seu horario foi confirmado pela barbearia.',
-      jsonb_build_object('type', 'appointment_confirmed', 'appointment_id', created_appointment_id, 'booking_request_id', request_row.id)
-    );
-  end if;
   return created_appointment_id;
 end;
 $$;
@@ -104,17 +96,128 @@ begin
   end if;
 
   update public.appointments set status = 'completed' where id = appointment_row.id;
-  if appointment_row.client_id is not null then
-    insert into public.notifications (barber_shop_id, user_id, title, message, data)
-    values (
-      appointment_row.barber_shop_id, appointment_row.client_id, 'Atendimento concluido',
-      'Esperamos que tenha gostado. Sua avaliacao ajuda todo o Clube.',
-      jsonb_build_object('type', 'appointment_completed', 'appointment_id', appointment_row.id)
-    );
-  end if;
   return true;
 end;
 $$;
+
+create or replace function public.notify_booking_request_status_change()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.status = 'converted'
+    and old.status is distinct from new.status
+    and new.client_id is not null
+    and not exists (
+      select 1 from public.notifications notification
+      where notification.user_id = new.client_id
+        and notification.data->>'type' = 'appointment_confirmed'
+        and notification.data->>'booking_request_id' = new.id::text
+    )
+  then
+    insert into public.notifications (barber_shop_id, user_id, title, message, data)
+    values (
+      new.barber_shop_id,
+      new.client_id,
+      'Agendamento confirmado',
+      'Seu horario foi confirmado pela barbearia.',
+      jsonb_build_object(
+        'type', 'appointment_confirmed',
+        'appointment_id', new.appointment_id,
+        'booking_request_id', new.id
+      )
+    );
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists notify_booking_request_status on public.booking_requests;
+create trigger notify_booking_request_status
+after update of status on public.booking_requests
+for each row execute function public.notify_booking_request_status_change();
+
+create or replace function public.notify_appointment_status_change()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.status = 'completed'
+    and old.status is distinct from new.status
+    and new.client_id is not null
+    and not exists (
+      select 1 from public.notifications notification
+      where notification.user_id = new.client_id
+        and notification.data->>'type' = 'appointment_completed'
+        and notification.data->>'appointment_id' = new.id::text
+    )
+  then
+    insert into public.notifications (barber_shop_id, user_id, title, message, data)
+    values (
+      new.barber_shop_id,
+      new.client_id,
+      'Atendimento concluido',
+      'Esperamos que tenha gostado. Sua avaliacao ajuda todo o Clube.',
+      jsonb_build_object(
+        'type', 'appointment_completed',
+        'appointment_id', new.id
+      )
+    );
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists notify_appointment_status on public.appointments;
+create trigger notify_appointment_status
+after update of status on public.appointments
+for each row execute function public.notify_appointment_status_change();
+
+-- Recupera eventos antigos que mudaram de status antes da criacao dos gatilhos.
+insert into public.notifications (barber_shop_id, user_id, title, message, data)
+select
+  request.barber_shop_id,
+  request.client_id,
+  'Agendamento confirmado',
+  'Seu horario foi confirmado pela barbearia.',
+  jsonb_build_object(
+    'type', 'appointment_confirmed',
+    'appointment_id', request.appointment_id,
+    'booking_request_id', request.id
+  )
+from public.booking_requests request
+where request.status = 'converted'
+  and request.client_id is not null
+  and not exists (
+    select 1 from public.notifications notification
+    where notification.user_id = request.client_id
+      and notification.data->>'type' = 'appointment_confirmed'
+      and notification.data->>'booking_request_id' = request.id::text
+  );
+
+insert into public.notifications (barber_shop_id, user_id, title, message, data)
+select
+  appointment.barber_shop_id,
+  appointment.client_id,
+  'Atendimento concluido',
+  'Esperamos que tenha gostado. Sua avaliacao ajuda todo o Clube.',
+  jsonb_build_object(
+    'type', 'appointment_completed',
+    'appointment_id', appointment.id
+  )
+from public.appointments appointment
+where appointment.status = 'completed'
+  and appointment.client_id is not null
+  and not exists (
+    select 1 from public.notifications notification
+    where notification.user_id = appointment.client_id
+      and notification.data->>'type' = 'appointment_completed'
+      and notification.data->>'appointment_id' = appointment.id::text
+  );
 
 revoke all on function public.accept_booking_request(uuid) from public;
 revoke all on function public.complete_appointment(uuid) from public;

@@ -101,22 +101,33 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                   'Confirmações e novidades importantes aparecerão aqui.',
             );
           }
-          return RefreshIndicator(
-            color: AppColors.orange,
-            onRefresh: state.refreshNotifications,
-            child: ListView.separated(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-              itemCount: state.notifications.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (context, index) {
-                final item = state.notifications[index];
-                return _NotificationCard(
-                  item: item,
-                  onTap: () => state.markNotificationAsRead(item.id),
-                );
-              },
-            ),
+          return Column(
+            children: [
+              if (state.notificationsLoadError != null)
+                _InlineRefreshError(
+                  message: state.notificationsLoadError!,
+                  onRetry: state.refreshNotifications,
+                ),
+              Expanded(
+                child: RefreshIndicator(
+                  color: AppColors.orange,
+                  onRefresh: state.refreshNotifications,
+                  child: ListView.separated(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+                    itemCount: state.notifications.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      final item = state.notifications[index];
+                      return _NotificationCard(
+                        item: item,
+                        onTap: () => state.markNotificationAsRead(item.id),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
           );
         },
       ),
@@ -132,6 +143,36 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     }
   }
 }
+
+class _InlineRefreshError extends StatelessWidget {
+  const _InlineRefreshError({required this.message, required this.onRetry});
+
+  final String message;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        margin: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.elevated,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.orange),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.sync_problem_rounded, color: AppColors.orange),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(color: AppColors.muted, fontSize: 11),
+              ),
+            ),
+            TextButton(onPressed: onRetry, child: const Text('Tentar')),
+          ],
+        ),
+      );
 
 class _NotificationCard extends StatelessWidget {
   const _NotificationCard({required this.item, required this.onTap});
