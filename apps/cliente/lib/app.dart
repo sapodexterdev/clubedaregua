@@ -9,6 +9,7 @@ import 'screens/client/barbershop_profile_screen.dart';
 import 'screens/client/favorites_screen.dart';
 import 'screens/client/history_screen.dart';
 import 'screens/client/home_screen.dart';
+import 'screens/client/notifications_screen.dart';
 import 'screens/client/profile_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/splash_screen.dart';
@@ -32,6 +33,7 @@ class ClubeDaReguaApp extends StatelessWidget {
         LoginScreen.route: (_) => const LoginScreen(),
         RegisterScreen.route: (_) => const RegisterScreen(),
         HomeScreen.route: (_) => const HomeScreen(),
+        NotificationsScreen.route: (_) => const NotificationsScreen(),
         BarbershopProfileScreen.route: (_) => const BarbershopProfileScreen(),
         BarberDetailsScreen.route: (_) => const BarberDetailsScreen(),
         AppointmentScreen.route: (_) => const AppointmentScreen(),

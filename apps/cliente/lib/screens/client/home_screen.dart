@@ -13,6 +13,7 @@ import '../../widgets/premium_bottom_nav.dart';
 import 'barbershop_profile_screen.dart';
 import 'favorites_screen.dart';
 import 'history_screen.dart';
+import 'notifications_screen.dart';
 import 'profile_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -76,7 +77,21 @@ class HomeScreen extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(22, 18, 22, 28),
                 children: [
-                  _DiscoveryHeader(greeting: state.discoveryGreeting),
+                  _DiscoveryHeader(
+                    greeting: state.discoveryGreeting,
+                    unreadCount: state.unreadNotificationCount,
+                    onNotificationsTap: () {
+                      if (!state.isSignedIn) {
+                        Navigator.pushNamed(
+                          context,
+                          LoginScreen.route,
+                          arguments: NotificationsScreen.route,
+                        );
+                        return;
+                      }
+                      Navigator.pushNamed(context, NotificationsScreen.route);
+                    },
+                  ),
                   const SizedBox(height: 24),
                   _SearchAndFilter(
                     value: state.discoveryQuery,
@@ -203,9 +218,15 @@ class HomeScreen extends StatelessWidget {
 }
 
 class _DiscoveryHeader extends StatelessWidget {
-  const _DiscoveryHeader({required this.greeting});
+  const _DiscoveryHeader({
+    required this.greeting,
+    required this.unreadCount,
+    required this.onNotificationsTap,
+  });
 
   final String greeting;
+  final int unreadCount;
+  final VoidCallback onNotificationsTap;
 
   @override
   Widget build(BuildContext context) {
@@ -240,18 +261,53 @@ class _DiscoveryHeader extends StatelessWidget {
             ],
           ),
         ),
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: AppColors.card,
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.stroke),
-          ),
-          child: const Icon(
-            Icons.notifications_none_rounded,
-            color: AppColors.orange,
-            size: 22,
+        InkWell(
+          onTap: onNotificationsTap,
+          customBorder: const CircleBorder(),
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.card,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.stroke),
+            ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                const Icon(
+                  Icons.notifications_none_rounded,
+                  color: AppColors.orange,
+                  size: 22,
+                ),
+                if (unreadCount > 0)
+                  Positioned(
+                    right: -3,
+                    top: -3,
+                    child: Container(
+                      constraints: const BoxConstraints(minWidth: 18),
+                      height: 18,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: AppColors.orange,
+                        borderRadius: BorderRadius.circular(9),
+                        border:
+                            Border.all(color: AppColors.background, width: 2),
+                      ),
+                      child: Text(
+                        unreadCount > 9 ? '9+' : '$unreadCount',
+                        style: const TextStyle(
+                          color: AppColors.onGold,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ],

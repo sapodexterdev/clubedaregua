@@ -2,12 +2,14 @@ import 'package:flutter/foundation.dart';
 
 import '../models/appointment.dart';
 import '../models/barber.dart';
+import '../models/notification_item.dart';
 import '../models/service_category.dart';
 import '../models/service_item.dart';
 import '../repositories/appointment_repository.dart';
 import '../repositories/barber_repository.dart';
 import '../repositories/client_profile_repository.dart';
 import '../repositories/favorite_repository.dart';
+import '../repositories/notification_repository.dart';
 import '../services/auth_service.dart';
 import '../services/mock_data.dart';
 import '../services/location_service.dart';
@@ -19,6 +21,7 @@ class AppState extends ChangeNotifier {
   final _appointmentRepository = AppointmentRepository();
   final _clientProfileRepository = const ClientProfileRepository();
   final _favoriteRepository = FavoriteRepository();
+  final _notificationRepository = const NotificationRepository();
   final _locationService = const LocationService();
 
   bool isLoading = false;
@@ -26,11 +29,13 @@ class AppState extends ChangeNotifier {
   bool isLoadingAppointments = false;
   bool isLoadingFavorites = false;
   bool isLoadingClientProfile = false;
+  bool isLoadingNotifications = false;
   String? discoveryLoadError;
   String? availabilityError;
   String? appointmentsLoadError;
   String? favoritesLoadError;
   String? clientProfileError;
+  String? notificationsLoadError;
   String selectedTab = 'home';
   Barber? selectedBarber = MockData.barbers.first;
   ServiceItem? selectedService = MockData.services.first;
@@ -42,6 +47,7 @@ class AppState extends ChangeNotifier {
   List<ServiceCategory> categories = List.of(MockData.categories);
   List<ServiceItem> services = List.of(MockData.services);
   List<Appointment> appointments = const [];
+  List<NotificationItem> notifications = const [];
   List<String> availableTimes = List.of(MockData.times);
   ShopIdentity? shopIdentity;
   List<PublicBarbershop> publicBarbershops = const [];
@@ -64,6 +70,9 @@ class AppState extends ChangeNotifier {
   final Set<String> _favoriteUpdates = <String>{};
   bool isSignedIn = false;
   bool lastBookingRequestCreated = false;
+
+  int get unreadNotificationCount =>
+      notifications.where((item) => !item.isRead).length;
 
   List<PublicBarbershop> get discoveredBarbershops {
     final query = _normalizedSearch(discoveryQuery);
@@ -207,6 +216,7 @@ class AppState extends ChangeNotifier {
     appointmentsLoadError = null;
     favoritesLoadError = null;
     clientProfileError = null;
+    notificationsLoadError = null;
     notifyListeners();
 
     final barbersFuture = _barberRepository.fetchBarbers();
@@ -250,6 +260,15 @@ class AppState extends ChangeNotifier {
       } catch (_) {
         clientProfileError = 'Não foi possível carregar os dados da conta.';
       }
+      try {
+        notifications = await _notificationRepository.fetchNotifications();
+      } catch (_) {
+        notifications = const [];
+        notificationsLoadError =
+            'Não foi possível carregar suas notificações.';
+      }
+    } else {
+      notifications = const [];
     }
     final fetchedShopIdentity = fetchedShopIdentities.isNotEmpty
         ? fetchedShopIdentities.first
@@ -618,6 +637,66 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<void> refreshNotifications() async {
+    if (!isSignedIn || isLoadingNotifications) return;
+    isLoadingNotifications = true;
+    notificationsLoadError = null;
+    notifyListeners();
+    try {
+      notifications = await _notificationRepository.fetchNotifications();
+    } catch (_) {
+      notificationsLoadError = 'Não foi possível carregar suas notificações.';
+    } finally {
+      isLoadingNotifications = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> markNotificationAsRead(String notificationId) async {
+    final index = notifications.indexWhere((item) => item.id == notificationId);
+    if (index < 0 || notifications[index].isRead) return true;
+    try {
+      final updated = await _notificationRepository.markAsRead(notificationId);
+      if (!updated) return false;
+      final item = notifications[index];
+      notifications = List.of(notifications)
+        ..[index] = NotificationItem(
+          id: item.id,
+          title: item.title,
+          message: item.message,
+          isRead: true,
+          createdAt: item.createdAt,
+        );
+      notifyListeners();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> markAllNotificationsAsRead() async {
+    if (unreadNotificationCount == 0) return true;
+    try {
+      final updated = await _notificationRepository.markAllAsRead();
+      if (!updated) return false;
+      notifications = notifications
+          .map(
+            (item) => NotificationItem(
+              id: item.id,
+              title: item.title,
+              message: item.message,
+              isRead: true,
+              createdAt: item.createdAt,
+            ),
+          )
+          .toList();
+      notifyListeners();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<bool> updateClientProfile({
     required String fullName,
     required String phone,
@@ -652,6 +731,7 @@ class AppState extends ChangeNotifier {
     currentUserEmail = null;
     currentUserPhone = null;
     appointments = const [];
+    notifications = const [];
     _favoriteShopIds.clear();
     notifyListeners();
   }

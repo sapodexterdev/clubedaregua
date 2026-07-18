@@ -1,6 +1,5 @@
 import '../models/appointment.dart';
 import '../models/barber.dart';
-import '../models/notification_item.dart';
 import '../models/service_category.dart';
 import '../models/service_item.dart';
 
@@ -85,21 +84,6 @@ class MockData {
       time: '10:00',
       status: 'pending',
       total: 55,
-    ),
-  ];
-
-  static const notifications = [
-    NotificationItem(
-      id: '1',
-      title: 'Agendamento confirmado',
-      message: 'Seu horário de hoje às 15:30 está garantido.',
-      isRead: false,
-    ),
-    NotificationItem(
-      id: '2',
-      title: 'Pontos adicionados',
-      message: 'Você ganhou 85 pontos no Clube da Régua.',
-      isRead: true,
     ),
   ];
 
