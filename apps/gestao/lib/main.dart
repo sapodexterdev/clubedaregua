@@ -1003,6 +1003,7 @@ class ManagementSession extends ChangeNotifier {
   bool get isSignedIn => _accessToken != null;
 
   Future<void> restoreUnifiedSession() async {
+    var shouldLoadManagementData = false;
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_unifiedSessionKey);
@@ -1019,14 +1020,30 @@ class ManagementSession extends ChangeNotifier {
         _clearSessionInMemory();
         return;
       }
-      await _resolvePlatformAdmin(_accessToken!);
-      await _ensureBarberShopId(_accessToken!);
-      await refreshManagementData();
+      shouldLoadManagementData = true;
     } catch (error) {
       _clearSessionInMemory();
       errorMessage = 'Sua conta não possui acesso profissional ativo.';
     } finally {
       isRestoringSession = false;
+      notifyListeners();
+    }
+
+    if (shouldLoadManagementData) {
+      Future.microtask(_loadRestoredManagementData);
+    }
+  }
+
+  Future<void> _loadRestoredManagementData() async {
+    final token = _accessToken;
+    if (token == null || token.isEmpty) return;
+
+    try {
+      await _resolvePlatformAdmin(token).timeout(const Duration(seconds: 8));
+      await _ensureBarberShopId(token).timeout(const Duration(seconds: 8));
+      await refreshManagementData();
+    } catch (error) {
+      errorMessage = _cleanErrorMessage(error);
       notifyListeners();
     }
   }
