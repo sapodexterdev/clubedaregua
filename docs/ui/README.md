@@ -57,6 +57,7 @@ Implementacao
 - `UI-013-Perfil-Cliente`
 - `UI-014-Notificacoes`
 - `UI-015-Conversao-Agendamento`
+- `UI-016-Gestao-Responsiva`
 
 ## Regra de Implementacao
 
