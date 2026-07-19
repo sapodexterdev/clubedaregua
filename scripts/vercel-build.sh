@@ -73,10 +73,21 @@ marker = "__GESTAO_BOOT_SPLASH_DATA__"
 if marker not in index_content:
     raise RuntimeError("Marcador da splash da Gestao nao encontrado")
 encoded_splash = Path("../cliente/web/boot-splash.b64").read_text(encoding="ascii").strip()
-index_path.write_text(
-    index_content.replace(marker, f"data:image/jpeg;base64,{encoded_splash}"),
-    encoding="utf-8",
+logo_marker = "__GESTAO_BOOT_LOGO_DATA__"
+if logo_marker not in index_content:
+    raise RuntimeError("Marcador da logo da Gestao nao encontrado")
+encoded_logo = Path("web/boot-logo.svg").read_bytes()
+import base64
+encoded_logo = base64.b64encode(encoded_logo).decode("ascii")
+index_content = index_content.replace(
+    marker,
+    f"data:image/jpeg;base64,{encoded_splash}",
 )
+index_content = index_content.replace(
+    logo_marker,
+    f"data:image/svg+xml;base64,{encoded_logo}",
+)
+index_path.write_text(index_content, encoding="utf-8")
 
 path = Path("build/web/flutter_bootstrap.js")
 content = path.read_text(encoding="utf-8")
