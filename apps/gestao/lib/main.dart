@@ -4,14 +4,16 @@ import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'utils/app_mode_navigation.dart';
 import 'utils/logo_file.dart';
 import 'utils/logo_picker.dart';
 
 void main() {
   runApp(
     ChangeNotifierProvider(
-      create: (_) => ManagementSession(),
+      create: (_) => ManagementSession()..restoreUnifiedSession(),
       child: const ClubeDaReguaGestaoApp(),
     ),
   );
@@ -39,6 +41,13 @@ class ClubeDaReguaGestaoApp extends StatelessWidget {
           final recoverySession = PasswordRecoveryLink.session;
           if (recoverySession != null) {
             return PasswordRecoveryScreen(session: recoverySession);
+          }
+          if (session.isRestoringSession) {
+            return const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(color: SharedAppColors.orange),
+              ),
+            );
           }
           if (!session.isSignedIn) return const ManagementLoginScreen();
           return const ManagementHomeScreen();
@@ -836,13 +845,17 @@ class ShopConfiguration {
 }
 
 class ManagementSession extends ChangeNotifier {
+  static const _unifiedSessionKey = 'clubedaregua.client.session';
+
   String? _accessToken;
   String? _refreshToken;
   String? _userId;
   String? _barberShopId;
+  bool _isPlatformAdmin = false;
   String? barberShopName;
   String? email;
   bool isLoading = false;
+  bool isRestoringSession = true;
   String? errorMessage;
   bool isBookingRequestsLoading = false;
   String? bookingRequestsError;
@@ -873,6 +886,35 @@ class ManagementSession extends ChangeNotifier {
   String customerSearchQuery = '';
 
   bool get isSignedIn => _accessToken != null;
+
+  Future<void> restoreUnifiedSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_unifiedSessionKey);
+      if (raw == null || raw.isEmpty) return;
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      _accessToken = data['access_token']?.toString();
+      _refreshToken = data['refresh_token']?.toString();
+      final user = data['user'];
+      if (user is Map) {
+        _userId = user['id']?.toString();
+        email = user['email']?.toString();
+      }
+      if (_accessToken == null || _accessToken!.isEmpty) {
+        _clearSessionInMemory();
+        return;
+      }
+      await _resolvePlatformAdmin(_accessToken!);
+      await _ensureBarberShopId(_accessToken!);
+      await refreshManagementData();
+    } catch (error) {
+      _clearSessionInMemory();
+      errorMessage = 'Sua conta não possui acesso profissional ativo.';
+    } finally {
+      isRestoringSession = false;
+      notifyListeners();
+    }
+  }
 
   TeamBarber? get currentBarber {
     final userId = _userId;
@@ -973,6 +1015,9 @@ class ManagementSession extends ChangeNotifier {
       final user = data['user'];
       if (user is Map) _userId = user['id']?.toString();
       email = emailValue.trim();
+      await _resolvePlatformAdmin(_accessToken!);
+      await _ensureBarberShopId(_accessToken!);
+      await _saveUnifiedSession(data);
       await refreshManagementData();
     } catch (error) {
       _accessToken = null;
@@ -1923,10 +1968,19 @@ class ManagementSession extends ChangeNotifier {
   }
 
   void signOut() {
+    SharedPreferences.getInstance().then(
+      (prefs) => prefs.remove(_unifiedSessionKey),
+    );
+    _clearSessionInMemory();
+    notifyListeners();
+  }
+
+  void _clearSessionInMemory() {
     _accessToken = null;
     _refreshToken = null;
     _userId = null;
     _barberShopId = null;
+    _isPlatformAdmin = false;
     barberShopName = null;
     email = null;
     bookingRequests = [];
@@ -1955,7 +2009,11 @@ class ManagementSession extends ChangeNotifier {
     isSettingsLoading = false;
     teamBarbers = [];
     errorMessage = null;
-    notifyListeners();
+  }
+
+  Future<void> _saveUnifiedSession(Map<String, dynamic> data) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_unifiedSessionKey, jsonEncode(data));
   }
 
   BookingRequest? _bookingRequestById(String id) {
@@ -1967,12 +2025,17 @@ class ManagementSession extends ChangeNotifier {
 
   Future<String> _ensureBarberShopId(String token) async {
     if (_barberShopId != null) return _barberShopId!;
+    final userId = _userId;
+    if (userId == null || userId.isEmpty) {
+      throw StateError('Usuário sem identificação válida.');
+    }
 
     final memberships = await _getRestRows(
       token,
       'shop_members',
       query: {
         'select': 'barber_shop_id,barber_shops(name)',
+        'user_id': 'eq.$userId',
         'is_active': 'eq.true',
         'order': 'created_at.asc',
         'limit': '1',
@@ -1994,6 +2057,7 @@ class ManagementSession extends ChangeNotifier {
       'barber_shops',
       query: {
         'select': 'id,name',
+        if (!_isPlatformAdmin) 'owner_id': 'eq.$userId',
         'order': 'name.asc',
         'limit': '1',
       },
@@ -2011,6 +2075,22 @@ class ManagementSession extends ChangeNotifier {
     }
 
     return _barberShopId!;
+  }
+
+  Future<void> _resolvePlatformAdmin(String token) async {
+    final userId = _userId;
+    if (userId == null || userId.isEmpty) return;
+    final rows = await _getRestRows(
+      token,
+      'users',
+      query: {
+        'select': 'role',
+        'id': 'eq.$userId',
+        'limit': '1',
+      },
+    );
+    _isPlatformAdmin =
+        rows.isNotEmpty && rows.first['role']?.toString() == 'admin';
   }
 
   Future<List<Map<String, dynamic>>> _getRestRows(
@@ -2176,6 +2256,7 @@ class ManagementSession extends ChangeNotifier {
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     _accessToken = data['access_token']?.toString();
     _refreshToken = data['refresh_token']?.toString() ?? refreshToken;
+    await _saveUnifiedSession(data);
     return _accessToken;
   }
 
@@ -2655,6 +2736,11 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
       appBar: AppBar(
         title: Text(page.title),
         actions: [
+          IconButton(
+            tooltip: 'Modo cliente',
+            onPressed: openClientMode,
+            icon: const Icon(Icons.swap_horiz_rounded),
+          ),
           IconButton(
             tooltip: 'Atualizar',
             onPressed: () =>

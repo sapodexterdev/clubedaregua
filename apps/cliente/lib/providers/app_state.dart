@@ -10,6 +10,7 @@ import '../repositories/barber_repository.dart';
 import '../repositories/client_profile_repository.dart';
 import '../repositories/favorite_repository.dart';
 import '../repositories/notification_repository.dart';
+import '../repositories/user_access_repository.dart';
 import '../services/auth_service.dart';
 import '../services/mock_data.dart';
 import '../services/location_service.dart';
@@ -22,6 +23,7 @@ class AppState extends ChangeNotifier {
   final _clientProfileRepository = const ClientProfileRepository();
   final _favoriteRepository = FavoriteRepository();
   final _notificationRepository = const NotificationRepository();
+  final _userAccessRepository = const UserAccessRepository();
   final _locationService = const LocationService();
 
   bool isLoading = false;
@@ -71,6 +73,11 @@ class AppState extends ChangeNotifier {
   bool isSignedIn = false;
   bool lastBookingRequestCreated = false;
   BookingReceipt? lastBookingReceipt;
+  Set<String> professionalRoles = const <String>{};
+  Set<String> professionalShopIds = const <String>{};
+
+  bool get hasProfessionalAccess =>
+      professionalShopIds.isNotEmpty || professionalRoles.contains('admin');
 
   int get unreadNotificationCount =>
       notifications.where((item) => !item.isRead).length;
@@ -255,6 +262,7 @@ class AppState extends ChangeNotifier {
     }
     final session = await sessionFuture;
     ClientProfile? clientProfile;
+    UserAccess userAccess = const UserAccess.client();
     if (session != null) {
       try {
         clientProfile = await _clientProfileRepository.fetchProfile();
@@ -267,6 +275,11 @@ class AppState extends ChangeNotifier {
         notifications = const [];
         notificationsLoadError =
             'Não foi possível carregar suas notificações.';
+      }
+      try {
+        userAccess = await _userAccessRepository.fetchAccess();
+      } catch (_) {
+        userAccess = const UserAccess.client();
       }
     } else {
       notifications = const [];
@@ -293,6 +306,8 @@ class AppState extends ChangeNotifier {
     );
     currentUserEmail = clientProfile?.email ?? session?.user.email;
     currentUserPhone = clientProfile?.phone;
+    professionalRoles = userAccess.professionalRoles;
+    professionalShopIds = userAccess.shopIds;
     _favoriteShopIds
       ..clear()
       ..addAll(fetchedFavoriteIds);
@@ -742,6 +757,8 @@ class AppState extends ChangeNotifier {
     currentUserName = null;
     currentUserEmail = null;
     currentUserPhone = null;
+    professionalRoles = const <String>{};
+    professionalShopIds = const <String>{};
     appointments = const [];
     notifications = const [];
     _favoriteShopIds.clear();

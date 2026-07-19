@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../providers/app_state.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../services/auth_service.dart';
+import '../../services/app_mode_navigation.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/premium_bottom_nav.dart';
 import 'favorites_screen.dart';
@@ -50,6 +51,21 @@ class ProfileScreen extends StatelessWidget {
                   _ErrorMessage(message: state.clientProfileError!),
                 ],
                 const SizedBox(height: 24),
+                if (state.hasProfessionalAccess) ...[
+                  const _SectionLabel('MODOS DO APP'),
+                  const SizedBox(height: 10),
+                  _ActionGroup(
+                    children: [
+                      _ProfileAction(
+                        icon: Icons.content_cut_rounded,
+                        title: 'Área profissional',
+                        subtitle: 'Agenda e gestão da barbearia',
+                        onTap: openProfessionalMode,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                ],
                 const _SectionLabel('CONTA'),
                 const SizedBox(height: 10),
                 _ActionGroup(

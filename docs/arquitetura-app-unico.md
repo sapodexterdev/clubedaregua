@@ -1,0 +1,34 @@
+# Arquitetura do App Único
+
+## Decisão
+
+O Clube da Régua será distribuído como um único produto. Cliente, barbeiro,
+recepção, gerente e proprietário usam a mesma conta e a mesma sessão.
+
+As experiências continuam separadas internamente:
+
+- **Modo Cliente:** descoberta, favoritos, agendamento, agenda e perfil.
+- **Modo Profissional:** agenda, solicitações, clientes e comissão.
+- **Modo Administrativo:** serviços, equipe, configuração e indicadores.
+
+## Resolução de acesso
+
+Após autenticar, o app consulta os vínculos ativos em `shop_members` e as
+barbearias pertencentes ao usuário. Quem possui acesso profissional escolhe o
+modo de entrada. Quem é somente cliente segue diretamente para a Home.
+
+O banco continua sendo a autoridade de autorização por meio de RLS. A escolha
+de modo altera apenas a navegação e nunca concede permissões.
+
+## Migração progressiva
+
+1. Compartilhar sessão e resolver os modos disponíveis.
+2. Manter `/gestao/` como módulo profissional durante a transição.
+3. Incorporar as áreas profissionais ao shell único por módulos.
+4. Remover a autenticação duplicada.
+5. Desativar o build separado somente após validação funcional completa.
+
+## Regra de produto
+
+Usuários com mais de um papel podem trocar de modo pelo Perfil. Sair da conta
+encerra a sessão em todos os modos.

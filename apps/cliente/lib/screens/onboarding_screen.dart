@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/app_constants.dart';
 import '../theme/app_colors.dart';
-import 'client/home_screen.dart';
+import 'app_entry_gate_screen.dart';
 import 'splash_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -71,7 +71,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(SplashScreen.onboardingSeenKey, true);
     if (!mounted) return;
-    Navigator.pushReplacementNamed(context, HomeScreen.route);
+    Navigator.pushReplacementNamed(context, AppEntryGateScreen.route);
   }
 
   void _skipToExplore() {

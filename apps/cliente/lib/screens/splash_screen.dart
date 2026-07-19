@@ -6,7 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/app_constants.dart';
-import 'client/home_screen.dart';
+import 'app_entry_gate_screen.dart';
 import 'onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -115,7 +115,7 @@ class _SplashScreenState extends State<SplashScreen>
     Navigator.pushReplacementNamed(
       context,
       hasSeenOnboarding && !forceOnboardingPreview
-          ? HomeScreen.route
+          ? AppEntryGateScreen.route
           : OnboardingScreen.route,
     );
   }
