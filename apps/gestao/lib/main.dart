@@ -25,17 +25,9 @@ class ClubeDaReguaGestaoApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Clube da R�gua Gest�o',
+      title: 'Clube da Régua Gestão',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: SharedAppColors.orange,
-          brightness: Brightness.light,
-        ),
-        scaffoldBackgroundColor: SharedAppColors.background,
-        useMaterial3: true,
-        fontFamily: 'Inter',
-      ),
+      theme: _buildManagementTheme(),
       home: Consumer<ManagementSession>(
         builder: (context, session, _) {
           final recoverySession = PasswordRecoveryLink.session;
@@ -55,6 +47,127 @@ class ClubeDaReguaGestaoApp extends StatelessWidget {
       ),
     );
   }
+}
+
+ThemeData _buildManagementTheme() {
+  const scheme = ColorScheme.dark(
+    primary: SharedAppColors.orange,
+    onPrimary: SharedAppColors.onGold,
+    secondary: SharedAppColors.orange,
+    onSecondary: SharedAppColors.onGold,
+    surface: SharedAppColors.card,
+    onSurface: SharedAppColors.text,
+    error: Color(0xFFEF4444),
+  );
+  final base = ThemeData(
+    colorScheme: scheme,
+    brightness: Brightness.dark,
+    scaffoldBackgroundColor: SharedAppColors.background,
+    canvasColor: SharedAppColors.card,
+    useMaterial3: true,
+    fontFamily: 'Inter',
+  );
+  return base.copyWith(
+    appBarTheme: const AppBarTheme(
+      backgroundColor: SharedAppColors.card,
+      foregroundColor: SharedAppColors.text,
+      elevation: 0,
+      centerTitle: false,
+      surfaceTintColor: Colors.transparent,
+      titleTextStyle: TextStyle(
+        color: SharedAppColors.text,
+        fontFamily: 'Barlow Condensed',
+        fontSize: 24,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+    dividerColor: SharedAppColors.stroke,
+    cardColor: SharedAppColors.card,
+    dialogTheme: DialogTheme(
+      backgroundColor: SharedAppColors.elevated,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+    ),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: SharedAppColors.card,
+      surfaceTintColor: Colors.transparent,
+      modalBackgroundColor: SharedAppColors.card,
+      showDragHandle: true,
+      dragHandleColor: SharedAppColors.stroke,
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: SharedAppColors.card,
+      labelStyle: const TextStyle(color: SharedAppColors.muted),
+      hintStyle: const TextStyle(color: SharedAppColors.muted),
+      prefixIconColor: SharedAppColors.muted,
+      suffixIconColor: SharedAppColors.muted,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: SharedAppColors.stroke),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: SharedAppColors.stroke),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: SharedAppColors.orange, width: 1.5),
+      ),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: SharedAppColors.orange,
+        foregroundColor: SharedAppColors.onGold,
+        minimumSize: const Size(64, 48),
+        textStyle: const TextStyle(fontWeight: FontWeight.w800),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: SharedAppColors.text,
+        minimumSize: const Size(64, 48),
+        side: const BorderSide(color: SharedAppColors.stroke),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: SharedAppColors.orange),
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: SharedAppColors.card,
+      indicatorColor: SharedAppColors.orange,
+      labelTextStyle: WidgetStateProperty.resolveWith(
+        (states) => TextStyle(
+          color: states.contains(WidgetState.selected)
+              ? SharedAppColors.orange
+              : SharedAppColors.muted,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      iconTheme: WidgetStateProperty.resolveWith(
+        (states) => IconThemeData(
+          color: states.contains(WidgetState.selected)
+              ? SharedAppColors.onGold
+              : SharedAppColors.muted,
+        ),
+      ),
+    ),
+    chipTheme: base.chipTheme.copyWith(
+      backgroundColor: SharedAppColors.elevated,
+      selectedColor: SharedAppColors.orange,
+      side: const BorderSide(color: SharedAppColors.stroke),
+      labelStyle: const TextStyle(color: SharedAppColors.text),
+    ),
+    snackBarTheme: const SnackBarThemeData(
+      backgroundColor: SharedAppColors.elevated,
+      contentTextStyle: TextStyle(color: SharedAppColors.text),
+      behavior: SnackBarBehavior.floating,
+    ),
+  );
 }
 
 class GestaoSupabaseConfig {
@@ -141,7 +254,7 @@ class BookingRequest {
 
   String get paymentMethod {
     final match = RegExp(r'Pagamento:\s*([^.]+)').firstMatch(notes);
-    return match?.group(1)?.trim() ?? 'N�o informado';
+    return match?.group(1)?.trim() ?? 'Não informado';
   }
 
   String get formattedDate {
@@ -152,14 +265,14 @@ class BookingRequest {
     return '${parts[2]}/${parts[1]}/$year';
   }
 
-  String get formattedDateTime => '$formattedDate �s $time';
+  String get formattedDateTime => '$formattedDate às $time';
 
   String get observation {
     final value = notes
         .replaceAll(RegExp(r'Solicitacao criada pelo PWA Cliente\.\s*'), '')
         .replaceAll(RegExp(r'Pagamento:\s*[^.]+\.?'), '')
         .trim();
-    return value.isEmpty ? 'Sem observacoes.' : value;
+    return value.isEmpty ? 'Sem observações.' : value;
   }
 
   BookingRequest copyWith({
@@ -189,7 +302,7 @@ class BookingRequest {
       client: map['customer_name']?.toString() ?? 'Cliente',
       phone: map['customer_phone']?.toString() ?? '',
       clientPhotoUrl: map['customer_photo_url']?.toString() ?? '',
-      service: map['services']?['name']?.toString() ?? 'Servico',
+      service: map['services']?['name']?.toString() ?? 'Serviço',
       barber: map['barbers']?['name']?.toString() ?? 'Barbeiro',
       date: map['requested_date']?.toString() ?? '',
       time: _timeOnly(map['requested_time']?.toString() ?? ''),
@@ -235,7 +348,7 @@ class TeamBarber {
   String get detail {
     final commission = commissionPercent.toStringAsFixed(0);
     final status = isActive ? 'agenda ativa' : 'inativo';
-    return '$commission% comiss�o - $status';
+    return '$commission% comissão - $status';
   }
 
   factory TeamBarber.fromMap(Map<String, dynamic> map) {
@@ -280,7 +393,7 @@ class ScheduleEntry {
       appointmentId: null,
       time: _timeOnly(map['requested_time']?.toString() ?? ''),
       client: map['customer_name']?.toString() ?? 'Cliente',
-      service: map['services']?['name']?.toString() ?? 'Servico',
+      service: map['services']?['name']?.toString() ?? 'Serviço',
       barber: map['barbers']?['name']?.toString() ?? 'Barbeiro',
       status: 'Aceito',
       notes: _cleanNotes(map['notes']?.toString() ?? ''),
@@ -294,12 +407,12 @@ class ScheduleEntry {
       appointmentId: map['id']?.toString(),
       time: startsAt.length >= 16 ? startsAt.substring(11, 16) : '',
       client: 'Cliente agendado',
-      service: map['services']?['name']?.toString() ?? 'Servico',
+      service: map['services']?['name']?.toString() ?? 'Serviço',
       barber: map['barbers']?['name']?.toString() ?? 'Barbeiro',
       status: _statusLabel(map['status']?.toString() ?? ''),
       notes: map['notes']?.toString().trim().isEmpty == false
           ? map['notes'].toString()
-          : 'Sem observacoes.',
+          : 'Sem observações.',
     );
   }
 
@@ -326,7 +439,7 @@ class ScheduleEntry {
     final clean = notes
         .replaceAll(RegExp(r'Solicitacao criada pelo PWA Cliente\.\s*'), '')
         .trim();
-    return clean.isEmpty ? 'Sem observacoes.' : clean;
+    return clean.isEmpty ? 'Sem observações.' : clean;
   }
 }
 
@@ -390,7 +503,7 @@ class ManagedService {
     final category = map['service_categories'];
     return ManagedService(
       id: map['id']?.toString() ?? '',
-      name: map['name']?.toString() ?? 'Servico',
+      name: map['name']?.toString() ?? 'Serviço',
       description: map['description']?.toString() ?? '',
       categoryId: map['category_id']?.toString(),
       categoryName: category is Map
@@ -593,7 +706,7 @@ class CustomerAppointment {
       id: map['id']?.toString() ?? '',
       clientId: map['client_id']?.toString() ?? '',
       date: ManagedCustomer._parseDateTime(map['starts_at']?.toString()),
-      service: map['service_name']?.toString() ?? 'Servico',
+      service: map['service_name']?.toString() ?? 'Serviço',
       barber: map['barber_name']?.toString() ?? 'Barbeiro',
       status: ScheduleEntry._statusLabel(map['status']?.toString() ?? ''),
       notes: map['notes']?.toString() ?? '',
@@ -609,7 +722,7 @@ class CustomerAppointment {
           'booking:${ManagedCustomer._digitsOnly(map['customer_phone']?.toString() ?? '')}',
       date: ManagedCustomer._parseDateTime(
           '$date ${time.isEmpty ? '00:00' : time}'),
-      service: map['services']?['name']?.toString() ?? 'Servico',
+      service: map['services']?['name']?.toString() ?? 'Serviço',
       barber: map['barbers']?['name']?.toString() ?? 'Barbeiro',
       status: _bookingStatusLabel(map['status']?.toString() ?? ''),
       notes: map['notes']?.toString() ?? '',
@@ -801,7 +914,7 @@ class ShopConfiguration {
     ),
     ShopBusinessDay(
       key: 'tuesday',
-      label: 'Ter�a',
+      label: 'Terça',
       isOpen: true,
       openTime: '09:00',
       closeTime: '18:00',
@@ -829,7 +942,7 @@ class ShopConfiguration {
     ),
     ShopBusinessDay(
       key: 'saturday',
-      label: 'S�bado',
+      label: 'Sábado',
       isOpen: true,
       openTime: '09:00',
       closeTime: '14:00',
@@ -1006,7 +1119,7 @@ class ManagementSession extends ChangeNotifier {
       );
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw StateError('Login inv�lido ou usu�rio sem acesso.');
+        throw StateError('Login inválido ou usuário sem acesso.');
       }
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -1398,7 +1511,7 @@ class ManagementSession extends ChangeNotifier {
   }
 
   String _favoriteBarber(Map<String, int>? counts) {
-    if (counts == null || counts.isEmpty) return 'Nao definido';
+    if (counts == null || counts.isEmpty) return 'Não definido';
     final entries = counts.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     return entries.first.key;
@@ -1425,7 +1538,7 @@ class ManagementSession extends ChangeNotifier {
         },
       );
       if (shops.isEmpty) {
-        throw StateError('Barbearia nao encontrada.');
+        throw StateError('Barbearia não encontrada.');
       }
 
       final settingsRows = await _getRestRows(
@@ -2064,14 +2177,14 @@ class ManagementSession extends ChangeNotifier {
     );
 
     if (shops.isEmpty) {
-      throw StateError('Nenhuma barbearia dispon�vel para este usu�rio.');
+      throw StateError('Nenhuma barbearia disponível para este usuário.');
     }
 
     final shop = shops.first;
     _barberShopId = shop['id']?.toString();
     barberShopName = shop['name']?.toString();
     if (_barberShopId == null || _barberShopId!.isEmpty) {
-      throw StateError('Barbearia sem identificador v�lido.');
+      throw StateError('Barbearia sem identificador válido.');
     }
 
     return _barberShopId!;
@@ -2282,7 +2395,7 @@ class ManagementSession extends ChangeNotifier {
         message.contains('XMLHttpRequest') ||
         message.contains('SocketException') ||
         message.contains('ClientException')) {
-      return 'Sem internet ou Supabase indispon�vel. Verifique sua conex�o.';
+      return 'Sem internet ou Supabase indisponível. Verifique sua conexão.';
     }
 
     if (message.contains('management_clients') ||
@@ -2298,23 +2411,23 @@ class ManagementSession extends ChangeNotifier {
     }
 
     if (message.toLowerCase().contains('horario escolhido ja esta ocupado') ||
-        message.toLowerCase().contains('hor�rio escolhido j� est� ocupado')) {
+        message.toLowerCase().contains('horário escolhido já está ocupado')) {
       return 'Este horário já possui um atendimento na agenda. Recuse ou cancele esta solicitação e oriente o cliente a escolher outro horário.';
     }
 
     return switch (message) {
       'Login invalido ou usuario sem acesso.' =>
-        'Login inv�lido ou usu�rio sem acesso.',
-      'Login inv�lido ou usu�rio sem acesso.' =>
-        'Login inv�lido ou usu�rio sem acesso.',
+        'Login inválido ou usuário sem acesso.',
+      'Login inválido ou usuário sem acesso.' =>
+        'Login inválido ou usuário sem acesso.',
       'Nao foi possivel carregar pedidos.' =>
-        'N�o foi poss�vel carregar os pedidos.',
-      'N�o foi poss�vel carregar os pedidos.' =>
-        'N�o foi poss�vel carregar os pedidos.',
+        'Não foi possível carregar os pedidos.',
+      'Não foi possível carregar os pedidos.' =>
+        'Não foi possível carregar os pedidos.',
       'Nao foi possivel atualizar o pedido.' =>
-        'N�o foi poss�vel atualizar o pedido.',
-      'N�o foi poss�vel atualizar o pedido.' =>
-        'N�o foi poss�vel atualizar o pedido.',
+        'Não foi possível atualizar o pedido.',
+      'Não foi possível atualizar o pedido.' =>
+        'Não foi possível atualizar o pedido.',
       _ => message,
     };
   }
@@ -2376,13 +2489,13 @@ class _ManagementLoginScreenState extends State<ManagementLoginScreen> {
                   ),
                   const SizedBox(height: 18),
                   const Text(
-                    'Clube da R�gua Gest�o',
+                    'Clube da Régua Gestão',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Entre para ver pedidos, agenda e opera��o da barbearia.',
+                    'Entre para ver pedidos, agenda e operação da barbearia.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: SharedAppColors.muted),
                   ),
@@ -2487,7 +2600,7 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
     }
 
     if (password != confirmPassword) {
-      setState(() => _message = 'As senhas digitadas n�o conferem.');
+      setState(() => _message = 'As senhas digitadas não conferem.');
       return;
     }
 
@@ -2593,7 +2706,7 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
       // Keep the fallback below when Supabase returns an empty or non-JSON body.
     }
 
-    return 'N�o foi poss�vel redefinir a senha. Gere um novo link e tente novamente.';
+    return 'Não foi possível redefinir a senha. Gere um novo link e tente novamente.';
   }
 
   @override
@@ -2633,8 +2746,8 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
                   const SizedBox(height: 8),
                   Text(
                     _isDone
-                        ? 'Agora voc� j� pode entrar com sua nova senha.'
-                        : 'Digite sua nova senha para acessar a gest�o.',
+                        ? 'Agora você já pode entrar com sua nova senha.'
+                        : 'Digite sua nova senha para acessar a gestão.',
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: SharedAppColors.muted),
                   ),
@@ -2732,10 +2845,152 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
     final safeTab = selectedTab >= tabs.length ? 0 : selectedTab;
     final page = tabs[safeTab];
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(page.title),
-        actions: [
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useSideNavigation = constraints.maxWidth >= 900;
+        final extendedNavigation = constraints.maxWidth >= 1280;
+        return Scaffold(
+          appBar: _ManagementTopBar(title: page.title),
+          bottomNavigationBar: useSideNavigation
+              ? null
+              : _ManagementBottomNavigation(
+                  tabs: tabs,
+                  selectedIndex: safeTab,
+                  onSelected: _selectTab,
+                ),
+          body: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (useSideNavigation)
+                _ManagementSideNavigation(
+                  tabs: tabs,
+                  selectedIndex: safeTab,
+                  extended: extendedNavigation,
+                  onSelected: _selectTab,
+                ),
+              Expanded(
+                child: _ManagementPageContent(
+                  horizontalPadding: useSideNavigation ? 32 : 18,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: _RoleSwitch(
+                        selectedRole: selectedRole,
+                        onChanged: (role) {
+                          setState(() {
+                            selectedRole = role;
+                            selectedTab = 0;
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Consumer<ManagementSession>(
+                      builder: (context, session, _) => _Header(
+                        isAdmin: isAdmin,
+                        title: isAdmin
+                            ? session.barberShopName ?? 'Barbearia'
+                            : session.barberHeaderName,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    page.child,
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _selectTab(int index) => setState(() => selectedTab = index);
+}
+
+class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
+  const _ManagementTopBar({required this.title});
+
+  final String title;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(72);
+
+  @override
+  Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 700;
+    return AppBar(
+      toolbarHeight: 72,
+      titleSpacing: 20,
+      title: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: SharedAppColors.orange.withOpacity(.12),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: SharedAppColors.orange.withOpacity(.5)),
+            ),
+            child: const Icon(
+              Icons.workspace_premium_rounded,
+              color: SharedAppColors.orange,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'CLUBE DA RÉGUA · GESTÃO',
+                  style: TextStyle(
+                    color: SharedAppColors.orange,
+                    fontFamily: 'Inter',
+                    fontSize: 10,
+                    letterSpacing: 1.1,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+              ],
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        IconButton(
+          tooltip: 'Notificações',
+          onPressed: () {},
+          icon: const Icon(Icons.notifications_none_rounded),
+        ),
+        if (compact)
+          PopupMenuButton<String>(
+            tooltip: 'Mais opções',
+            icon: const Icon(Icons.more_vert_rounded),
+            onSelected: (value) {
+              switch (value) {
+                case 'client':
+                  openClientMode();
+                  return;
+                case 'refresh':
+                  context.read<ManagementSession>().refreshManagementData();
+                  return;
+                case 'logout':
+                  context.read<ManagementSession>().signOut();
+                  return;
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 'client', child: Text('Modo cliente')),
+              PopupMenuItem(value: 'refresh', child: Text('Atualizar dados')),
+              PopupMenuItem(value: 'logout', child: Text('Sair')),
+            ],
+          )
+        else ...[
           IconButton(
             tooltip: 'Modo cliente',
             onPressed: openClientMode,
@@ -2748,22 +3003,102 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
             icon: const Icon(Icons.refresh_rounded),
           ),
           IconButton(
-            tooltip: 'Notifica��es',
-            onPressed: () {},
-            icon: const Icon(Icons.notifications_none_rounded),
-          ),
-          IconButton(
             tooltip: 'Sair',
             onPressed: () => context.read<ManagementSession>().signOut(),
             icon: const Icon(Icons.logout_rounded),
           ),
         ],
+        const SizedBox(width: 10),
+      ],
+      bottom: const PreferredSize(
+        preferredSize: Size.fromHeight(1),
+        child: Divider(height: 1, color: SharedAppColors.stroke),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: safeTab,
-        backgroundColor: Colors.white,
-        indicatorColor: SharedAppColors.orange.withOpacity(.14),
-        onDestinationSelected: (index) => setState(() => selectedTab = index),
+    );
+  }
+}
+
+class _ManagementPageContent extends StatelessWidget {
+  const _ManagementPageContent({
+    required this.children,
+    required this.horizontalPadding,
+  });
+
+  final List<Widget> children;
+  final double horizontalPadding;
+
+  @override
+  Widget build(BuildContext context) => ListView(
+        padding: EdgeInsets.fromLTRB(horizontalPadding, 24, horizontalPadding, 40),
+        children: [
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1180),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: children,
+              ),
+            ),
+          ),
+        ],
+      );
+}
+
+class _ManagementSideNavigation extends StatelessWidget {
+  const _ManagementSideNavigation({
+    required this.tabs,
+    required this.selectedIndex,
+    required this.extended,
+    required this.onSelected,
+  });
+
+  final List<_ManagementTab> tabs;
+  final int selectedIndex;
+  final bool extended;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) => NavigationRail(
+        selectedIndex: selectedIndex,
+        extended: extended,
+        minWidth: 82,
+        minExtendedWidth: 220,
+        backgroundColor: SharedAppColors.card,
+        indicatorColor: SharedAppColors.orange,
+        selectedIconTheme: const IconThemeData(color: SharedAppColors.onGold),
+        unselectedIconTheme: const IconThemeData(color: SharedAppColors.muted),
+        selectedLabelTextStyle: const TextStyle(
+          color: SharedAppColors.text,
+          fontWeight: FontWeight.w800,
+        ),
+        unselectedLabelTextStyle: const TextStyle(color: SharedAppColors.muted),
+        onDestinationSelected: onSelected,
+        destinations: [
+          for (final tab in tabs)
+            NavigationRailDestination(
+              icon: Icon(tab.icon),
+              selectedIcon: Icon(tab.selectedIcon),
+              label: Text(tab.label),
+            ),
+        ],
+      );
+}
+
+class _ManagementBottomNavigation extends StatelessWidget {
+  const _ManagementBottomNavigation({
+    required this.tabs,
+    required this.selectedIndex,
+    required this.onSelected,
+  });
+
+  final List<_ManagementTab> tabs;
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) => NavigationBar(
+        selectedIndex: selectedIndex,
+        onDestinationSelected: onSelected,
         destinations: [
           for (final tab in tabs)
             NavigationDestination(
@@ -2772,36 +3107,7 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
               label: tab.label,
             ),
         ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
-        children: [
-          _RoleSwitch(
-            selectedRole: selectedRole,
-            onChanged: (role) {
-              setState(() {
-                selectedRole = role;
-                selectedTab = 0;
-              });
-            },
-          ),
-          const SizedBox(height: 18),
-          Consumer<ManagementSession>(
-            builder: (context, session, _) {
-              return _Header(
-                isAdmin: isAdmin,
-                title: isAdmin
-                    ? session.barberShopName ?? 'Barbearia'
-                    : session.barberHeaderName,
-              );
-            },
-          ),
-          const SizedBox(height: 18),
-          page.child,
-        ],
-      ),
-    );
-  }
+      );
 }
 
 class _ManagementTab {
@@ -2836,7 +3142,7 @@ const _barberTabs = [
     child: _BarberAgendaPage(),
   ),
   _ManagementTab(
-    label: 'Hor�rios',
+    label: 'Horários',
     title: 'Disponibilidade',
     icon: Icons.schedule_outlined,
     selectedIcon: Icons.schedule_rounded,
@@ -2850,8 +3156,8 @@ const _barberTabs = [
     child: _ClientsPage(),
   ),
   _ManagementTab(
-    label: 'Comiss�o',
-    title: 'Comiss�o e faturamento',
+    label: 'Comissão',
+    title: 'Comissão e faturamento',
     icon: Icons.payments_outlined,
     selectedIcon: Icons.payments_rounded,
     child: _CommissionPage(),
@@ -2881,8 +3187,8 @@ const _adminTabs = [
     child: _BarberAgendaPage(adminView: true),
   ),
   _ManagementTab(
-    label: 'Servi�os',
-    title: 'Cadastro de servi�os',
+    label: 'Serviços',
+    title: 'Cadastro de serviços',
     icon: Icons.design_services_outlined,
     selectedIcon: Icons.design_services_rounded,
     child: _ServicesPage(),
@@ -2903,7 +3209,7 @@ const _adminTabs = [
   ),
   _ManagementTab(
     label: 'Config',
-    title: 'Configura��o da barbearia',
+    title: 'Configuração da barbearia',
     icon: Icons.settings_outlined,
     selectedIcon: Icons.settings_rounded,
     child: _SettingsPage(),
@@ -2941,12 +3247,15 @@ class _RoleSwitch extends StatelessWidget {
         backgroundColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
               ? SharedAppColors.orange
-              : Colors.white,
+              : SharedAppColors.card,
         ),
         foregroundColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
-              ? Colors.white
-              : SharedAppColors.text,
+              ? SharedAppColors.onGold
+              : SharedAppColors.muted,
+        ),
+        side: WidgetStateProperty.all(
+          const BorderSide(color: SharedAppColors.stroke),
         ),
       ),
     );
@@ -2967,8 +3276,9 @@ class _Header extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: SharedAppColors.dark,
+        color: SharedAppColors.card,
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: SharedAppColors.stroke),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2976,17 +3286,18 @@ class _Header extends StatelessWidget {
           Text(
             title,
             style: const TextStyle(
-              color: Colors.white,
-              fontSize: 24,
+              color: SharedAppColors.text,
+              fontFamily: 'Barlow Condensed',
+              fontSize: 28,
               fontWeight: FontWeight.w900,
             ),
           ),
           const SizedBox(height: 6),
           Text(
             isAdmin
-                ? 'Controle equipe, servi�os, caixa e desempenho da unidade.'
-                : 'Confirme atendimentos, bloqueie hor�rios e acompanhe sua comiss�o.',
-            style: const TextStyle(color: Colors.white70, height: 1.35),
+                ? 'Controle equipe, serviços, caixa e desempenho da unidade.'
+                : 'Confirme atendimentos, bloqueie horários e acompanhe sua comissão.',
+            style: const TextStyle(color: SharedAppColors.muted, height: 1.35),
           ),
         ],
       ),
@@ -3032,7 +3343,7 @@ class _BarberAgendaPage extends StatelessWidget {
             const SizedBox(height: 18),
             _ScheduleFilters(adminView: adminView),
             const SizedBox(height: 22),
-            const _SectionTitle('Proximos horarios'),
+            const _SectionTitle('Próximos horários'),
             const SizedBox(height: 12),
             if (session.isScheduleLoading) ...[
               const LinearProgressIndicator(color: SharedAppColors.orange),
@@ -3041,7 +3352,7 @@ class _BarberAgendaPage extends StatelessWidget {
             if (session.scheduleError != null)
               _InlineNotice(
                 icon: Icons.warning_amber_rounded,
-                title: 'Nao foi possivel carregar a agenda',
+                title: 'Não foi possível carregar a agenda',
                 subtitle: session.scheduleError!,
               )
             else if (entries.isEmpty)
@@ -3084,12 +3395,12 @@ class _BarberAgendaPage extends StatelessWidget {
               const SizedBox(height: 12),
               _RequestInfoRow(
                 icon: Icons.schedule_rounded,
-                label: 'Horario',
+                label: 'Horário',
                 value: entry.time,
               ),
               _RequestInfoRow(
                 icon: Icons.content_cut_rounded,
-                label: 'Servico',
+                label: 'Serviço',
                 value: entry.service,
               ),
               _RequestInfoRow(
@@ -3121,7 +3432,7 @@ class _BarberAgendaPage extends StatelessWidget {
                       navigator.pop();
                       messenger.showSnackBar(
                         const SnackBar(
-                          content: Text('Atendimento concluido.'),
+                          content: Text('Atendimento concluído.'),
                         ),
                       );
                     } catch (_) {
@@ -3129,7 +3440,7 @@ class _BarberAgendaPage extends StatelessWidget {
                       messenger.showSnackBar(
                         const SnackBar(
                           content: Text(
-                            'Nao foi possivel concluir o atendimento.',
+                            'Não foi possível concluir o atendimento.',
                           ),
                         ),
                       );
@@ -3172,7 +3483,7 @@ class _ScheduleFilters extends StatelessWidget {
                   labelText: 'Barbeiro',
                   prefixIcon: Icon(Icons.badge_outlined),
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: SharedAppColors.card,
                 ),
                 items: [
                   const DropdownMenuItem<String>(
@@ -3205,10 +3516,12 @@ class _ScheduleFilters extends StatelessWidget {
                     selected: selected,
                     onSelected: (_) => session.selectScheduleDate(day),
                     selectedColor: SharedAppColors.orange,
-                    backgroundColor: Colors.white,
-                    side: BorderSide.none,
+                    backgroundColor: SharedAppColors.elevated,
+                    side: const BorderSide(color: SharedAppColors.stroke),
                     labelStyle: TextStyle(
-                      color: selected ? Colors.white : SharedAppColors.text,
+                      color: selected
+                          ? SharedAppColors.onGold
+                          : SharedAppColors.text,
                       fontWeight: FontWeight.w800,
                     ),
                   );
@@ -3345,7 +3658,7 @@ class _BookingRequestsPage extends StatelessWidget {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Recusar solicitacao'),
+          title: const Text('Recusar solicitação'),
           content: TextField(
             controller: controller,
             maxLines: 3,
@@ -3398,25 +3711,25 @@ class _AvailabilityPage extends StatelessWidget {
     return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionTitle('Hor�rios dispon�veis'),
+        _SectionTitle('Horários disponíveis'),
         SizedBox(height: 12),
         _ScheduleTile(day: 'Segunda a sexta', hours: '09:00 - 18:00'),
-        _ScheduleTile(day: 'S�bado', hours: '09:00 - 14:00'),
+        _ScheduleTile(day: 'Sábado', hours: '09:00 - 14:00'),
         SizedBox(height: 22),
         _SectionTitle('Bloqueios'),
         SizedBox(height: 12),
         _BlockedTile(
-          title: 'Almo�o estendido',
+          title: 'Almoço estendido',
           detail: 'Hoje, 12:00 - 13:30',
         ),
         _BlockedTile(
-          title: 'F�rias programadas',
-          detail: '12/08 at� 18/08',
+          title: 'Férias programadas',
+          detail: '12/08 até 18/08',
         ),
         SizedBox(height: 22),
         _ActionPanel(
           title: 'Ajustar disponibilidade',
-          subtitle: 'Crie hor�rios fixos, folgas ou bloqueios r�pidos.',
+          subtitle: 'Crie horários fixos, folgas ou bloqueios rápidos.',
           buttonLabel: 'Novo bloqueio',
           icon: Icons.event_busy_rounded,
         ),
@@ -3456,7 +3769,7 @@ class _ClientsPage extends StatelessWidget {
             if (session.customersError != null)
               _InlineNotice(
                 icon: Icons.warning_amber_rounded,
-                title: 'Nao foi possivel carregar os clientes',
+                title: 'Não foi possível carregar os clientes',
                 subtitle: session.customersError!,
               )
             else if (customers.isEmpty)
@@ -3485,7 +3798,7 @@ class _ClientsPage extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: Colors.white,
+      backgroundColor: SharedAppColors.card,
       builder: (_) => ChangeNotifierProvider.value(
         value: context.read<ManagementSession>(),
         child: _CustomerDetailsSheet(customer: customer),
@@ -3519,7 +3832,7 @@ class _CustomerFilters extends StatelessWidget {
             hintText: 'Buscar por nome ou telefone',
             prefixIcon: const Icon(Icons.search_rounded),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: SharedAppColors.elevated,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(18),
               borderSide: BorderSide.none,
@@ -3689,7 +4002,7 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
               minLines: 2,
               maxLines: 4,
               decoration: const InputDecoration(
-                labelText: 'Observacoes internas',
+                labelText: 'Observações internas',
                 prefixIcon: Icon(Icons.notes_rounded),
               ),
             ),
@@ -3708,9 +4021,9 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
             if (!customer.canEdit)
               const _InlineNotice(
                 icon: Icons.info_outline_rounded,
-                title: 'Cliente vindo de solicitacao',
+                title: 'Cliente vindo de solicitação',
                 subtitle:
-                    'Este cliente ainda nao possui cadastro vinculado. Ele aparece pelo agendamento realizado, mas a edicao fica bloqueada.',
+                    'Este cliente ainda não possui cadastro vinculado. Ele aparece pelo agendamento realizado, mas a edição fica bloqueada.',
               )
             else
               FilledButton(
@@ -3799,21 +4112,21 @@ class _CommissionPage extends StatelessWidget {
           cards: [
             _MetricData('Semana', 'R\$ 1.780', Icons.trending_up_rounded),
             _MetricData(
-                'Comiss�o', 'R\$ 712', Icons.account_balance_wallet_rounded),
+                'Comissão', 'R\$ 712', Icons.account_balance_wallet_rounded),
           ],
         ),
         SizedBox(height: 22),
         _SectionTitle('Resumo'),
         SizedBox(height: 12),
         _InsightTile(
-          title: 'Atendimentos conclu�dos',
+          title: 'Atendimentos concluídos',
           value: '31',
-          subtitle: 'Ticket m�dio de R\$ 57',
+          subtitle: 'Ticket médio de R\$ 57',
         ),
         _InsightTile(
-          title: 'Servi�o mais feito',
+          title: 'Serviço mais feito',
           value: 'Corte + barba',
-          subtitle: '14 atendimentos no per�odo',
+          subtitle: '14 atendimentos no período',
         ),
       ],
     );
@@ -3843,14 +4156,14 @@ class _AdminDashboardPage extends StatelessWidget {
           subtitle: '18 atendimentos esta semana',
         ),
         _InsightTile(
-          title: 'Servi�o mais vendido',
+          title: 'Serviço mais vendido',
           value: 'Corte + barba',
           subtitle: '34% dos agendamentos',
         ),
         _InsightTile(
           title: 'Caixa do dia',
           value: 'R\$ 1.240',
-          subtitle: 'PIX, dinheiro e cart�o',
+          subtitle: 'PIX, dinheiro e cartão',
         ),
       ],
     );
@@ -3872,10 +4185,10 @@ class _ServicesPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _ActionPanel(
-              title: 'Catalogo de servicos',
+              title: 'Catálogo de serviços',
               subtitle:
-                  '$activeCount servico(s) ativo(s). Gerencie precos e duracao.',
-              buttonLabel: 'Novo servico',
+                  '$activeCount serviço(s) ativo(s). Gerencie preços e duração.',
+              buttonLabel: 'Novo serviço',
               icon: Icons.add_circle_rounded,
               onPressed: () => _openServiceForm(context),
             ),
@@ -3889,14 +4202,14 @@ class _ServicesPage extends StatelessWidget {
             if (session.servicesError != null)
               _InlineNotice(
                 icon: Icons.warning_amber_rounded,
-                title: 'Nao foi possivel carregar os servicos',
+                title: 'Não foi possível carregar os serviços',
                 subtitle: session.servicesError!,
               )
             else if (services.isEmpty)
               const _InlineNotice(
                 icon: Icons.content_cut_rounded,
-                title: 'Nenhum servico encontrado',
-                subtitle: 'Ajuste os filtros ou cadastre um novo servico.',
+                title: 'Nenhum serviço encontrado',
+                subtitle: 'Ajuste os filtros ou cadastre um novo serviço.',
               )
             else
               for (final service in services)
@@ -3918,7 +4231,7 @@ class _ServicesPage extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: Colors.white,
+      backgroundColor: SharedAppColors.card,
       builder: (_) => ChangeNotifierProvider.value(
         value: context.read<ManagementSession>(),
         child: _ServiceForm(service: service),
@@ -3949,9 +4262,9 @@ class _UnusedLegacyServicesPageSnapshot extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _ActionPanel(
-          title: 'Cat�logo de servi�os',
-          subtitle: 'Cadastre pre�os, dura��o e comiss�o por servi�o.',
-          buttonLabel: 'Novo servi�o',
+          title: 'Catálogo de serviços',
+          subtitle: 'Cadastre preços, duração e comissão por serviço.',
+          buttonLabel: 'Novo serviço',
           icon: Icons.add_circle_rounded,
         ),
         SizedBox(height: 18),
@@ -3976,10 +4289,10 @@ class _ServiceFilters extends StatelessWidget {
         TextField(
           onChanged: session.setServiceSearchQuery,
           decoration: InputDecoration(
-            hintText: 'Buscar servico por nome',
+            hintText: 'Buscar serviço por nome',
             prefixIcon: const Icon(Icons.search_rounded),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: SharedAppColors.elevated,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(18),
               borderSide: BorderSide.none,
@@ -4023,7 +4336,7 @@ class _ServiceFilters extends StatelessWidget {
             labelText: 'Categoria',
             prefixIcon: Icon(Icons.category_outlined),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: SharedAppColors.elevated,
           ),
           items: [
             const DropdownMenuItem<String>(
@@ -4083,10 +4396,10 @@ class _FilterChipButton extends StatelessWidget {
         selected: selected,
         onSelected: (_) => onSelected(),
         selectedColor: SharedAppColors.orange,
-        backgroundColor: Colors.white,
-        side: BorderSide.none,
+        backgroundColor: SharedAppColors.elevated,
+        side: const BorderSide(color: SharedAppColors.stroke),
         labelStyle: TextStyle(
-          color: selected ? Colors.white : const Color(0xFF261F1C),
+          color: selected ? SharedAppColors.onGold : SharedAppColors.text,
           fontWeight: FontWeight.w800,
         ),
       ),
@@ -4164,7 +4477,7 @@ class _ServiceFormState extends State<_ServiceForm> {
               children: [
                 Expanded(
                   child: Text(
-                    _isEditing ? 'Editar servico' : 'Novo servico',
+                    _isEditing ? 'Editar serviço' : 'Novo serviço',
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
@@ -4187,7 +4500,7 @@ class _ServiceFormState extends State<_ServiceForm> {
               ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
-                  return 'Informe o nome do servico.';
+                  return 'Informe o nome do serviço.';
                 }
                 return null;
               },
@@ -4284,8 +4597,8 @@ class _ServiceFormState extends State<_ServiceForm> {
               onChanged: _isSaving
                   ? null
                   : (value) => setState(() => _isActive = value),
-              title: const Text('Servico ativo'),
-              subtitle: const Text('Servicos inativos deixam de aparecer.'),
+              title: const Text('Serviço ativo'),
+              subtitle: const Text('Serviços inativos deixam de aparecer.'),
             ),
             const SizedBox(height: 12),
             FilledButton(
@@ -4301,7 +4614,7 @@ class _ServiceFormState extends State<_ServiceForm> {
               const SizedBox(height: 8),
               TextButton(
                 onPressed: _isSaving ? null : _confirmDeleteOrDeactivate,
-                child: const Text('Excluir servico'),
+                child: const Text('Excluir serviço'),
               ),
             ],
           ],
@@ -4378,7 +4691,7 @@ class _ServiceFormState extends State<_ServiceForm> {
       if (!mounted) return;
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Servico salvo com sucesso.')),
+        const SnackBar(content: Text('Serviço salvo com sucesso.')),
       );
     } catch (error) {
       if (!mounted) return;
@@ -4399,11 +4712,11 @@ class _ServiceFormState extends State<_ServiceForm> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(canDelete ? 'Excluir servico?' : 'Inativar servico?'),
+        title: Text(canDelete ? 'Excluir serviço?' : 'Inativar serviço?'),
         content: Text(
           canDelete
-              ? 'Este servico nao possui agendamentos e sera removido do banco.'
-              : 'Nao e possivel excluir este servico porque existem agendamentos feitos nele. Para preservar o historico, ele sera apenas inativado.',
+              ? 'Este serviço não possui agendamentos e será removido do banco.'
+              : 'Não é possível excluir este serviço porque existem agendamentos feitos nele. Para preservar o histórico, ele será apenas inativado.',
         ),
         actions: [
           TextButton(
@@ -4431,7 +4744,7 @@ class _ServiceFormState extends State<_ServiceForm> {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(canDelete ? 'Servico excluido.' : 'Servico inativado.'),
+          content: Text(canDelete ? 'Serviço excluído.' : 'Serviço inativado.'),
         ),
       );
     } catch (error) {
@@ -4474,7 +4787,7 @@ class _TeamPage extends StatelessWidget {
             if (session.errorMessage != null)
               _InlineNotice(
                 icon: Icons.warning_amber_rounded,
-                title: 'N�o foi poss�vel carregar a equipe',
+                title: 'Não foi possível carregar a equipe',
                 subtitle: session.errorMessage!,
               )
             else if (session.teamBarbers.isEmpty)
@@ -4503,7 +4816,7 @@ class _TeamPage extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: Colors.white,
+      backgroundColor: SharedAppColors.card,
       builder: (_) => ChangeNotifierProvider.value(
         value: context.read<ManagementSession>(),
         child: _TeamBarberForm(barber: barber),
@@ -4522,7 +4835,7 @@ class LegacyTeamPage extends StatelessWidget {
       children: [
         _ActionPanel(
           title: 'Equipe da unidade',
-          subtitle: 'Gerencie barbeiros, permiss�es e percentuais.',
+          subtitle: 'Gerencie barbeiros, permissões e percentuais.',
           buttonLabel: 'Novo barbeiro',
           icon: Icons.person_add_alt_1_rounded,
         ),
@@ -4530,16 +4843,16 @@ class LegacyTeamPage extends StatelessWidget {
         _TeamTile(
           name: 'Barbeiro demo',
           role: 'Barbeiro principal',
-          detail: '40% comiss�o - agenda ativa',
+          detail: '40% comissão - agenda ativa',
         ),
         _TeamTile(
           name: 'Ricardo Anderson',
           role: 'Barbeiro',
-          detail: '35% comiss�o - agenda ativa',
+          detail: '35% comissão - agenda ativa',
         ),
         _TeamTile(
           name: 'Camila Rocha',
-          role: 'Recep��o',
+          role: 'Recepção',
           detail: 'Acesso a agenda e caixa',
         ),
       ],
@@ -4667,7 +4980,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     decoration: const InputDecoration(
-                      labelText: 'Pre�o inicial',
+                      labelText: 'Preço inicial',
                       prefixIcon: Icon(Icons.attach_money),
                     ),
                     validator: _validateMoney,
@@ -4680,7 +4993,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     decoration: const InputDecoration(
-                      labelText: 'Comiss�o %',
+                      labelText: 'Comissão %',
                       prefixIcon: Icon(Icons.percent),
                     ),
                     validator: _validateCommission,
@@ -4724,7 +5037,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
 
   String? _validateMoney(String? value) {
     final parsed = _parseNumber(value);
-    if (parsed == null || parsed < 0) return 'Valor inv�lido.';
+    if (parsed == null || parsed < 0) return 'Valor inválido.';
     return null;
   }
 
@@ -4811,8 +5124,8 @@ class _SettingsPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _ActionPanel(
-              title: 'Configura��o da barbearia',
-              subtitle: 'Defina dados p�blicos, hor�rios e regras de agenda.',
+              title: 'Configuração da barbearia',
+              subtitle: 'Defina dados públicos, horários e regras de agenda.',
               buttonLabel: 'Atualizar',
               icon: Icons.refresh_rounded,
               onPressed: session.fetchShopConfiguration,
@@ -4825,13 +5138,13 @@ class _SettingsPage extends StatelessWidget {
             if (session.settingsError != null)
               _InlineNotice(
                 icon: Icons.warning_amber_rounded,
-                title: 'N�o foi poss�vel carregar as configura��es',
+                title: 'Não foi possível carregar as configurações',
                 subtitle: session.settingsError!,
               )
             else if (config == null)
               const _InlineNotice(
                 icon: Icons.settings_outlined,
-                title: 'Configura��o n�o carregada',
+                title: 'Configuração não carregada',
                 subtitle: 'Toque em Atualizar para buscar os dados.',
               )
             else
@@ -4944,7 +5257,7 @@ class _SettingsFormState extends State<_SettingsForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _SectionTitle('Informa��es gerais'),
+          const _SectionTitle('Informações gerais'),
           const SizedBox(height: 12),
           _SettingsCard(
             children: [
@@ -4965,7 +5278,7 @@ class _SettingsFormState extends State<_SettingsForm> {
                       decoration: const InputDecoration(
                         labelText: 'URL da logo',
                         helperText:
-                            'Fa�a upload pelo Storage ou cole uma URL p�blica.',
+                            'Faça upload pelo Storage ou cole uma URL pública.',
                         prefixIcon: Icon(Icons.image_outlined),
                       ),
                     ),
@@ -5103,7 +5416,7 @@ class _SettingsFormState extends State<_SettingsForm> {
               TextFormField(
                 controller: _addressController,
                 decoration: const InputDecoration(
-                  labelText: 'Endere�o completo',
+                  labelText: 'Endereço completo',
                   prefixIcon: Icon(Icons.location_on_outlined),
                 ),
               ),
@@ -5147,7 +5460,7 @@ class _SettingsFormState extends State<_SettingsForm> {
             ],
           ),
           const SizedBox(height: 22),
-          const _SectionTitle('Hor�rio de funcionamento'),
+          const _SectionTitle('Horário de funcionamento'),
           const SizedBox(height: 12),
           _SettingsCard(
             children: [
@@ -5167,7 +5480,7 @@ class _SettingsFormState extends State<_SettingsForm> {
                 contentPadding: EdgeInsets.zero,
                 value: _lunchEnabled,
                 activeColor: SharedAppColors.orange,
-                title: const Text('Almo�o'),
+                title: const Text('Almoço'),
                 subtitle: const Text('Bloqueia intervalo recorrente.'),
                 onChanged: (value) => setState(() => _lunchEnabled = value),
               ),
@@ -5177,7 +5490,7 @@ class _SettingsFormState extends State<_SettingsForm> {
                     child: TextFormField(
                       enabled: _lunchEnabled,
                       controller: _lunchStartController,
-                      decoration: const InputDecoration(labelText: 'In�cio'),
+                      decoration: const InputDecoration(labelText: 'Início'),
                       validator: _validateTime,
                     ),
                   ),
@@ -5195,7 +5508,7 @@ class _SettingsFormState extends State<_SettingsForm> {
             ],
           ),
           const SizedBox(height: 22),
-          const _SectionTitle('Configura��o de agendamento'),
+          const _SectionTitle('Configuração de agendamento'),
           const SizedBox(height: 12),
           _SettingsCard(
             children: [
@@ -5232,7 +5545,7 @@ class _SettingsFormState extends State<_SettingsForm> {
                 controller: _minNoticeController,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
-                  labelText: 'Anteced�ncia m�nima em minutos',
+                  labelText: 'Antecedência mínima em minutos',
                   prefixIcon: Icon(Icons.schedule_outlined),
                 ),
                 validator: _positiveInt,
@@ -5252,7 +5565,7 @@ class _SettingsFormState extends State<_SettingsForm> {
                 controller: _cancelHoursController,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
-                  labelText: 'Cancelamento permitido at� X horas antes',
+                  labelText: 'Cancelamento permitido até X horas antes',
                   prefixIcon: Icon(Icons.event_busy_outlined),
                 ),
                 validator: _positiveInt,
@@ -5267,7 +5580,7 @@ class _SettingsFormState extends State<_SettingsForm> {
               foregroundColor: SharedAppColors.onGold,
               minimumSize: const Size.fromHeight(52),
             ),
-            child: Text(_isSaving ? 'Salvando...' : 'Salvar configura��es'),
+            child: Text(_isSaving ? 'Salvando...' : 'Salvar configurações'),
           ),
         ],
       ),
@@ -5275,13 +5588,13 @@ class _SettingsFormState extends State<_SettingsForm> {
   }
 
   String? _required(String? value) {
-    if (value == null || value.trim().isEmpty) return 'Campo obrigat�rio.';
+    if (value == null || value.trim().isEmpty) return 'Campo obrigatório.';
     return null;
   }
 
   String? _positiveInt(String? value) {
     final parsed = int.tryParse(value?.trim() ?? '');
-    if (parsed == null || parsed <= 0) return 'Informe um n�mero v�lido.';
+    if (parsed == null || parsed <= 0) return 'Informe um número válido.';
     return null;
   }
 
@@ -5294,7 +5607,7 @@ class _SettingsFormState extends State<_SettingsForm> {
   }
 
   String? _validateTime(String? value) {
-    if (value == null || value.trim().isEmpty) return 'Informe o hor�rio.';
+    if (value == null || value.trim().isEmpty) return 'Informe o horário.';
     if (!RegExp(r'^\d{2}:\d{2}$').hasMatch(value.trim())) {
       return 'Use HH:mm.';
     }
@@ -5380,7 +5693,7 @@ class _SettingsFormState extends State<_SettingsForm> {
       await context.read<ManagementSession>().saveShopConfiguration(config);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Configura��es salvas com sucesso.')),
+        const SnackBar(content: Text('Configurações salvas com sucesso.')),
       );
     } catch (error) {
       if (!mounted) return;
@@ -5527,20 +5840,20 @@ class _CashPage extends StatelessWidget {
         _MetricsGrid(
           cards: [
             _MetricData('Entradas', 'R\$ 1.240', Icons.south_west_rounded),
-            _MetricData('Sa�das', 'R\$ 180', Icons.north_east_rounded),
+            _MetricData('Saídas', 'R\$ 180', Icons.north_east_rounded),
           ],
         ),
         SizedBox(height: 22),
         _SectionTitle('Movimentos de caixa'),
         SizedBox(height: 12),
         _CashMovementTile(title: 'PIX - Marcos Lima', value: '+ R\$ 85'),
-        _CashMovementTile(title: 'Dinheiro - Jo�o Pedro', value: '+ R\$ 55'),
+        _CashMovementTile(title: 'Dinheiro - João Pedro', value: '+ R\$ 55'),
         _CashMovementTile(title: 'Compra de pomada', value: '- R\$ 180'),
         SizedBox(height: 22),
-        _SectionTitle('Estoque cr�tico'),
+        _SectionTitle('Estoque crítico'),
         SizedBox(height: 12),
         _StockTile(name: 'Pomada modeladora', quantity: '3 un'),
-        _StockTile(name: 'L�mina descart�vel', quantity: '18 un'),
+        _StockTile(name: 'Lâmina descartável', quantity: '18 un'),
       ],
     );
   }
@@ -5560,16 +5873,25 @@ class _MetricsGrid extends StatelessWidget {
   final List<_MetricData> cards;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        for (var index = 0; index < cards.length; index++) ...[
-          Expanded(child: _MetricCard(data: cards[index])),
-          if (index != cards.length - 1) const SizedBox(width: 12),
-        ],
-      ],
-    );
-  }
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (context, constraints) {
+          final columns = constraints.maxWidth >= 900
+              ? cards.length.clamp(1, 4)
+              : constraints.maxWidth >= 520
+                  ? 2
+                  : 1;
+          final width =
+              (constraints.maxWidth - ((columns - 1) * 12)) / columns;
+          return Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              for (final card in cards)
+                SizedBox(width: width, child: _MetricCard(data: card)),
+            ],
+          );
+        },
+      );
 }
 
 class _MetricCard extends StatelessWidget {
@@ -5582,8 +5904,9 @@ class _MetricCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: SharedAppColors.card,
         borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: SharedAppColors.stroke),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -5630,7 +5953,7 @@ class _SearchBox extends StatelessWidget {
         hintText: hint,
         prefixIcon: const Icon(Icons.search_rounded),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: SharedAppColors.card,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
           borderSide: BorderSide.none,
@@ -5656,8 +5979,9 @@ class _InlineNotice extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: SharedAppColors.card,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: SharedAppColors.stroke),
       ),
       child: Row(
         children: [
@@ -5754,8 +6078,9 @@ class _BookingRequestTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: SharedAppColors.card,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: SharedAppColors.stroke),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -5777,7 +6102,7 @@ class _BookingRequestTile extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       request.phone.isEmpty
-                          ? 'Telefone nao informado'
+                          ? 'Telefone não informado'
                           : request.phone,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -5812,7 +6137,7 @@ class _BookingRequestTile extends StatelessWidget {
           const SizedBox(height: 14),
           _RequestInfoRow(
             icon: Icons.content_cut_rounded,
-            label: 'Servico',
+            label: 'Serviço',
             value: request.service,
           ),
           _RequestInfoRow(
@@ -5822,7 +6147,7 @@ class _BookingRequestTile extends StatelessWidget {
           ),
           _RequestInfoRow(
             icon: Icons.event_rounded,
-            label: 'Data e horario',
+            label: 'Data e horário',
             value: request.formattedDateTime,
           ),
           _RequestInfoRow(
@@ -5832,7 +6157,7 @@ class _BookingRequestTile extends StatelessWidget {
           ),
           _RequestInfoRow(
             icon: Icons.notes_rounded,
-            label: 'Observacoes',
+            label: 'Observações',
             value: request.observation,
           ),
           const SizedBox(height: 14),
@@ -5856,7 +6181,7 @@ class _BookingRequestTile extends StatelessWidget {
                 onPressed: isClosed ? null : onAccepted,
                 style: FilledButton.styleFrom(
                   backgroundColor: SharedAppColors.orange,
-                  foregroundColor: Colors.white,
+                  foregroundColor: SharedAppColors.onGold,
                 ),
                 icon: const Icon(Icons.check_rounded),
                 label: const Text('Aceitar'),
@@ -6139,7 +6464,7 @@ class _TeamTile extends StatelessWidget {
         child: Icon(Icons.person_rounded, color: Colors.white),
       ),
       title: name,
-      subtitle: '$role � $detail',
+      subtitle: '$role · $detail',
       trailing: const Icon(Icons.chevron_right_rounded),
     );
   }
@@ -6192,7 +6517,7 @@ class _CashMovementTile extends StatelessWidget {
         isPositive ? Icons.south_west_rounded : Icons.north_east_rounded,
       ),
       title: title,
-      subtitle: isPositive ? 'Entrada' : 'Sa�da',
+      subtitle: isPositive ? 'Entrada' : 'Saída',
       trailing: Text(
         value,
         style: TextStyle(
@@ -6215,7 +6540,7 @@ class _StockTile extends StatelessWidget {
     return _SurfaceTile(
       leading: const _IconBadge(Icons.inventory_2_rounded),
       title: name,
-      subtitle: 'Reposi��o recomendada',
+      subtitle: 'Reposição recomendada',
       trailing: Text(
         quantity,
         style: const TextStyle(fontWeight: FontWeight.w900),
@@ -6240,7 +6565,7 @@ class _InsightTile extends StatelessWidget {
     return _SurfaceTile(
       leading: const _IconBadge(Icons.insights_rounded),
       title: value,
-      subtitle: '$title � $subtitle',
+      subtitle: '$title · $subtitle',
     );
   }
 }
@@ -6265,8 +6590,9 @@ class _ActionPanel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: SharedAppColors.card,
         borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: SharedAppColors.stroke),
       ),
       child: Row(
         children: [
@@ -6291,7 +6617,7 @@ class _ActionPanel extends StatelessWidget {
             onPressed: onPressed ?? () {},
             style: FilledButton.styleFrom(
               backgroundColor: SharedAppColors.orange,
-              foregroundColor: Colors.white,
+              foregroundColor: SharedAppColors.onGold,
               visualDensity: VisualDensity.compact,
             ),
             child: Text(buttonLabel),
@@ -6321,8 +6647,9 @@ class _SurfaceTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: SharedAppColors.card,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: SharedAppColors.stroke),
       ),
       child: Row(
         children: [
