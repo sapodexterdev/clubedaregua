@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -2482,22 +2483,48 @@ class _ManagementLoginScreenState extends State<ManagementLoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Icon(
-                    Icons.content_cut_rounded,
-                    color: SharedAppColors.orange,
-                    size: 58,
+                  Center(
+                    child: SvgPicture.asset(
+                      'assets/images/brand_v3_logo_principal.svg',
+                      width: 210,
+                      height: 156,
+                      fit: BoxFit.contain,
+                      semanticsLabel: 'Clube da Régua',
+                    ),
                   ),
-                  const SizedBox(height: 18),
-                  const Text(
-                    'Clube da Régua Gestão',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
+                  const SizedBox(height: 12),
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: SharedAppColors.orange.withOpacity(.1),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: SharedAppColors.orange.withOpacity(.45),
+                        ),
+                      ),
+                      child: const Text(
+                        'PORTAL DE GESTÃO',
+                        style: TextStyle(
+                          color: SharedAppColors.orange,
+                          fontSize: 11,
+                          letterSpacing: 1.4,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 14),
                   const Text(
                     'Entre para ver pedidos, agenda e operação da barbearia.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: SharedAppColors.muted),
+                    style: TextStyle(
+                      color: SharedAppColors.muted,
+                      height: 1.4,
+                    ),
                   ),
                   const SizedBox(height: 28),
                   TextField(
@@ -2541,7 +2568,7 @@ class _ManagementLoginScreenState extends State<ManagementLoginScreen> {
                             ),
                     style: FilledButton.styleFrom(
                       backgroundColor: SharedAppColors.orange,
-                      foregroundColor: Colors.white,
+                      foregroundColor: SharedAppColors.onGold,
                       minimumSize: const Size.fromHeight(54),
                     ),
                     child: Text(session.isLoading ? 'Entrando...' : 'Entrar'),
@@ -3273,6 +3300,9 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final logoUrl =
+        context.watch<ManagementSession>().shopConfiguration?.logoUrl.trim() ??
+            '';
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -3280,24 +3310,58 @@ class _Header extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: SharedAppColors.stroke),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: SharedAppColors.text,
-              fontFamily: 'Barlow Condensed',
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: SharedAppColors.elevated,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: SharedAppColors.stroke),
             ),
+            clipBehavior: Clip.antiAlias,
+            child: logoUrl.isEmpty
+                ? const Icon(
+                    Icons.storefront_rounded,
+                    color: SharedAppColors.orange,
+                  )
+                : Image.network(
+                    logoUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const Icon(
+                      Icons.storefront_rounded,
+                      color: SharedAppColors.orange,
+                    ),
+                  ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            isAdmin
-                ? 'Controle equipe, serviços, caixa e desempenho da unidade.'
-                : 'Confirme atendimentos, bloqueie horários e acompanhe sua comissão.',
-            style: const TextStyle(color: SharedAppColors.muted, height: 1.35),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: SharedAppColors.text,
+                    fontFamily: 'Barlow Condensed',
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  isAdmin
+                      ? 'Controle equipe, serviços, caixa e desempenho da unidade.'
+                      : 'Confirme atendimentos, bloqueie horários e acompanhe sua comissão.',
+                  style: const TextStyle(
+                    color: SharedAppColors.muted,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
