@@ -4,80 +4,122 @@
   <base href="$FLUTTER_BASE_HREF">
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Clube da Regua Gestao - painel para barbearias.">
+  <meta name="description" content="Clube da Régua Gestão — painel para barbearias.">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#F4F4F4">
+  <meta name="theme-color" content="#09090B">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Clube Gestao">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Clube da Régua Gestão">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
-  <title>Clube da Regua Gestao</title>
+  <link rel="preload" href="boot-logo.svg" as="image" type="image/svg+xml">
+  <title>Clube da Régua Gestão</title>
   <style>
     html,
     body {
-      background: #F4F4F4;
-      color: #151515;
-      font-family: Arial, Helvetica, sans-serif;
+      background: #09090B;
       height: 100%;
       margin: 0;
       overflow: hidden;
       width: 100%;
     }
 
-    #boot-status {
+    #boot-splash {
       align-items: center;
+      background: #09090B;
       display: flex;
-      flex-direction: column;
-      gap: 12px;
       height: 100%;
+      inset: 0;
       justify-content: center;
-      left: 0;
       pointer-events: none;
       position: fixed;
-      text-align: center;
-      top: 0;
-      transition: opacity .2s ease, visibility .2s ease;
+      transition: opacity 300ms ease, visibility 300ms ease;
       width: 100%;
+      z-index: 9999;
+    }
+
+    #boot-splash::after {
+      background: linear-gradient(
+        180deg,
+        rgba(0, 0, 0, .58),
+        rgba(0, 0, 0, .34) 45%,
+        rgba(5, 5, 5, .82)
+      );
+      content: '';
+      inset: 0;
+      position: absolute;
       z-index: 1;
     }
 
-    #boot-status.is-hidden {
+    #boot-background {
+      height: 100%;
+      inset: 0;
+      object-fit: cover;
+      object-position: center;
+      position: absolute;
+      width: 100%;
+    }
+
+    #boot-logo {
+      animation: loading-pulse 1800ms ease-in-out infinite;
+      filter: drop-shadow(0 0 18px rgba(243, 178, 0, .28));
+      opacity: .30;
+      position: relative;
+      width: clamp(82px, 20vw, 118px);
+      z-index: 2;
+    }
+
+    #boot-splash.is-hidden {
       opacity: 0;
       visibility: hidden;
     }
 
-    #boot-status strong {
-      color: #FF6B2C;
-      font-size: 26px;
-      font-weight: 900;
+    @keyframes loading-pulse {
+      0%, 100% {
+        opacity: .30;
+        transform: scale(.96);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1);
+      }
     }
 
-    #boot-status span {
-      color: #8A8A8A;
-      font-size: 14px;
+    @media (prefers-reduced-motion: reduce) {
+      #boot-logo {
+        animation: none;
+        opacity: 1;
+      }
     }
   </style>
 </head>
 <body>
-  <div id="boot-status">
-    <strong>Clube Gestao</strong>
-    <span>Carregando painel...</span>
+  <div id="boot-splash" aria-label="Carregando Clube da Régua Gestão">
+    <img id="boot-background" src="__GESTAO_BOOT_SPLASH_DATA__" alt="">
+    <img id="boot-logo" src="boot-logo.svg" alt="Clube da Régua">
   </div>
   <script>
-    function hideBootStatus() {
-      document.getElementById('boot-status')?.classList.add('is-hidden');
+    const bootStartedAt = Date.now();
+
+    function hideBootSplash() {
+      const elapsed = Date.now() - bootStartedAt;
+      const delay = Math.max(0, 700 - elapsed);
+      window.setTimeout(() => {
+        document.getElementById('boot-splash')?.classList.add('is-hidden');
+      }, delay);
     }
 
-    window.addEventListener('flutter-first-frame', hideBootStatus);
+    window.addEventListener('flutter-first-frame', hideBootSplash);
 
     const observer = new MutationObserver(() => {
-      const flutterReady = document.querySelector('flutter-view, flt-glass-pane, flt-scene-host');
+      const flutterReady = document.querySelector(
+        'flutter-view, flt-glass-pane, flt-scene-host'
+      );
       if (flutterReady) {
-        hideBootStatus();
         observer.disconnect();
+        hideBootSplash();
       }
     });
     observer.observe(document.body, { childList: true, subtree: true });
