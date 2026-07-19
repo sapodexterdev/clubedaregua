@@ -11,6 +11,7 @@ import 'utils/app_mode_navigation.dart';
 import 'utils/logo_file.dart';
 import 'utils/logo_picker.dart';
 
+// A identidade oficial da plataforma e carregada pelos assets da Gestao.
 void main() {
   runApp(
     ChangeNotifierProvider(
