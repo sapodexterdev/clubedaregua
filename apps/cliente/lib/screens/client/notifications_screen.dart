@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 
 import '../../models/notification_item.dart';
 import '../../providers/app_state.dart';
@@ -76,11 +77,8 @@ class _NotificationsScreenState extends State<NotificationsScreen>
       body: Consumer<AppState>(
         builder: (context, state, _) {
           if (state.isLoadingNotifications && state.notifications.isEmpty) {
-            return const Center(
-              child: CircularProgressIndicator(
-                color: AppColors.orange,
-                strokeWidth: 2,
-              ),
+            return const CDRLoading.fullScreen(
+              message: 'Buscando suas notificações...',
             );
           }
           if (state.notificationsLoadError != null &&
