@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 
 import '../../models/barber.dart';
 import '../../models/service_item.dart';
@@ -440,14 +441,8 @@ class _Availability extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const SizedBox(
+      return const CDRLoading.section(
         height: 90,
-        child: Center(
-          child: CircularProgressIndicator(
-            color: AppColors.orange,
-            strokeWidth: 2,
-          ),
-        ),
       );
     }
     if (error != null) {
