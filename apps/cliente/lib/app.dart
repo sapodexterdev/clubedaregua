@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
-import 'screens/app_entry_gate_screen.dart';
 import 'screens/client/appointment_confirmation_screen.dart';
 import 'screens/client/appointment_screen.dart';
 import 'screens/client/barber_details_screen.dart';
@@ -31,7 +30,6 @@ class ClubeDaReguaApp extends StatelessWidget {
       initialRoute: SplashScreen.route,
       routes: {
         SplashScreen.route: (_) => const SplashScreen(),
-        AppEntryGateScreen.route: (_) => const AppEntryGateScreen(),
         OnboardingScreen.route: (_) => const OnboardingScreen(),
         ModeSelectionScreen.route: (_) => const ModeSelectionScreen(),
         LoginScreen.route: (_) => const LoginScreen(),

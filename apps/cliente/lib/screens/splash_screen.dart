@@ -1,12 +1,16 @@
+import 'dart:async';
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/app_constants.dart';
-import 'app_entry_gate_screen.dart';
+import '../providers/app_state.dart';
+import 'client/home_screen.dart';
+import 'mode_selection_screen.dart';
 import 'onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -100,24 +104,47 @@ class _SplashScreenState extends State<SplashScreen>
       Future<void>.delayed(kIsWeb ? Duration.zero : _displayDuration),
     ]);
 
-    if (!mounted) return;
-
-    setState(() => _exiting = true);
-    await Future<void>.delayed(_exitDuration);
-
-    if (!mounted) return;
-
     final prefs = results.first as SharedPreferences;
     final hasSeenOnboarding =
         prefs.getBool(SplashScreen.onboardingSeenKey) ?? false;
     final forceOnboardingPreview = kIsWeb &&
         Uri.base.queryParameters['preview'] == 'onboarding';
-    Navigator.pushReplacementNamed(
-      context,
-      hasSeenOnboarding && !forceOnboardingPreview
-          ? AppEntryGateScreen.route
-          : OnboardingScreen.route,
-    );
+
+    String route;
+    if (!hasSeenOnboarding || forceOnboardingPreview) {
+      route = OnboardingScreen.route;
+    } else {
+      final state = context.read<AppState>();
+      await _waitForInitialData(state);
+      if (!mounted) return;
+      route = state.isSignedIn && state.hasProfessionalAccess
+          ? ModeSelectionScreen.route
+          : HomeScreen.route;
+    }
+
+    if (!mounted) return;
+    setState(() => _exiting = true);
+    await Future<void>.delayed(_exitDuration);
+    if (!mounted) return;
+    Navigator.pushReplacementNamed(context, route);
+  }
+
+  Future<void> _waitForInitialData(AppState state) async {
+    if (!state.isLoading) return;
+
+    final ready = Completer<void>();
+    void listener() {
+      if (!state.isLoading && !ready.isCompleted) ready.complete();
+    }
+
+    state.addListener(listener);
+    try {
+      await ready.future.timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      // Abre o app mesmo se um serviço externo demorar além do esperado.
+    } finally {
+      state.removeListener(listener);
+    }
   }
 
   @override
