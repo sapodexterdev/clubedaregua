@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:js_interop';
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -12,6 +13,9 @@ import '../providers/app_state.dart';
 import 'client/home_screen.dart';
 import 'mode_selection_screen.dart';
 import 'onboarding_screen.dart';
+
+@JS('hideBootStatus')
+external void _hideWebBootStatus();
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -125,6 +129,9 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
     if (kIsWeb) {
       Navigator.pushReplacementNamed(context, route);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _hideWebBootStatus();
+      });
       return;
     }
 

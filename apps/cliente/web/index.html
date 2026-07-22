@@ -146,6 +146,9 @@
     });
     observer.observe(document.body, { childList: true, subtree: true });
 
+    // Segurança: nunca mantém o usuário preso no loading em caso de falha.
+    window.setTimeout(hideBootStatus, 30000);
+
   </script>
   <script src="flutter_bootstrap.js" defer></script>
 </body>
