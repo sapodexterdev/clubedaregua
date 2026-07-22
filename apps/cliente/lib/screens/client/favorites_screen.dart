@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 
 import '../../core/app_constants.dart';
 import '../../providers/app_state.dart';
@@ -44,11 +45,8 @@ class FavoritesScreen extends StatelessWidget {
           if (!state.isSignedIn) return const _LoginRequired();
           final shops = state.favoriteBarbershops;
           if (state.isLoadingFavorites && shops.isEmpty) {
-            return const Center(
-              child: CircularProgressIndicator(
-                color: AppColors.orange,
-                strokeWidth: 2,
-              ),
+            return const CDRLoading.fullScreen(
+              message: 'Carregando seus favoritos...',
             );
           }
           if (state.favoritesLoadError != null && shops.isEmpty) {
@@ -204,10 +202,7 @@ class _FavoriteCard extends StatelessWidget {
               tooltip: 'Remover dos favoritos',
               onPressed: removing ? null : onRemove,
               icon: removing
-                  ? const SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
+                  ? const CDRLoading.compact(size: 22)
                   : const Icon(
                       Icons.favorite_rounded,
                       color: AppColors.orange,
