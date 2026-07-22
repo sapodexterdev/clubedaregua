@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 
 import '../../providers/app_state.dart';
 import '../../screens/auth/login_screen.dart';
@@ -648,13 +649,7 @@ class _SubmitBar extends StatelessWidget {
             foregroundColor: AppColors.onGold,
           ),
           child: submitting
-              ? const SizedBox.square(
-                  dimension: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: AppColors.onGold,
-                  ),
-                )
+              ? const CDRLoading.compact(size: 24)
               : Text(
                   signedIn
                       ? 'ENVIAR SOLICITAÇÃO'
