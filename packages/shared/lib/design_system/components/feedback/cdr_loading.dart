@@ -10,7 +10,7 @@ class CDRLoading extends StatefulWidget {
     super.key,
     this.message,
     this.logoAsset = 'assets/images/brand_v3_segunda_logo.svg',
-    this.backgroundAsset = 'assets/images/splash_v3_loading_v2.png',
+    this.backgroundAsset = 'assets/images/splash_v3_loading_v3.jpg',
   })  : variant = CDRLoadingVariant.fullScreen,
         height = double.infinity,
         size = 132;
@@ -20,7 +20,7 @@ class CDRLoading extends StatefulWidget {
     this.message,
     this.height = 148,
     this.logoAsset = 'assets/images/brand_v3_segunda_logo.svg',
-    this.backgroundAsset = 'assets/images/splash_v3_loading_v2.png',
+    this.backgroundAsset = 'assets/images/splash_v3_loading_v3.jpg',
   })  : variant = CDRLoadingVariant.section,
         size = 72;
 
