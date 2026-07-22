@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 
 import '../providers/app_state.dart';
 import '../theme/app_colors.dart';
@@ -36,14 +37,8 @@ class _AppEntryGateScreenState extends State<AppEntryGateScreen> {
 
     return const Scaffold(
       backgroundColor: AppColors.background,
-      body: Center(
-        child: SizedBox.square(
-          dimension: 28,
-          child: CircularProgressIndicator(
-            color: AppColors.orange,
-            strokeWidth: 2,
-          ),
-        ),
+      body: CDRLoading.fullScreen(
+        message: 'Preparando sua experiência...',
       ),
     );
   }
