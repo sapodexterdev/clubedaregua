@@ -2,11 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/app_constants.dart';
+import '../providers/app_state.dart';
 import '../theme/app_colors.dart';
 import 'app_entry_gate_screen.dart';
+import 'client/home_screen.dart';
+import 'mode_selection_screen.dart';
 import 'splash_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -71,7 +75,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(SplashScreen.onboardingSeenKey, true);
     if (!mounted) return;
-    Navigator.pushReplacementNamed(context, AppEntryGateScreen.route);
+    final state = context.read<AppState>();
+    final route = state.isLoading
+        ? AppEntryGateScreen.route
+        : state.isSignedIn && state.hasProfessionalAccess
+            ? ModeSelectionScreen.route
+            : HomeScreen.route;
+    Navigator.pushReplacementNamed(context, route);
   }
 
   void _skipToExplore() {
