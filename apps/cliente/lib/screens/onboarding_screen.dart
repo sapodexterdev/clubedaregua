@@ -8,7 +8,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/app_constants.dart';
 import '../providers/app_state.dart';
 import '../theme/app_colors.dart';
-import 'app_entry_gate_screen.dart';
 import 'client/home_screen.dart';
 import 'mode_selection_screen.dart';
 import 'splash_screen.dart';
@@ -76,11 +75,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     await prefs.setBool(SplashScreen.onboardingSeenKey, true);
     if (!mounted) return;
     final state = context.read<AppState>();
-    final route = state.isLoading
-        ? AppEntryGateScreen.route
-        : state.isSignedIn && state.hasProfessionalAccess
-            ? ModeSelectionScreen.route
-            : HomeScreen.route;
+    final route = state.isSignedIn && state.hasProfessionalAccess
+        ? ModeSelectionScreen.route
+        : HomeScreen.route;
     Navigator.pushReplacementNamed(context, route);
   }
 
