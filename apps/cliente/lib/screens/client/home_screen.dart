@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 
 import '../../core/app_constants.dart';
 import '../../models/service_category.dart';
@@ -511,13 +512,7 @@ class _LocationPill extends StatelessWidget {
                 ListTile(
                   enabled: !isLocating,
                   leading: isLocating
-                      ? const SizedBox.square(
-                          dimension: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.orange,
-                          ),
-                        )
+                      ? const CDRLoading.compact(size: 24)
                       : const Icon(
                           Icons.my_location_rounded,
                           color: AppColors.orange,
@@ -916,10 +911,7 @@ class _LargeCardContent extends StatelessWidget {
                     return Container(
                       color: AppColors.elevated,
                       alignment: Alignment.center,
-                      child: const CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.orange,
-                      ),
+                      child: const CDRLoading.compact(size: 34),
                     );
                   },
                   errorBuilder: (_, __, ___) => Image.asset(
