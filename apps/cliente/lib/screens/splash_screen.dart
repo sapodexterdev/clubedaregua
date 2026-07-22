@@ -123,6 +123,11 @@ class _SplashScreenState extends State<SplashScreen>
     }
 
     if (!mounted) return;
+    if (kIsWeb) {
+      Navigator.pushReplacementNamed(context, route);
+      return;
+    }
+
     setState(() => _exiting = true);
     await Future<void>.delayed(_exitDuration);
     if (!mounted) return;
@@ -155,6 +160,13 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF050505),
+        body: SizedBox.expand(),
+      );
+    }
+
     final reduceMotion = MediaQuery.of(context).disableAnimations;
 
     return Scaffold(

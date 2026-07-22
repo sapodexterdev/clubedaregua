@@ -12,10 +12,14 @@ import 'utils/logo_file.dart';
 import 'utils/logo_picker.dart';
 
 // A identidade oficial da plataforma e carregada pelos assets da Gestao.
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final session = ManagementSession();
+  await session.restoreUnifiedSession();
+
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => ManagementSession()..restoreUnifiedSession(),
+    ChangeNotifierProvider.value(
+      value: session,
       child: const ClubeDaReguaGestaoApp(),
     ),
   );

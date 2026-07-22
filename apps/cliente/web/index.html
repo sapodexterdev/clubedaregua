@@ -128,14 +128,20 @@
       document.getElementById('boot-splash')?.classList.add('is-hidden');
     }
 
-    window.addEventListener('hashchange', hideBootStatus);
+    window.addEventListener('hashchange', () => {
+      if (window.location.hash && window.location.hash !== '#/') {
+        hideBootStatus();
+      }
+    });
 
     const observer = new MutationObserver(() => {
       const flutterReady = document.querySelector('flutter-view, flt-glass-pane, flt-scene-host');
       if (flutterReady) {
         observer.disconnect();
         const openedOnDirectRoute = window.location.hash && window.location.hash !== '#/';
-        setTimeout(hideBootStatus, openedOnDirectRoute ? 500 : 3000);
+        if (openedOnDirectRoute) {
+          setTimeout(hideBootStatus, 500);
+        }
       }
     });
     observer.observe(document.body, { childList: true, subtree: true });
