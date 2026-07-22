@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 
 import '../../providers/app_state.dart';
 import '../../screens/client/home_screen.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/primary_button.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -97,25 +97,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
             style: TextStyle(color: AppColors.muted),
           ),
           const SizedBox(height: 28),
-          TextField(
+          CDRTextField(
             controller: nameController,
-            decoration: const InputDecoration(hintText: 'Nome completo'),
+            label: 'Nome completo',
+            leading: Icons.person_outline_rounded,
+            textInputAction: TextInputAction.next,
+            autofillHints: const [AutofillHints.name],
           ),
           const SizedBox(height: 14),
-          TextField(
+          CDRTextField(
             controller: emailController,
-            decoration: const InputDecoration(hintText: 'Email'),
+            label: 'E-mail',
+            leading: Icons.mail_outline_rounded,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            autofillHints: const [AutofillHints.email],
           ),
           const SizedBox(height: 14),
-          TextField(
+          CDRPasswordField(
             controller: passwordController,
-            obscureText: true,
-            decoration: const InputDecoration(hintText: 'Senha'),
+            onSubmitted: isLoading ? null : (_) => _register(),
           ),
           const SizedBox(height: 24),
-          PrimaryButton(
-            label: isLoading ? 'Cadastrando...' : 'Cadastrar',
+          CDRButton.primary(
+            label: 'CRIAR CONTA',
             onPressed: isLoading ? null : _register,
+            isLoading: isLoading,
           ),
         ],
       ),

@@ -1,52 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 
 import 'app_colors.dart';
 
 class AppTheme {
   static ThemeData get light {
-    return ThemeData(
-      useMaterial3: true,
-      fontFamily: 'Inter',
+    return CDRTheme.dark().copyWith(
       scaffoldBackgroundColor: AppColors.background,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: AppColors.orange,
-        primary: AppColors.orange,
-        onPrimary: AppColors.onGold,
-        surface: AppColors.card,
-        onSurface: AppColors.text,
-      ),
-      textTheme: ThemeData.light().textTheme.apply(
-            bodyColor: AppColors.text,
-            displayColor: AppColors.text,
-          ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.background,
+        foregroundColor: AppColors.text,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
-        foregroundColor: AppColors.text,
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: AppColors.card,
-        hintStyle: const TextStyle(color: AppColors.muted),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(22),
-          borderSide: BorderSide.none,
-        ),
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.orange,
-          foregroundColor: AppColors.onGold,
-          elevation: 0,
-          minimumSize: const Size.fromHeight(56),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-        ),
       ),
     );
   }

@@ -56,23 +56,7 @@ class ClubeDaReguaGestaoApp extends StatelessWidget {
 }
 
 ThemeData _buildManagementTheme() {
-  const scheme = ColorScheme.dark(
-    primary: SharedAppColors.orange,
-    onPrimary: SharedAppColors.onGold,
-    secondary: SharedAppColors.orange,
-    onSecondary: SharedAppColors.onGold,
-    surface: SharedAppColors.card,
-    onSurface: SharedAppColors.text,
-    error: Color(0xFFEF4444),
-  );
-  final base = ThemeData(
-    colorScheme: scheme,
-    brightness: Brightness.dark,
-    scaffoldBackgroundColor: SharedAppColors.background,
-    canvasColor: SharedAppColors.card,
-    useMaterial3: true,
-    fontFamily: 'Inter',
-  );
+  final base = CDRTheme.dark();
   return base.copyWith(
     appBarTheme: const AppBarTheme(
       backgroundColor: SharedAppColors.card,
@@ -100,47 +84,6 @@ ThemeData _buildManagementTheme() {
       modalBackgroundColor: SharedAppColors.card,
       showDragHandle: true,
       dragHandleColor: SharedAppColors.stroke,
-    ),
-    inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: SharedAppColors.card,
-      labelStyle: const TextStyle(color: SharedAppColors.muted),
-      hintStyle: const TextStyle(color: SharedAppColors.muted),
-      prefixIconColor: SharedAppColors.muted,
-      suffixIconColor: SharedAppColors.muted,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: SharedAppColors.stroke),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: SharedAppColors.stroke),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: SharedAppColors.orange, width: 1.5),
-      ),
-    ),
-    filledButtonTheme: FilledButtonThemeData(
-      style: FilledButton.styleFrom(
-        backgroundColor: SharedAppColors.orange,
-        foregroundColor: SharedAppColors.onGold,
-        minimumSize: const Size(64, 48),
-        textStyle: const TextStyle(fontWeight: FontWeight.w800),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      ),
-    ),
-    outlinedButtonTheme: OutlinedButtonThemeData(
-      style: OutlinedButton.styleFrom(
-        foregroundColor: SharedAppColors.text,
-        minimumSize: const Size(64, 48),
-        side: const BorderSide(color: SharedAppColors.stroke),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      ),
-    ),
-    textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(foregroundColor: SharedAppColors.orange),
     ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: SharedAppColors.card,
@@ -2482,7 +2425,6 @@ class ManagementLoginScreen extends StatefulWidget {
 class _ManagementLoginScreenState extends State<ManagementLoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  var _showPassword = false;
 
   @override
   void dispose() {
@@ -2605,70 +2547,34 @@ class _ManagementLoginScreenState extends State<ManagementLoginScreen> {
                             ),
                           ),
                           const SizedBox(height: 26),
-                          TextField(
+                          CDRTextField(
                             controller: _emailController,
+                            label: 'E-mail profissional',
+                            leading: Icons.mail_outline_rounded,
                             keyboardType: TextInputType.emailAddress,
                             textInputAction: TextInputAction.next,
                             autofillHints: const [AutofillHints.email],
-                            cursorColor: SharedAppColors.orange,
-                            style: const TextStyle(color: Colors.white),
-                            decoration: _loginInputDecoration(
-                              label: 'E-mail profissional',
-                              icon: Icons.mail_outline_rounded,
-                            ),
                           ),
                           const SizedBox(height: 14),
-                          TextField(
+                          CDRPasswordField(
                             controller: _passwordController,
-                            obscureText: !_showPassword,
-                            textInputAction: TextInputAction.done,
-                            autofillHints: const [AutofillHints.password],
                             onSubmitted: session.isLoading
                                 ? null
                                 : (_) => session.signIn(
                                       _emailController.text,
                                       _passwordController.text,
                                     ),
-                            cursorColor: SharedAppColors.orange,
-                            style: const TextStyle(color: Colors.white),
-                            decoration: _loginInputDecoration(
-                              label: 'Senha',
-                              icon: Icons.lock_outline_rounded,
-                              suffix: TextButton(
-                                onPressed: () => setState(
-                                  () => _showPassword = !_showPassword,
-                                ),
-                                child: Text(
-                                  _showPassword ? 'Ocultar' : 'Mostrar',
-                                ),
-                              ),
-                            ),
                           ),
                           const SizedBox(height: 18),
-                          FilledButton(
+                          CDRButton.primary(
+                            label: 'ENTRAR NO PORTAL',
                             onPressed: session.isLoading
                                 ? null
                                 : () => session.signIn(
                                       _emailController.text,
                                       _passwordController.text,
                                     ),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: SharedAppColors.orange,
-                              foregroundColor: SharedAppColors.onGold,
-                              disabledBackgroundColor:
-                                  SharedAppColors.orange.withOpacity(.55),
-                              minimumSize: const Size.fromHeight(56),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              textStyle: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                            child: session.isLoading
-                                ? const CDRLoading.compact(size: 26)
-                                : const Text('ENTRAR NO PORTAL'),
+                            isLoading: session.isLoading,
                           ),
                           if (session.errorMessage != null) ...[
                             const SizedBox(height: 14),
@@ -2723,33 +2629,6 @@ class _ManagementLoginScreenState extends State<ManagementLoginScreen> {
     );
   }
 
-  InputDecoration _loginInputDecoration({
-    required String label,
-    required IconData icon,
-    Widget? suffix,
-  }) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: SharedAppColors.muted),
-      prefixIcon: Icon(icon),
-      prefixIconColor: SharedAppColors.muted,
-      suffixIcon: suffix,
-      filled: true,
-      fillColor: const Color(0xFF18181C),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFF3A3A41)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(
-          color: SharedAppColors.orange,
-          width: 1.4,
-        ),
-      ),
-    );
-  }
 }
 
 class PasswordRecoveryScreen extends StatefulWidget {
@@ -2764,8 +2643,6 @@ class PasswordRecoveryScreen extends StatefulWidget {
 class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  var _showPassword = false;
-  var _showConfirmPassword = false;
   var _isLoading = false;
   var _isDone = false;
   var _showLogin = false;
@@ -2941,57 +2818,27 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
                   ),
                   const SizedBox(height: 28),
                   if (!_isDone) ...[
-                    TextField(
+                    CDRPasswordField(
                       controller: _passwordController,
-                      obscureText: !_showPassword,
-                      decoration: InputDecoration(
-                        labelText: 'Nova senha',
-                        prefixIcon: const Icon(Icons.lock_outline_rounded),
-                        suffixIcon: TextButton(
-                          onPressed: () => setState(
-                            () => _showPassword = !_showPassword,
-                          ),
-                          child: Text(_showPassword ? 'Ocultar' : 'Mostrar'),
-                        ),
-                      ),
+                      label: 'Nova senha',
+                      textInputAction: TextInputAction.next,
                     ),
                     const SizedBox(height: 12),
-                    TextField(
+                    CDRPasswordField(
                       controller: _confirmPasswordController,
-                      obscureText: !_showConfirmPassword,
-                      decoration: InputDecoration(
-                        labelText: 'Confirmar nova senha',
-                        prefixIcon: const Icon(Icons.lock_outline_rounded),
-                        suffixIcon: TextButton(
-                          onPressed: () => setState(
-                            () => _showConfirmPassword = !_showConfirmPassword,
-                          ),
-                          child: Text(
-                            _showConfirmPassword ? 'Ocultar' : 'Mostrar',
-                          ),
-                        ),
-                      ),
+                      label: 'Confirmar nova senha',
+                      onSubmitted: _isLoading ? null : (_) => _updatePassword(),
                     ),
                   ],
                   const SizedBox(height: 18),
-                  FilledButton(
+                  CDRButton.primary(
+                    label: _isDone ? 'ENTRAR' : 'SALVAR SENHA',
                     onPressed: _isLoading
                         ? null
                         : _isDone
                             ? () => setState(() => _showLogin = true)
                             : _updatePassword,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: SharedAppColors.orange,
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size.fromHeight(54),
-                    ),
-                    child: Text(
-                      _isLoading
-                          ? 'Salvando...'
-                          : _isDone
-                              ? 'Entrar'
-                              : 'Salvar senha',
-                    ),
+                    isLoading: _isLoading,
                   ),
                   if (_message != null) ...[
                     const SizedBox(height: 14),
