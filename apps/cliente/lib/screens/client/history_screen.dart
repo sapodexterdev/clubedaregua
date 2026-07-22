@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 
 import '../../models/appointment.dart';
 import '../../providers/app_state.dart';
@@ -234,10 +235,7 @@ class _AppointmentCard extends StatelessWidget {
                 TextButton(
                   onPressed: cancelling ? null : onCancel,
                   child: cancelling
-                      ? const SizedBox.square(
-                          dimension: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
+                      ? const CDRLoading.compact(size: 20)
                       : const Text('Cancelar'),
                 ),
             ],
@@ -424,11 +422,9 @@ class _AgendaLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: CircularProgressIndicator(
-        color: AppColors.orange,
-        strokeWidth: 2,
-      ),
+    return const CDRLoading.section(
+      height: 132,
+      message: 'Atualizando sua agenda...',
     );
   }
 }
