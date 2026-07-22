@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 
 import '../../providers/app_state.dart';
 import '../../screens/auth/login_screen.dart';
@@ -386,10 +387,7 @@ class _IdentityCard extends StatelessWidget {
             ),
           ),
           if (state.isLoadingClientProfile)
-            const SizedBox.square(
-              dimension: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
+            const CDRLoading.compact(size: 22),
         ],
       ),
     );
