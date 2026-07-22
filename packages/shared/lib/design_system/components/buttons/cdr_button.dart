@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../tokens/cdr_design_tokens.dart';
+import '../feedback/cdr_loading.dart';
 
 enum CDRButtonVariant {
   primary,
@@ -163,16 +164,11 @@ class CDRButton extends StatelessWidget {
   }
 
   Widget _loader() {
-    final color = _foregroundColor({});
-
-    return SizedBox(
-      key: const ValueKey('cdr-button-loader'),
+    return const SizedBox(
+      key: ValueKey('cdr-button-loader'),
       width: CDRSizeTokens.loader,
       height: CDRSizeTokens.loader,
-      child: CircularProgressIndicator(
-        strokeWidth: 2,
-        valueColor: AlwaysStoppedAnimation<Color>(color),
-      ),
+      child: FittedBox(child: CDRLoading.compact()),
     );
   }
 
