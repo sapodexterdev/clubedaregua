@@ -2496,117 +2496,256 @@ class _ManagementLoginScreenState extends State<ManagementLoginScreen> {
     final session = context.watch<ManagementSession>();
 
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: SvgPicture.asset(
-                      'assets/images/brand_v3_logo_principal.svg',
-                      width: 210,
-                      height: 156,
-                      fit: BoxFit.contain,
-                      semanticsLabel: 'Clube da Régua',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 7,
-                      ),
-                      decoration: BoxDecoration(
-                        color: SharedAppColors.orange.withOpacity(.1),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                          color: SharedAppColors.orange.withOpacity(.45),
-                        ),
-                      ),
-                      child: const Text(
-                        'PORTAL DE GESTÃO',
-                        style: TextStyle(
-                          color: SharedAppColors.orange,
-                          fontSize: 11,
-                          letterSpacing: 1.4,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  const Text(
-                    'Entre para ver pedidos, agenda e operação da barbearia.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: SharedAppColors.muted,
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-                  TextField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    cursorColor: Colors.white,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      labelText: 'E-mail',
-                      labelStyle: TextStyle(color: Colors.white70),
-                      prefixIcon: Icon(Icons.mail_outline_rounded),
-                      prefixIconColor: Colors.white70,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _passwordController,
-                    obscureText: !_showPassword,
-                    cursorColor: Colors.white,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      labelText: 'Senha',
-                      labelStyle: const TextStyle(color: Colors.white70),
-                      prefixIcon: const Icon(Icons.lock_outline_rounded),
-                      prefixIconColor: Colors.white70,
-                      suffixIcon: TextButton(
-                        onPressed: () => setState(
-                          () => _showPassword = !_showPassword,
-                        ),
-                        child: Text(_showPassword ? 'Ocultar' : 'Mostrar'),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  FilledButton(
-                    onPressed: session.isLoading
-                        ? null
-                        : () => session.signIn(
-                              _emailController.text,
-                              _passwordController.text,
-                            ),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: SharedAppColors.orange,
-                      foregroundColor: SharedAppColors.onGold,
-                      minimumSize: const Size.fromHeight(54),
-                    ),
-                    child: Text(session.isLoading ? 'Entrando...' : 'Entrar'),
-                  ),
-                  if (session.errorMessage != null) ...[
-                    const SizedBox(height: 14),
-                    Text(
-                      session.errorMessage!,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                  ],
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/images/splash_v3_loading_v3.jpg'),
+                fit: BoxFit.cover,
+                alignment: Alignment.center,
+              ),
+            ),
+          ),
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xB8050505),
+                  Color(0xE609090B),
+                  Color(0xFA09090B),
                 ],
               ),
             ),
           ),
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 24,
+                ),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 430),
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 22),
+                    decoration: BoxDecoration(
+                      color: const Color(0xF2111114),
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(color: const Color(0xFF34343A)),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x99000000),
+                          blurRadius: 36,
+                          offset: Offset(0, 18),
+                        ),
+                      ],
+                    ),
+                    child: AutofillGroup(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Center(
+                            child: SvgPicture.asset(
+                              'assets/images/brand_v3_logo_principal.svg',
+                              width: 176,
+                              height: 118,
+                              fit: BoxFit.contain,
+                              semanticsLabel: 'Clube da Régua',
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 13,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0x1AF3B200),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: const Color(0x73F3B200),
+                                ),
+                              ),
+                              child: const Text(
+                                'PORTAL DE GESTÃO',
+                                style: TextStyle(
+                                  color: SharedAppColors.orange,
+                                  fontSize: 10,
+                                  letterSpacing: 1.5,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          const Text(
+                            'Sua barbearia, sob controle.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: SharedAppColors.text,
+                              fontFamily: 'Barlow Condensed',
+                              fontSize: 27,
+                              height: 1.05,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Acesse pedidos, agenda, equipe e toda a operação em um só lugar.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: SharedAppColors.muted,
+                              fontSize: 13,
+                              height: 1.45,
+                            ),
+                          ),
+                          const SizedBox(height: 26),
+                          TextField(
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.next,
+                            autofillHints: const [AutofillHints.email],
+                            cursorColor: SharedAppColors.orange,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: _loginInputDecoration(
+                              label: 'E-mail profissional',
+                              icon: Icons.mail_outline_rounded,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          TextField(
+                            controller: _passwordController,
+                            obscureText: !_showPassword,
+                            textInputAction: TextInputAction.done,
+                            autofillHints: const [AutofillHints.password],
+                            onSubmitted: session.isLoading
+                                ? null
+                                : (_) => session.signIn(
+                                      _emailController.text,
+                                      _passwordController.text,
+                                    ),
+                            cursorColor: SharedAppColors.orange,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: _loginInputDecoration(
+                              label: 'Senha',
+                              icon: Icons.lock_outline_rounded,
+                              suffix: TextButton(
+                                onPressed: () => setState(
+                                  () => _showPassword = !_showPassword,
+                                ),
+                                child: Text(
+                                  _showPassword ? 'Ocultar' : 'Mostrar',
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          FilledButton(
+                            onPressed: session.isLoading
+                                ? null
+                                : () => session.signIn(
+                                      _emailController.text,
+                                      _passwordController.text,
+                                    ),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: SharedAppColors.orange,
+                              foregroundColor: SharedAppColors.onGold,
+                              disabledBackgroundColor:
+                                  SharedAppColors.orange.withOpacity(.55),
+                              minimumSize: const Size.fromHeight(56),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              textStyle: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            child: session.isLoading
+                                ? const CDRLoading.compact(size: 26)
+                                : const Text('ENTRAR NO PORTAL'),
+                          ),
+                          if (session.errorMessage != null) ...[
+                            const SizedBox(height: 14),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0x1FEF4444),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: const Color(0x66EF4444),
+                                ),
+                              ),
+                              child: Text(
+                                session.errorMessage!,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Color(0xFFFFA3A3),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 18),
+                          const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.verified_user_outlined,
+                                size: 15,
+                                color: SharedAppColors.muted,
+                              ),
+                              SizedBox(width: 7),
+                              Text(
+                                'Acesso seguro para profissionais autorizados',
+                                style: TextStyle(
+                                  color: SharedAppColors.muted,
+                                  fontSize: 10.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  InputDecoration _loginInputDecoration({
+    required String label,
+    required IconData icon,
+    Widget? suffix,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: SharedAppColors.muted),
+      prefixIcon: Icon(icon),
+      prefixIconColor: SharedAppColors.muted,
+      suffixIcon: suffix,
+      filled: true,
+      fillColor: const Color(0xFF18181C),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFF3A3A41)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(
+          color: SharedAppColors.orange,
+          width: 1.4,
         ),
       ),
     );
