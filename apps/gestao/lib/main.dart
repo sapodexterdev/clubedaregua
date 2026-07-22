@@ -38,8 +38,8 @@ class ClubeDaReguaGestaoApp extends StatelessWidget {
           }
           if (session.isRestoringSession) {
             return const Scaffold(
-              body: Center(
-                child: CircularProgressIndicator(color: SharedAppColors.orange),
+              body: CDRLoading.fullScreen(
+                message: 'Preparando sua área profissional...',
               ),
             );
           }
@@ -3428,7 +3428,7 @@ class _BarberAgendaPage extends StatelessWidget {
             const _SectionTitle('Próximos horários'),
             const SizedBox(height: 12),
             if (session.isScheduleLoading) ...[
-              const LinearProgressIndicator(color: SharedAppColors.orange),
+              const CDRLoading.section(height: 88),
               const SizedBox(height: 12),
             ],
             if (session.scheduleError != null)
@@ -3667,7 +3667,7 @@ class _BookingRequestsPage extends StatelessWidget {
             const _SectionTitle('Novas solicitações'),
             const SizedBox(height: 12),
             if (session.isBookingRequestsLoading) ...[
-              const LinearProgressIndicator(color: SharedAppColors.orange),
+              const CDRLoading.section(height: 88),
               const SizedBox(height: 12),
             ],
             if (session.bookingRequestsError != null)
@@ -3845,7 +3845,7 @@ class _ClientsPage extends StatelessWidget {
             _CustomerFilters(session: session),
             const SizedBox(height: 18),
             if (session.isCustomersLoading) ...[
-              const LinearProgressIndicator(color: SharedAppColors.orange),
+              const CDRLoading.section(height: 88),
               const SizedBox(height: 12),
             ],
             if (session.customersError != null)
@@ -4278,7 +4278,7 @@ class _ServicesPage extends StatelessWidget {
             _ServiceFilters(session: session),
             const SizedBox(height: 18),
             if (session.isServicesLoading) ...[
-              const LinearProgressIndicator(color: SharedAppColors.orange),
+              const CDRLoading.section(height: 88),
               const SizedBox(height: 12),
             ],
             if (session.servicesError != null)
@@ -4863,7 +4863,7 @@ class _TeamPage extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             if (session.isLoading) ...[
-              const LinearProgressIndicator(color: SharedAppColors.orange),
+              const CDRLoading.section(height: 88),
               const SizedBox(height: 12),
             ],
             if (session.errorMessage != null)
@@ -5214,7 +5214,7 @@ class _SettingsPage extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             if (session.isSettingsLoading) ...[
-              const LinearProgressIndicator(color: SharedAppColors.orange),
+              const CDRLoading.section(height: 88),
               const SizedBox(height: 12),
             ],
             if (session.settingsError != null)
@@ -5373,14 +5373,7 @@ class _SettingsFormState extends State<_SettingsForm> {
                       foregroundColor: SharedAppColors.onGold,
                     ),
                     icon: _isUploadingLogo
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: SharedAppColors.onGold,
-                            ),
-                          )
+                        ? const CDRLoading.compact(size: 22)
                         : const Icon(Icons.upload_rounded),
                     tooltip: 'Enviar logo',
                   ),
@@ -5419,14 +5412,7 @@ class _SettingsFormState extends State<_SettingsForm> {
                       foregroundColor: SharedAppColors.onGold,
                     ),
                     icon: _isUploadingCover
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: SharedAppColors.onGold,
-                            ),
-                          )
+                        ? const CDRLoading.compact(size: 22)
                         : const Icon(Icons.upload_rounded),
                     tooltip: 'Enviar foto de capa',
                   ),
