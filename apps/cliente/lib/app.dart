@@ -12,6 +12,7 @@ import 'screens/client/home_screen.dart';
 import 'screens/client/notifications_screen.dart';
 import 'screens/client/profile_screen.dart';
 import 'screens/onboarding_screen.dart';
+import 'screens/owner_onboarding_screen.dart';
 import 'screens/mode_selection_screen.dart';
 import 'screens/splash_screen.dart';
 import 'theme/app_theme.dart';
@@ -31,6 +32,7 @@ class ClubeDaReguaApp extends StatelessWidget {
       routes: {
         SplashScreen.route: (_) => const SplashScreen(),
         OnboardingScreen.route: (_) => const OnboardingScreen(),
+        OwnerOnboardingScreen.route: (_) => const OwnerOnboardingScreen(),
         ModeSelectionScreen.route: (_) => const ModeSelectionScreen(),
         LoginScreen.route: (_) => const LoginScreen(),
         RegisterScreen.route: (_) => const RegisterScreen(),

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../providers/app_state.dart';
 import '../../screens/auth/login_screen.dart';
+import '../../screens/owner_onboarding_screen.dart';
 import '../../services/auth_service.dart';
 import '../../services/app_mode_navigation.dart';
 import '../../theme/app_colors.dart';
@@ -53,6 +54,25 @@ class ProfileScreen extends StatelessWidget {
                   _ErrorMessage(message: state.clientProfileError!),
                 ],
                 const SizedBox(height: 24),
+                if (!state.hasProfessionalAccess) ...[
+                  const _SectionLabel('PARA BARBEARIAS'),
+                  const SizedBox(height: 10),
+                  _ActionGroup(
+                    children: [
+                      _ProfileAction(
+                        icon: Icons.storefront_rounded,
+                        title: 'Cadastrar minha barbearia',
+                        subtitle:
+                            'Experimente o Plano Pro gratuitamente por 14 dias',
+                        onTap: () => Navigator.pushNamed(
+                          context,
+                          OwnerOnboardingScreen.route,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                ],
                 if (state.hasProfessionalAccess) ...[
                   const _SectionLabel('MODOS DO APP'),
                   const SizedBox(height: 10),

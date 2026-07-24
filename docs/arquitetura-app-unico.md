@@ -47,3 +47,18 @@ recebe os modos Cliente, Barbeiro e Dono.
 A escolha de modo nunca concede autorização. As permissões continuam
 determinadas pelos vínculos do banco e protegidas pelas políticas RLS. Sair da
 conta encerra a sessão em todos os modos.
+
+## Entrada do Dono no SaaS
+
+Uma conta comum pode iniciar o onboarding **Cadastrar minha barbearia** pelo
+Perfil. A operação `create_owner_barbershop` executa atomicamente:
+
+1. criação da barbearia;
+2. configuração operacional inicial;
+3. vínculo ativo do usuário como `owner`;
+4. assinatura do Plano Pro em teste por 14 dias;
+5. cadastro profissional opcional, quando o dono também atende.
+
+O usuário não atribui permissões diretamente à própria conta. A função valida
+a sessão, impede uma segunda barbearia ativa no MVP e cria todos os registros
+em uma única transação.
