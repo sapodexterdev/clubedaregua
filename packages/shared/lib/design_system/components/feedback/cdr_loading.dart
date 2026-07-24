@@ -6,6 +6,7 @@ import '../../tokens/cdr_design_tokens.dart';
 enum CDRLoadingVariant { fullScreen, section, compact }
 
 class CDRLoading extends StatefulWidget {
+  /// Loading institucional, reservado para entrada e troca de telas.
   const CDRLoading.fullScreen({
     super.key,
     this.message,
@@ -15,6 +16,7 @@ class CDRLoading extends StatefulWidget {
         height = double.infinity,
         size = 132;
 
+  /// Loading padrão para carregamentos internos de conteúdo.
   const CDRLoading.section({
     super.key,
     this.message,
@@ -24,6 +26,7 @@ class CDRLoading extends StatefulWidget {
   })  : variant = CDRLoadingVariant.section,
         size = 72;
 
+  /// Loading padrão para botões e ações pontuais.
   const CDRLoading.compact({
     super.key,
     this.size = 30,
@@ -85,7 +88,34 @@ class _CDRLoadingState extends State<CDRLoading>
   Widget build(BuildContext context) {
     final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     if (widget.variant == CDRLoadingVariant.compact) {
-      return _animatedLogo(reduceMotion, compact: true);
+      return _standardIndicator(widget.size);
+    }
+    if (widget.variant == CDRLoadingVariant.section) {
+      return SizedBox(
+        height: widget.height,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _standardIndicator(
+                widget.size.clamp(24.0, 36.0).toDouble(),
+              ),
+              if (widget.message != null) ...[
+                const SizedBox(height: CDRSpacingTokens.md),
+                Text(
+                  widget.message!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: CDRColorTokens.gray,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
     }
 
     final content = Stack(
@@ -134,10 +164,17 @@ class _CDRLoadingState extends State<CDRLoading>
       ],
     );
 
-    if (widget.variant == CDRLoadingVariant.fullScreen) return content;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(CDRRadiusTokens.large),
-      child: SizedBox(height: widget.height, child: content),
+    return content;
+  }
+
+  Widget _standardIndicator(double size) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: const CircularProgressIndicator(
+        color: CDRColorTokens.gold,
+        strokeWidth: 3,
+      ),
     );
   }
 
