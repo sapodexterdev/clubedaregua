@@ -3397,7 +3397,7 @@ class _BarberAgendaPage extends StatelessWidget {
             _MetricsGrid(
               cards: [
                 _MetricData(
-                  'Hoje',
+                  'Agendamentos',
                   '${entries.length}',
                   Icons.calendar_today_rounded,
                 ),
@@ -3410,8 +3410,12 @@ class _BarberAgendaPage extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             _ScheduleFilters(adminView: adminView),
-            const SizedBox(height: 22),
-            const _SectionTitle('Próximos horários'),
+            const SizedBox(height: 28),
+            _SectionTitle(
+              'Horários do dia',
+              eyebrow: 'AGENDA',
+              trailing: _selectedDateLabel(session.selectedScheduleDate),
+            ),
             const SizedBox(height: 12),
             if (session.isScheduleLoading) ...[
               const CDRLoading.section(height: 88),
@@ -3442,83 +3446,100 @@ class _BarberAgendaPage extends StatelessWidget {
     );
   }
 
+  String _selectedDateLabel(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return '$day/$month/${date.year}';
+  }
+
   void _showScheduleDetails(BuildContext context, ScheduleEntry entry) {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
       builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                entry.client,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'DETALHES DO ATENDIMENTO',
+                  style: TextStyle(
+                    color: SharedAppColors.orange,
+                    fontSize: 10,
+                    letterSpacing: 1.3,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              _RequestInfoRow(
-                icon: Icons.schedule_rounded,
-                label: 'Horário',
-                value: entry.time,
-              ),
-              _RequestInfoRow(
-                icon: Icons.content_cut_rounded,
-                label: 'Serviço',
-                value: entry.service,
-              ),
-              _RequestInfoRow(
-                icon: Icons.badge_outlined,
-                label: 'Barbeiro',
-                value: entry.barber,
-              ),
-              _RequestInfoRow(
-                icon: Icons.info_outline_rounded,
-                label: 'Status',
-                value: entry.status,
-              ),
-              _RequestInfoRow(
-                icon: Icons.notes_rounded,
-                label: 'Obs.',
-                value: entry.notes,
-              ),
-              if (entry.canComplete) ...[
-                const SizedBox(height: 18),
-                FilledButton.icon(
-                  onPressed: () async {
-                    final navigator = Navigator.of(context);
-                    final messenger = ScaffoldMessenger.of(context);
-                    try {
-                      await context
-                          .read<ManagementSession>()
-                          .completeAppointment(entry.appointmentId!);
-                      if (!context.mounted) return;
-                      navigator.pop();
-                      messenger.showSnackBar(
-                        const SnackBar(
-                          content: Text('Atendimento concluído.'),
-                        ),
-                      );
-                    } catch (_) {
-                      if (!context.mounted) return;
-                      messenger.showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Não foi possível concluir o atendimento.',
+                const SizedBox(height: 6),
+                Text(
+                  entry.client,
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 16),
+                const Divider(height: 1),
+                const SizedBox(height: 6),
+                _RequestInfoRow(
+                  icon: Icons.schedule_rounded,
+                  label: 'Horário',
+                  value: entry.time,
+                ),
+                _RequestInfoRow(
+                  icon: Icons.content_cut_rounded,
+                  label: 'Serviço',
+                  value: entry.service,
+                ),
+                _RequestInfoRow(
+                  icon: Icons.badge_outlined,
+                  label: 'Barbeiro',
+                  value: entry.barber,
+                ),
+                _RequestInfoRow(
+                  icon: Icons.info_outline_rounded,
+                  label: 'Status',
+                  value: entry.status,
+                ),
+                _RequestInfoRow(
+                  icon: Icons.notes_rounded,
+                  label: 'Obs.',
+                  value: entry.notes,
+                ),
+                if (entry.canComplete) ...[
+                  const SizedBox(height: 18),
+                  CDRButton.primary(
+                    label: 'CONCLUIR ATENDIMENTO',
+                    onPressed: () async {
+                      final navigator = Navigator.of(context);
+                      final messenger = ScaffoldMessenger.of(context);
+                      try {
+                        await context
+                            .read<ManagementSession>()
+                            .completeAppointment(entry.appointmentId!);
+                        if (!context.mounted) return;
+                        navigator.pop();
+                        messenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('Atendimento concluído.'),
                           ),
-                        ),
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.task_alt_rounded),
-                  label: const Text('Concluir atendimento'),
-                ),
+                        );
+                      } catch (_) {
+                        if (!context.mounted) return;
+                        messenger.showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Não foi possível concluir o atendimento.',
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                    leading: const Icon(Icons.task_alt_rounded),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         );
       },
@@ -3541,62 +3562,81 @@ class _ScheduleFilters extends StatelessWidget {
           return DateTime(now.year, now.month, now.day + index);
         });
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (adminView) ...[
-              DropdownButtonFormField<String>(
-                value: _validBarberDropdownValue(session),
-                decoration: const InputDecoration(
-                  labelText: 'Barbeiro',
-                  prefixIcon: Icon(Icons.badge_outlined),
-                  filled: true,
-                  fillColor: SharedAppColors.card,
-                ),
-                items: [
-                  const DropdownMenuItem<String>(
-                    value: _allBarbersDropdownValue,
-                    child: Text('Todos os barbeiros'),
+        return Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: SharedAppColors.card,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: SharedAppColors.stroke),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (adminView) ...[
+                DropdownButtonFormField<String>(
+                  value: _validBarberDropdownValue(session),
+                  decoration: const InputDecoration(
+                    labelText: 'Barbeiro',
+                    prefixIcon: Icon(Icons.badge_outlined),
+                    filled: true,
+                    fillColor: SharedAppColors.card,
                   ),
-                  for (final barber in _uniqueBarbers(session.teamBarbers))
-                    DropdownMenuItem<String>(
-                      value: barber.id,
-                      child: Text(barber.name),
+                  items: [
+                    const DropdownMenuItem<String>(
+                      value: _allBarbersDropdownValue,
+                      child: Text('Todos os barbeiros'),
                     ),
-                ],
-                onChanged: (value) => session.selectScheduleBarber(
-                  value == _allBarbersDropdownValue ? null : value,
+                    for (final barber in _uniqueBarbers(session.teamBarbers))
+                      DropdownMenuItem<String>(
+                        value: barber.id,
+                        child: Text(barber.name),
+                      ),
+                  ],
+                  onChanged: (value) => session.selectScheduleBarber(
+                    value == _allBarbersDropdownValue ? null : value,
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              SizedBox(
+                height: 58,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: days.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final day = days[index];
+                    final selected = DateUtils.isSameDay(day, date);
+                    return ChoiceChip(
+                      label: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _weekdayLabel(day),
+                            style: const TextStyle(fontSize: 10),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(_dayLabel(day)),
+                        ],
+                      ),
+                      selected: selected,
+                      onSelected: (_) => session.selectScheduleDate(day),
+                      selectedColor: SharedAppColors.orange,
+                      backgroundColor: SharedAppColors.elevated,
+                      side: const BorderSide(color: SharedAppColors.stroke),
+                      labelStyle: TextStyle(
+                        color: selected
+                            ? SharedAppColors.onGold
+                            : SharedAppColors.text,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    );
+                  },
                 ),
               ),
-              const SizedBox(height: 12),
             ],
-            SizedBox(
-              height: 46,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: days.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (context, index) {
-                  final day = days[index];
-                  final selected = DateUtils.isSameDay(day, date);
-                  return ChoiceChip(
-                    label: Text(_dayLabel(day)),
-                    selected: selected,
-                    onSelected: (_) => session.selectScheduleDate(day),
-                    selectedColor: SharedAppColors.orange,
-                    backgroundColor: SharedAppColors.elevated,
-                    side: const BorderSide(color: SharedAppColors.stroke),
-                    labelStyle: TextStyle(
-                      color: selected
-                          ? SharedAppColors.onGold
-                          : SharedAppColors.text,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
+          ),
         );
       },
     );
@@ -3606,6 +3646,11 @@ class _ScheduleFilters extends StatelessWidget {
     final day = date.day.toString().padLeft(2, '0');
     final month = date.month.toString().padLeft(2, '0');
     return '$day/$month';
+  }
+
+  String _weekdayLabel(DateTime date) {
+    const labels = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'];
+    return labels[date.weekday - 1];
   }
 
   String _validBarberDropdownValue(ManagementSession session) {
@@ -6116,20 +6161,108 @@ class _AppointmentTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final subtitle =
-        showBarber ? '${entry.service} - ${entry.barber}' : entry.service;
+    final normalizedStatus = entry.status.toLowerCase();
+    final statusColor = normalizedStatus.contains('conclu')
+        ? CDRColorTokens.success
+        : normalizedStatus.contains('cancel')
+            ? CDRColorTokens.error
+            : normalizedStatus.contains('confirm') ||
+                    normalizedStatus.contains('aceito')
+                ? CDRColorTokens.info
+                : SharedAppColors.orange;
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(20),
-      onTap: onTap,
-      child: _SurfaceTile(
-        leading: _TimeBadge(entry.time),
-        title: entry.client,
-        subtitle: subtitle,
-        trailing: Chip(
-          label: Text(entry.status),
-          side: BorderSide.none,
-          backgroundColor: SharedAppColors.background,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: SharedAppColors.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: SharedAppColors.stroke),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              _TimeBadge(entry.time),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      entry.client,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      entry.service,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    if (showBarber) ...[
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.badge_outlined,
+                            size: 14,
+                            color: SharedAppColors.muted,
+                          ),
+                          const SizedBox(width: 5),
+                          Expanded(
+                            child: Text(
+                              entry.barber,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    constraints: const BoxConstraints(maxWidth: 104),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(.1),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      entry.status.toUpperCase(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontSize: 9,
+                        letterSpacing: .3,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: SharedAppColors.muted,
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
