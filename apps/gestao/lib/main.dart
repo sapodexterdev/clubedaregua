@@ -2960,17 +2960,18 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
       title: Row(
         children: [
           Container(
-            width: 38,
-            height: 38,
+            width: 44,
+            height: 44,
+            padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
-              color: SharedAppColors.orange.withOpacity(.12),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: SharedAppColors.orange.withOpacity(.5)),
+              color: SharedAppColors.background,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: SharedAppColors.stroke),
             ),
-            child: const Icon(
-              Icons.workspace_premium_rounded,
-              color: SharedAppColors.orange,
-              size: 22,
+            child: SvgPicture.asset(
+              'assets/images/brand_v3_segunda_logo.svg',
+              fit: BoxFit.contain,
+              semanticsLabel: 'Clube da Régua',
             ),
           ),
           const SizedBox(width: 12),
@@ -2980,7 +2981,7 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'CLUBE DA RÉGUA · GESTÃO',
+                  'CLUBE DA RÉGUA',
                   style: TextStyle(
                     color: SharedAppColors.orange,
                     fontFamily: 'Inter',
@@ -3312,7 +3313,7 @@ class _Header extends StatelessWidget {
         context.watch<ManagementSession>().shopConfiguration?.logoUrl.trim() ??
             '';
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         color: SharedAppColors.card,
         borderRadius: BorderRadius.circular(24),
@@ -3351,12 +3352,7 @@ class _Header extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    color: SharedAppColors.text,
-                    fontFamily: 'Barlow Condensed',
-                    fontSize: 28,
-                    fontWeight: FontWeight.w900,
-                  ),
+                  style: Theme.of(context).textTheme.headlineMedium,
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -3653,8 +3649,14 @@ class _BookingRequestsPage extends StatelessWidget {
                     'Pedidos', '${requests.length}', Icons.today_rounded),
               ],
             ),
-            const SizedBox(height: 22),
-            const _SectionTitle('Novas solicitações'),
+            const SizedBox(height: 28),
+            _SectionTitle(
+              newCount > 0 ? 'Novas solicitações' : 'Solicitações',
+              eyebrow: 'PEDIDOS',
+              trailing: requests.isEmpty
+                  ? null
+                  : '${requests.length} no total',
+            ),
             const SizedBox(height: 12),
             if (session.isBookingRequestsLoading) ...[
               const CDRLoading.section(height: 88),
@@ -5960,7 +5962,7 @@ class _MetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: SharedAppColors.card,
         borderRadius: BorderRadius.circular(22),
@@ -5969,11 +5971,19 @@ class _MetricCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(data.icon, color: SharedAppColors.orange),
-          const SizedBox(height: 16),
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: SharedAppColors.orange.withOpacity(.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(data.icon, color: SharedAppColors.orange, size: 21),
+          ),
+          const SizedBox(height: 18),
           Text(
             data.value,
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+            style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 4),
           Text(data.label,
@@ -5985,15 +5995,43 @@ class _MetricCard extends StatelessWidget {
 }
 
 class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.title);
+  const _SectionTitle(this.title, {this.eyebrow, this.trailing});
 
   final String title;
+  final String? eyebrow;
+  final String? trailing;
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (eyebrow != null) ...[
+                Text(
+                  eyebrow!,
+                  style: const TextStyle(
+                    color: SharedAppColors.orange,
+                    fontSize: 10,
+                    letterSpacing: 1.4,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 5),
+              ],
+              Text(title, style: Theme.of(context).textTheme.headlineSmall),
+            ],
+          ),
+        ),
+        if (trailing != null)
+          Text(
+            trailing!,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+      ],
     );
   }
 }
@@ -6134,117 +6172,158 @@ class _BookingRequestTile extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: SharedAppColors.card,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(color: SharedAppColors.stroke),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              _ClientAvatar(photoUrl: request.clientPhotoUrl),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          Container(
+            height: 3,
+            color: isClosed ? SharedAppColors.stroke : statusColor,
+          ),
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Text(
-                      request.client,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    _ClientAvatar(photoUrl: request.clientPhotoUrl),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            request.client,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            request.phone.isEmpty
+                                ? 'Telefone não informado'
+                                : request.phone,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      request.phone.isEmpty
-                          ? 'Telefone não informado'
-                          : request.phone,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: SharedAppColors.muted),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(total, style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: statusColor.withOpacity(.1),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            statusLabel.toUpperCase(),
+                            style: TextStyle(
+                              color: statusColor,
+                              fontSize: 10,
+                              letterSpacing: .4,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    total,
-                    style: const TextStyle(fontWeight: FontWeight.w900),
-                  ),
-                  const SizedBox(height: 6),
-                  Chip(
-                    label: Text(statusLabel),
-                    side: BorderSide.none,
-                    labelStyle: TextStyle(
-                      color: statusColor,
-                      fontWeight: FontWeight.w800,
-                    ),
-                    visualDensity: VisualDensity.compact,
-                    backgroundColor: statusColor.withOpacity(.1),
+                const SizedBox(height: 16),
+                const Divider(height: 1),
+                const SizedBox(height: 6),
+                _RequestInfoRow(
+                  icon: Icons.content_cut_rounded,
+                  label: 'Serviço',
+                  value: request.service,
+                ),
+                _RequestInfoRow(
+                  icon: Icons.badge_outlined,
+                  label: 'Barbeiro',
+                  value: request.barber,
+                ),
+                _RequestInfoRow(
+                  icon: Icons.event_rounded,
+                  label: 'Data e horário',
+                  value: request.formattedDateTime,
+                ),
+                _RequestInfoRow(
+                  icon: Icons.payments_outlined,
+                  label: 'Pagamento',
+                  value: request.paymentMethod,
+                ),
+                _RequestInfoRow(
+                  icon: Icons.notes_rounded,
+                  label: 'Observações',
+                  value: request.observation,
+                ),
+                if (!isClosed) ...[
+                  const SizedBox(height: 18),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final compact = constraints.maxWidth < 430;
+                      final decline = CDRButton.outlined(
+                        label: 'RECUSAR',
+                        onPressed: onDeclined,
+                        isExpanded: compact,
+                        leading: const Icon(Icons.block_rounded),
+                      );
+                      final accept = CDRButton.primary(
+                        label: 'ACEITAR',
+                        onPressed: onAccepted,
+                        isExpanded: compact,
+                        leading: const Icon(Icons.check_rounded),
+                      );
+                      if (compact) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            accept,
+                            const SizedBox(height: 10),
+                            decline,
+                            const SizedBox(height: 4),
+                            TextButton.icon(
+                              onPressed: onCancelled,
+                              icon: const Icon(Icons.close_rounded),
+                              label: const Text('Cancelar solicitação'),
+                            ),
+                          ],
+                        );
+                      }
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton.icon(
+                            onPressed: onCancelled,
+                            icon: const Icon(Icons.close_rounded),
+                            label: const Text('Cancelar'),
+                          ),
+                          const SizedBox(width: 8),
+                          decline,
+                          const SizedBox(width: 10),
+                          accept,
+                        ],
+                      );
+                    },
                   ),
                 ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          _RequestInfoRow(
-            icon: Icons.content_cut_rounded,
-            label: 'Serviço',
-            value: request.service,
-          ),
-          _RequestInfoRow(
-            icon: Icons.badge_outlined,
-            label: 'Barbeiro',
-            value: request.barber,
-          ),
-          _RequestInfoRow(
-            icon: Icons.event_rounded,
-            label: 'Data e horário',
-            value: request.formattedDateTime,
-          ),
-          _RequestInfoRow(
-            icon: Icons.payments_outlined,
-            label: 'Pagamento',
-            value: request.paymentMethod,
-          ),
-          _RequestInfoRow(
-            icon: Icons.notes_rounded,
-            label: 'Observações',
-            value: request.observation,
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: isClosed ? null : onDeclined,
-                  icon: const Icon(Icons.block_rounded),
-                  label: const Text('Recusar'),
-                ),
-              ),
-              const SizedBox(width: 10),
-              IconButton.filledTonal(
-                tooltip: 'Cancelar',
-                onPressed: isClosed ? null : onCancelled,
-                icon: const Icon(Icons.close_rounded),
-              ),
-              const SizedBox(width: 10),
-              FilledButton.icon(
-                onPressed: isClosed ? null : onAccepted,
-                style: FilledButton.styleFrom(
-                  backgroundColor: SharedAppColors.orange,
-                  foregroundColor: SharedAppColors.onGold,
-                ),
-                icon: const Icon(Icons.check_rounded),
-                label: const Text('Aceitar'),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
