@@ -3830,12 +3830,27 @@ class _AvailabilityPage extends StatelessWidget {
     return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionTitle('Horários disponíveis'),
+        _MetricsGrid(
+          cards: [
+            _MetricData('Dias ativos', '6', Icons.event_available_rounded),
+            _MetricData('Bloqueios', '2', Icons.event_busy_rounded),
+          ],
+        ),
+        SizedBox(height: 28),
+        _SectionTitle(
+          'Jornada semanal',
+          eyebrow: 'DISPONIBILIDADE',
+          trailing: 'Horário de Brasília',
+        ),
         SizedBox(height: 12),
         _ScheduleTile(day: 'Segunda a sexta', hours: '09:00 - 18:00'),
         _ScheduleTile(day: 'Sábado', hours: '09:00 - 14:00'),
-        SizedBox(height: 22),
-        _SectionTitle('Bloqueios'),
+        SizedBox(height: 28),
+        _SectionTitle(
+          'Bloqueios programados',
+          eyebrow: 'AGENDA',
+          trailing: '2 ativos',
+        ),
         SizedBox(height: 12),
         _BlockedTile(
           title: 'Almoço estendido',
@@ -6568,7 +6583,10 @@ class _ScheduleTile extends StatelessWidget {
       leading: const _IconBadge(Icons.schedule_rounded),
       title: day,
       subtitle: hours,
-      trailing: const Icon(Icons.edit_rounded, color: SharedAppColors.muted),
+      trailing: const _AvailabilityStatus(
+        label: 'ABERTO',
+        color: CDRColorTokens.success,
+      ),
     );
   }
 }
@@ -6585,8 +6603,37 @@ class _BlockedTile extends StatelessWidget {
       leading: const _IconBadge(Icons.block_rounded),
       title: title,
       subtitle: detail,
-      trailing:
-          const Icon(Icons.more_horiz_rounded, color: SharedAppColors.muted),
+      trailing: const _AvailabilityStatus(
+        label: 'BLOQUEADO',
+        color: CDRColorTokens.error,
+      ),
+    );
+  }
+}
+
+class _AvailabilityStatus extends StatelessWidget {
+  const _AvailabilityStatus({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withOpacity(.1),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 9,
+          letterSpacing: .4,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
     );
   }
 }
@@ -6857,43 +6904,62 @@ class _ActionPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: SharedAppColors.card,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: SharedAppColors.stroke),
-      ),
-      child: Row(
-        children: [
-          _IconBadge(icon),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: const TextStyle(fontWeight: FontWeight.w900)),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: const TextStyle(color: SharedAppColors.muted),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 560;
+        final content = Row(
+          children: [
+            _IconBadge(icon),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 4),
+                  Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+                ],
+              ),
+            ),
+          ],
+        );
+
+        final action = onPressed == null
+            ? const _AvailabilityStatus(
+                label: 'EM BREVE',
+                color: SharedAppColors.muted,
+              )
+            : CDRButton.primary(
+                label: buttonLabel.toUpperCase(),
+                onPressed: onPressed,
+                isExpanded: compact,
+              );
+
+        return Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: SharedAppColors.card,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: SharedAppColors.stroke),
+          ),
+          child: compact
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    content,
+                    const SizedBox(height: 16),
+                    Align(alignment: Alignment.centerLeft, child: action),
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(child: content),
+                    const SizedBox(width: 16),
+                    action,
+                  ],
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          FilledButton(
-            onPressed: onPressed ?? () {},
-            style: FilledButton.styleFrom(
-              backgroundColor: SharedAppColors.orange,
-              foregroundColor: SharedAppColors.onGold,
-              visualDensity: VisualDensity.compact,
-            ),
-            child: Text(buttonLabel),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
