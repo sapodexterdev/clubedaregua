@@ -4559,15 +4559,24 @@ class _ServicesPage extends StatelessWidget {
           children: [
             _ActionPanel(
               title: 'Catálogo de serviços',
-              subtitle:
-                  '$activeCount serviço(s) ativo(s). Gerencie preços e duração.',
+              subtitle: activeCount == 1
+                  ? '1 serviço ativo. Gerencie preço, duração e disponibilidade.'
+                  : '$activeCount serviços ativos. Gerencie preços, durações e disponibilidade.',
               buttonLabel: 'Novo serviço',
               icon: Icons.add_circle_rounded,
               onPressed: () => _openServiceForm(context),
             ),
             const SizedBox(height: 18),
             _ServiceFilters(session: session),
-            const SizedBox(height: 18),
+            const SizedBox(height: 24),
+            _SectionTitle(
+              'Serviços cadastrados',
+              eyebrow: 'CATÁLOGO',
+              trailing: services.length == 1
+                  ? '1 serviço'
+                  : '${services.length} serviços',
+            ),
+            const SizedBox(height: 12),
             if (session.isServicesLoading) ...[
               const CDRLoading.section(height: 88),
               const SizedBox(height: 12),
@@ -4657,76 +4666,78 @@ class _ServiceFilters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        TextField(
-          onChanged: session.setServiceSearchQuery,
-          decoration: InputDecoration(
-            hintText: 'Buscar serviço por nome',
-            prefixIcon: const Icon(Icons.search_rounded),
-            filled: true,
-            fillColor: SharedAppColors.elevated,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(18),
-              borderSide: BorderSide.none,
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: SharedAppColors.card,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: SharedAppColors.stroke),
+      ),
+      child: Column(
+        children: [
+          TextField(
+            onChanged: session.setServiceSearchQuery,
+            textInputAction: TextInputAction.search,
+            decoration: const InputDecoration(
+              hintText: 'Buscar serviço por nome',
+              prefixIcon: Icon(Icons.search_rounded),
             ),
           ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 44,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              _FilterChipButton(
-                label: 'Todos',
-                selected:
-                    session.serviceStatusFilter == ServiceStatusFilter.all,
-                onSelected: () =>
-                    session.setServiceStatusFilter(ServiceStatusFilter.all),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 44,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                _FilterChipButton(
+                  label: 'Todos',
+                  selected:
+                      session.serviceStatusFilter == ServiceStatusFilter.all,
+                  onSelected: () =>
+                      session.setServiceStatusFilter(ServiceStatusFilter.all),
+                ),
+                _FilterChipButton(
+                  label: 'Ativos',
+                  selected:
+                      session.serviceStatusFilter == ServiceStatusFilter.active,
+                  onSelected: () => session
+                      .setServiceStatusFilter(ServiceStatusFilter.active),
+                ),
+                _FilterChipButton(
+                  label: 'Inativos',
+                  selected: session.serviceStatusFilter ==
+                      ServiceStatusFilter.inactive,
+                  onSelected: () => session
+                      .setServiceStatusFilter(ServiceStatusFilter.inactive),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: _validCategoryFilterValue(session),
+            decoration: const InputDecoration(
+              labelText: 'Categoria',
+              prefixIcon: Icon(Icons.category_outlined),
+            ),
+            items: [
+              const DropdownMenuItem<String>(
+                value: _allCategoriesDropdownValue,
+                child: Text('Todas as categorias'),
               ),
-              _FilterChipButton(
-                label: 'Ativos',
-                selected:
-                    session.serviceStatusFilter == ServiceStatusFilter.active,
-                onSelected: () =>
-                    session.setServiceStatusFilter(ServiceStatusFilter.active),
-              ),
-              _FilterChipButton(
-                label: 'Inativos',
-                selected:
-                    session.serviceStatusFilter == ServiceStatusFilter.inactive,
-                onSelected: () => session
-                    .setServiceStatusFilter(ServiceStatusFilter.inactive),
-              ),
+              for (final category
+                  in _uniqueCategories(session.serviceCategories))
+                DropdownMenuItem<String>(
+                  value: category.id,
+                  child: Text(category.name),
+                ),
             ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
-          value: _validCategoryFilterValue(session),
-          decoration: const InputDecoration(
-            labelText: 'Categoria',
-            prefixIcon: Icon(Icons.category_outlined),
-            filled: true,
-            fillColor: SharedAppColors.elevated,
-          ),
-          items: [
-            const DropdownMenuItem<String>(
-              value: _allCategoriesDropdownValue,
-              child: Text('Todas as categorias'),
+            onChanged: (value) => session.setServiceCategoryFilter(
+              value == _allCategoriesDropdownValue ? null : value,
             ),
-            for (final category in _uniqueCategories(session.serviceCategories))
-              DropdownMenuItem<String>(
-                value: category.id,
-                child: Text(category.name),
-              ),
-          ],
-          onChanged: (value) => session.setServiceCategoryFilter(
-            value == _allCategoriesDropdownValue ? null : value,
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -4849,12 +4860,26 @@ class _ServiceFormState extends State<_ServiceForm> {
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    _isEditing ? 'Editar serviço' : 'Novo serviço',
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _isEditing ? 'EDITAR SERVIÇO' : 'NOVO SERVIÇO',
+                        style: const TextStyle(
+                          color: SharedAppColors.orange,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _isEditing
+                            ? 'Atualize o serviço'
+                            : 'Cadastre um serviço',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                    ],
                   ),
                 ),
                 IconButton(
@@ -4863,6 +4888,8 @@ class _ServiceFormState extends State<_ServiceForm> {
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+            const Divider(color: SharedAppColors.stroke),
             const SizedBox(height: 16),
             TextFormField(
               controller: _nameController,
@@ -4909,7 +4936,7 @@ class _ServiceFormState extends State<_ServiceForm> {
               minLines: 2,
               maxLines: 3,
               decoration: const InputDecoration(
-                labelText: 'Descricao',
+                labelText: 'Descrição',
                 prefixIcon: Icon(Icons.notes_rounded),
               ),
             ),
@@ -4922,7 +4949,7 @@ class _ServiceFormState extends State<_ServiceForm> {
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     decoration: const InputDecoration(
-                      labelText: 'Preco',
+                      labelText: 'Preço',
                       prefixIcon: Icon(Icons.attach_money),
                     ),
                     validator: _validatePrice,
@@ -4934,7 +4961,7 @@ class _ServiceFormState extends State<_ServiceForm> {
                     controller: _durationController,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
-                      labelText: 'Duracao min',
+                      labelText: 'Duração (min)',
                       prefixIcon: Icon(Icons.schedule_rounded),
                     ),
                     validator: _validateDuration,
@@ -4956,7 +4983,7 @@ class _ServiceFormState extends State<_ServiceForm> {
               controller: _colorController,
               enabled: false,
               decoration: const InputDecoration(
-                labelText: 'Cor de identificacao',
+                labelText: 'Cor de identificação',
                 helperText:
                     'Preparado para integrar quando houver coluna no banco.',
                 prefixIcon: Icon(Icons.palette_outlined),
@@ -4974,14 +5001,11 @@ class _ServiceFormState extends State<_ServiceForm> {
               subtitle: const Text('Serviços inativos deixam de aparecer.'),
             ),
             const SizedBox(height: 12),
-            FilledButton(
+            CDRButton.primary(
+              label: _isEditing ? 'SALVAR ALTERAÇÕES' : 'CADASTRAR SERVIÇO',
               onPressed: _isSaving ? null : _save,
-              style: FilledButton.styleFrom(
-                backgroundColor: SharedAppColors.orange,
-                foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(52),
-              ),
-              child: Text(_isSaving ? 'Salvando...' : 'Salvar'),
+              isLoading: _isSaving,
+              leading: const Icon(Icons.save_outlined),
             ),
             if (_isEditing) ...[
               const SizedBox(height: 8),
@@ -4999,14 +5023,14 @@ class _ServiceFormState extends State<_ServiceForm> {
   String? _validatePrice(String? value) {
     final parsed = _parseMoney(value);
     if (parsed == null || parsed <= 0) {
-      return 'Informe um preco maior que zero.';
+      return 'Informe um preço maior que zero.';
     }
     return null;
   }
 
   String? _validateDuration(String? value) {
     final parsed = int.tryParse(value?.trim() ?? '');
-    if (parsed == null || parsed <= 0) return 'Informe a duracao.';
+    if (parsed == null || parsed <= 0) return 'Informe a duração.';
     return null;
   }
 
@@ -7007,39 +7031,86 @@ class _ServiceTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusColor =
-        service.isActive ? Colors.green.shade700 : Colors.red.shade700;
-    return InkWell(
-      borderRadius: BorderRadius.circular(20),
-      onTap: onTap,
-      child: _SurfaceTile(
-        leading: service.imageUrl.isEmpty
-            ? const _IconBadge(Icons.content_cut_rounded)
-            : CircleAvatar(
-                radius: 25,
-                backgroundColor: SharedAppColors.orange.withOpacity(0.12),
-                backgroundImage: NetworkImage(service.imageUrl),
-              ),
-        title: service.name,
-        subtitle:
-            '${service.categoryName} - ${service.durationLabel} - ${service.appointmentCount} agendamento(s)',
-        trailing: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              service.formattedPrice,
-              style: const TextStyle(fontWeight: FontWeight.w900),
+        service.isActive ? CDRColorTokens.success : CDRColorTokens.error;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: SharedAppColors.card,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: SharedAppColors.stroke),
             ),
-            const SizedBox(height: 4),
-            Text(
-              service.statusLabel,
-              style: TextStyle(
-                color: statusColor,
-                fontWeight: FontWeight.w800,
-                fontSize: 12,
-              ),
+            child: Row(
+              children: [
+                service.imageUrl.isEmpty
+                    ? const _IconBadge(Icons.content_cut_rounded)
+                    : CircleAvatar(
+                        radius: 27,
+                        backgroundColor:
+                            SharedAppColors.orange.withOpacity(0.12),
+                        backgroundImage: NetworkImage(service.imageUrl),
+                      ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        service.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        '${service.categoryName} • ${service.durationLabel}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 8),
+                      _AvailabilityStatus(
+                        label: service.statusLabel.toUpperCase(),
+                        color: statusColor,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      service.formattedPrice,
+                      style: const TextStyle(
+                        color: SharedAppColors.orange,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      service.appointmentCount == 1
+                          ? '1 agendamento'
+                          : '${service.appointmentCount} agendamentos',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 8),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      color: SharedAppColors.muted,
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
