@@ -76,8 +76,14 @@ class AppState extends ChangeNotifier {
   Set<String> professionalRoles = const <String>{};
   Set<String> professionalShopIds = const <String>{};
 
+  bool get hasBarberAccess => professionalRoles.contains('barber');
+
+  bool get hasOwnerAccess => professionalRoles.any(
+        (role) => const {'owner', 'manager', 'admin'}.contains(role),
+      );
+
   bool get hasProfessionalAccess =>
-      professionalShopIds.isNotEmpty || professionalRoles.contains('admin');
+      hasBarberAccess || hasOwnerAccess;
 
   int get unreadNotificationCount =>
       notifications.where((item) => !item.isRead).length;

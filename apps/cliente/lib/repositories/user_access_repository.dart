@@ -14,8 +14,14 @@ class UserAccess {
   final Set<String> professionalRoles;
   final Set<String> shopIds;
 
+  bool get hasBarberAccess => professionalRoles.contains('barber');
+
+  bool get hasOwnerAccess => professionalRoles.any(
+        (role) => const {'owner', 'manager', 'admin'}.contains(role),
+      );
+
   bool get hasProfessionalAccess =>
-      shopIds.isNotEmpty || professionalRoles.contains('admin');
+      hasBarberAccess || hasOwnerAccess;
 }
 
 class UserAccessRepository {
@@ -33,11 +39,23 @@ class UserAccessRepository {
 
     List<Map<String, dynamic>> memberships = const [];
     List<Map<String, dynamic>> ownedShops = const [];
+    List<Map<String, dynamic>> linkedBarbers = const [];
     List<Map<String, dynamic>> users = const [];
     try {
       memberships = await _rest.getRows(
         'shop_members',
         select: 'barber_shop_id,role',
+        filters: {
+          'user_id': 'eq.${session.user.id}',
+          'is_active': 'eq.true',
+        },
+        accessToken: session.accessToken,
+      );
+    } catch (_) {}
+    try {
+      linkedBarbers = await _rest.getRows(
+        'barbers',
+        select: 'barber_shop_id',
         filters: {
           'user_id': 'eq.${session.user.id}',
           'is_active': 'eq.true',
@@ -69,6 +87,7 @@ class UserAccessRepository {
       for (final row in memberships)
         if (row['role']?.toString().isNotEmpty == true) row['role'].toString(),
       if (ownedShops.isNotEmpty) 'owner',
+      if (linkedBarbers.isNotEmpty) 'barber',
       for (final row in users)
         if (row['role']?.toString() == 'admin') 'admin',
     };
@@ -78,6 +97,9 @@ class UserAccessRepository {
           row['barber_shop_id'].toString(),
       for (final row in ownedShops)
         if (row['id']?.toString().isNotEmpty == true) row['id'].toString(),
+      for (final row in linkedBarbers)
+        if (row['barber_shop_id']?.toString().isNotEmpty == true)
+          row['barber_shop_id'].toString(),
     };
     return UserAccess(professionalRoles: roles, shopIds: shopIds);
   }

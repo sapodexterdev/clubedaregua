@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:clubedaregua_shared/clubedaregua_shared.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../providers/app_state.dart';
 import '../../screens/auth/login_screen.dart';
@@ -57,12 +58,26 @@ class ProfileScreen extends StatelessWidget {
                   const SizedBox(height: 10),
                   _ActionGroup(
                     children: [
-                      _ProfileAction(
-                        icon: Icons.content_cut_rounded,
-                        title: 'Área profissional',
-                        subtitle: 'Agenda e gestão da barbearia',
-                        onTap: openProfessionalMode,
-                      ),
+                      if (state.hasBarberAccess)
+                        _ProfileAction(
+                          icon: Icons.content_cut_rounded,
+                          title: 'Modo barbeiro',
+                          subtitle: 'Sua agenda, clientes e comissão',
+                          onTap: () => _openProfessionalMode(
+                            'barber',
+                            openBarberMode,
+                          ),
+                        ),
+                      if (state.hasOwnerAccess)
+                        _ProfileAction(
+                          icon: Icons.storefront_rounded,
+                          title: 'Modo dono',
+                          subtitle: 'Gestão completa da barbearia',
+                          onTap: () => _openProfessionalMode(
+                            'owner',
+                            openOwnerMode,
+                          ),
+                        ),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -145,6 +160,15 @@ class ProfileScreen extends StatelessWidget {
     if (route != ProfileScreen.route) {
       Navigator.pushReplacementNamed(context, route);
     }
+  }
+
+  static Future<void> _openProfessionalMode(
+    String mode,
+    VoidCallback navigate,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(appLastModeKey, mode);
+    navigate();
   }
 
   static Future<void> _showEditProfile(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../providers/app_state.dart';
 import '../services/app_mode_navigation.dart';
@@ -44,20 +45,36 @@ class ModeSelectionScreen extends StatelessWidget {
                 icon: Icons.search_rounded,
                 title: 'Entrar como cliente',
                 description: 'Descobrir barbearias, agendar e acompanhar seus horários.',
-                onTap: () => Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  HomeScreen.route,
-                  (_) => false,
+                onTap: () => _openClientMode(context),
+              ),
+              if (state.hasBarberAccess) ...[
+                const SizedBox(height: 14),
+                _ModeCard(
+                  icon: Icons.content_cut_rounded,
+                  title: 'Entrar como barbeiro',
+                  description:
+                      'Acessar sua agenda, solicitações, clientes e comissão.',
+                  highlighted: true,
+                  onTap: () => _openProfessionalMode(
+                    'barber',
+                    openBarberMode,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 14),
-              _ModeCard(
-                icon: Icons.content_cut_rounded,
-                title: 'Entrar como profissional',
-                description: 'Acessar agenda, solicitações e gestão da barbearia.',
-                highlighted: true,
-                onTap: openProfessionalMode,
-              ),
+              ],
+              if (state.hasOwnerAccess) ...[
+                const SizedBox(height: 14),
+                _ModeCard(
+                  icon: Icons.storefront_rounded,
+                  title: 'Entrar como dono',
+                  description:
+                      'Gerenciar equipe, serviços e operação da barbearia.',
+                  highlighted: true,
+                  onTap: () => _openProfessionalMode(
+                    'owner',
+                    openOwnerMode,
+                  ),
+                ),
+              ],
               const Spacer(),
               const Text(
                 'Você poderá trocar de modo novamente pelo seu perfil.',
@@ -69,6 +86,26 @@ class ModeSelectionScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _openClientMode(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(appLastModeKey, 'client');
+    if (!context.mounted) return;
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      HomeScreen.route,
+      (_) => false,
+    );
+  }
+
+  Future<void> _openProfessionalMode(
+    String mode,
+    VoidCallback navigate,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(appLastModeKey, mode);
+    navigate();
   }
 }
 

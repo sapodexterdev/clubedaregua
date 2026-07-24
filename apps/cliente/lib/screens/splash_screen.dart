@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/app_constants.dart';
 import '../providers/app_state.dart';
+import '../services/app_mode_navigation.dart';
 import 'client/home_screen.dart';
 import 'mode_selection_screen.dart';
 import 'onboarding_screen.dart';
@@ -113,6 +114,10 @@ class _SplashScreenState extends State<SplashScreen>
         prefs.getBool(SplashScreen.onboardingSeenKey) ?? false;
     final forceOnboardingPreview = kIsWeb &&
         Uri.base.queryParameters['preview'] == 'onboarding';
+    final requestedMode = Uri.base.queryParameters['mode'];
+    if (requestedMode == 'client') {
+      await prefs.setString(appLastModeKey, 'client');
+    }
 
     String route;
     if (!hasSeenOnboarding || forceOnboardingPreview) {
@@ -121,7 +126,24 @@ class _SplashScreenState extends State<SplashScreen>
       final state = context.read<AppState>();
       await _waitForInitialData(state);
       if (!mounted) return;
-      route = state.isSignedIn && state.hasProfessionalAccess
+      final lastMode = prefs.getString(appLastModeKey);
+      if (kIsWeb &&
+          state.isSignedIn &&
+          lastMode == 'barber' &&
+          state.hasBarberAccess) {
+        openBarberMode();
+        return;
+      }
+      if (kIsWeb &&
+          state.isSignedIn &&
+          lastMode == 'owner' &&
+          state.hasOwnerAccess) {
+        openOwnerMode();
+        return;
+      }
+      route = state.isSignedIn &&
+              state.hasProfessionalAccess &&
+              lastMode != 'client'
           ? ModeSelectionScreen.route
           : HomeScreen.route;
     }

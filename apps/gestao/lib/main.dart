@@ -40,7 +40,8 @@ class ClubeDaReguaGestaoApp extends StatelessWidget {
           if (recoverySession != null) {
             return PasswordRecoveryScreen(session: recoverySession);
           }
-          if (session.isRestoringSession) {
+          if (session.isRestoringSession ||
+              (session.isSignedIn && !session.professionalAccessResolved)) {
             return const Scaffold(
               body: CDRLoading.fullScreen(
                 message: 'Preparando sua área profissional...',
@@ -48,6 +49,9 @@ class ClubeDaReguaGestaoApp extends StatelessWidget {
             );
           }
           if (!session.isSignedIn) return const ManagementLoginScreen();
+          if (!session.hasProfessionalAccess) {
+            return const _ProfessionalAccessDeniedScreen();
+          }
           return const ManagementHomeScreen();
         },
       ),
@@ -914,6 +918,9 @@ class ManagementSession extends ChangeNotifier {
   String? _userId;
   String? _barberShopId;
   bool _isPlatformAdmin = false;
+  bool _isShopOwner = false;
+  bool _isLinkedBarber = false;
+  String? _membershipRole;
   String? barberShopName;
   String? email;
   bool isLoading = false;
@@ -948,6 +955,18 @@ class ManagementSession extends ChangeNotifier {
   String customerSearchQuery = '';
 
   bool get isSignedIn => _accessToken != null;
+  bool get professionalAccessResolved =>
+      !isSignedIn || _professionalAccessResolved;
+  bool get canWorkAsBarber =>
+      _isLinkedBarber || _membershipRole == 'barber';
+  bool get canManageShop =>
+      _isPlatformAdmin ||
+      _isShopOwner ||
+      _membershipRole == 'owner' ||
+      _membershipRole == 'manager';
+  bool get hasProfessionalAccess => canWorkAsBarber || canManageShop;
+
+  bool _professionalAccessResolved = false;
 
   Future<void> restoreUnifiedSession() async {
     var shouldLoadManagementData = false;
@@ -967,6 +986,7 @@ class ManagementSession extends ChangeNotifier {
         _clearSessionInMemory();
         return;
       }
+      _professionalAccessResolved = false;
       shouldLoadManagementData = true;
     } catch (error) {
       _clearSessionInMemory();
@@ -988,9 +1008,12 @@ class ManagementSession extends ChangeNotifier {
     try {
       await _resolvePlatformAdmin(token).timeout(const Duration(seconds: 8));
       await _ensureBarberShopId(token).timeout(const Duration(seconds: 8));
+      await _resolveShopCapabilities(token).timeout(const Duration(seconds: 8));
       await refreshManagementData();
     } catch (error) {
       errorMessage = _cleanErrorMessage(error);
+    } finally {
+      _professionalAccessResolved = true;
       notifyListeners();
     }
   }
@@ -1096,6 +1119,11 @@ class ManagementSession extends ChangeNotifier {
       email = emailValue.trim();
       await _resolvePlatformAdmin(_accessToken!);
       await _ensureBarberShopId(_accessToken!);
+      await _resolveShopCapabilities(_accessToken!);
+      if (!hasProfessionalAccess) {
+        throw StateError('Sua conta não possui acesso profissional ativo.');
+      }
+      _professionalAccessResolved = true;
       await _saveUnifiedSession(data);
       await refreshManagementData();
     } catch (error) {
@@ -2060,6 +2088,10 @@ class ManagementSession extends ChangeNotifier {
     _userId = null;
     _barberShopId = null;
     _isPlatformAdmin = false;
+    _isShopOwner = false;
+    _isLinkedBarber = false;
+    _membershipRole = null;
+    _professionalAccessResolved = false;
     barberShopName = null;
     email = null;
     bookingRequests = [];
@@ -2131,6 +2163,27 @@ class ManagementSession extends ChangeNotifier {
       }
     }
 
+    final linkedBarbers = await _getRestRows(
+      token,
+      'barbers',
+      query: {
+        'select': 'barber_shop_id,barber_shops(name)',
+        'user_id': 'eq.$userId',
+        'is_active': 'eq.true',
+        'limit': '1',
+      },
+    );
+
+    if (linkedBarbers.isNotEmpty) {
+      final barber = linkedBarbers.first;
+      _barberShopId = barber['barber_shop_id']?.toString();
+      final shop = barber['barber_shops'];
+      if (shop is Map) barberShopName = shop['name']?.toString();
+      if (_barberShopId != null && _barberShopId!.isNotEmpty) {
+        return _barberShopId!;
+      }
+    }
+
     final shops = await _getRestRows(
       token,
       'barber_shops',
@@ -2154,6 +2207,56 @@ class ManagementSession extends ChangeNotifier {
     }
 
     return _barberShopId!;
+  }
+
+  Future<void> _resolveShopCapabilities(String token) async {
+    final userId = _userId;
+    final shopId = _barberShopId;
+    if (userId == null ||
+        userId.isEmpty ||
+        shopId == null ||
+        shopId.isEmpty) {
+      return;
+    }
+
+    final memberships = await _getRestRows(
+      token,
+      'shop_members',
+      query: {
+        'select': 'role',
+        'barber_shop_id': 'eq.$shopId',
+        'user_id': 'eq.$userId',
+        'is_active': 'eq.true',
+        'limit': '1',
+      },
+    );
+    _membershipRole =
+        memberships.isEmpty ? null : memberships.first['role']?.toString();
+
+    final shops = await _getRestRows(
+      token,
+      'barber_shops',
+      query: {
+        'select': 'owner_id',
+        'id': 'eq.$shopId',
+        'limit': '1',
+      },
+    );
+    _isShopOwner =
+        shops.isNotEmpty && shops.first['owner_id']?.toString() == userId;
+
+    final barbers = await _getRestRows(
+      token,
+      'barbers',
+      query: {
+        'select': 'id',
+        'barber_shop_id': 'eq.$shopId',
+        'user_id': 'eq.$userId',
+        'is_active': 'eq.true',
+        'limit': '1',
+      },
+    );
+    _isLinkedBarber = barbers.isNotEmpty;
   }
 
   Future<void> _resolvePlatformAdmin(String token) async {
@@ -2412,6 +2515,59 @@ class ManagementSession extends ChangeNotifier {
     if (notes.trim().isEmpty) return reasonLine;
     if (notes.contains(reasonLine)) return notes;
     return '${notes.trim()}\n$reasonLine';
+  }
+}
+
+class _ProfessionalAccessDeniedScreen extends StatelessWidget {
+  const _ProfessionalAccessDeniedScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                children: [
+                  const _IconBadge(Icons.lock_person_outlined),
+                  const SizedBox(height: 18),
+                  Text(
+                    'Acesso profissional não encontrado',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Esta conta pode continuar usando o Clube da Régua como cliente. Para acessar a área profissional, ela precisa estar vinculada como barbeiro ou responsável por uma barbearia.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: SharedAppColors.muted,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  CDRButton.primary(
+                    label: 'VOLTAR AO MODO CLIENTE',
+                    onPressed: openClientMode,
+                    leading: const Icon(Icons.search_rounded),
+                  ),
+                  const SizedBox(height: 10),
+                  CDRButton.ghost(
+                    label: 'SAIR DA CONTA',
+                    onPressed:
+                        context.read<ManagementSession>().signOut,
+                    leading: const Icon(Icons.logout_rounded),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -2870,12 +3026,28 @@ class ManagementHomeScreen extends StatefulWidget {
 }
 
 class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
-  var selectedRole = ManagementRole.barber;
+  late ManagementRole selectedRole;
   var selectedTab = 0;
 
   @override
+  void initState() {
+    super.initState();
+    selectedRole = Uri.base.queryParameters['mode'] == 'owner'
+        ? ManagementRole.admin
+        : ManagementRole.barber;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final isAdmin = selectedRole == ManagementRole.admin;
+    final session = context.watch<ManagementSession>();
+    final effectiveRole = switch (selectedRole) {
+      ManagementRole.admin when session.canManageShop => ManagementRole.admin,
+      ManagementRole.barber when session.canWorkAsBarber =>
+        ManagementRole.barber,
+      _ when session.canManageShop => ManagementRole.admin,
+      _ => ManagementRole.barber,
+    };
+    final isAdmin = effectiveRole == ManagementRole.admin;
     final tabs = isAdmin ? _adminTabs : _barberTabs;
     final safeTab = selectedTab >= tabs.length ? 0 : selectedTab;
     final page = tabs[safeTab];
@@ -2909,24 +3081,38 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
                   children: [
                     Align(
                       alignment: Alignment.centerLeft,
-                      child: _RoleSwitch(
-                        selectedRole: selectedRole,
-                        onChanged: (role) {
-                          setState(() {
-                            selectedRole = role;
-                            selectedTab = 0;
-                          });
-                        },
-                      ),
+                      child:
+                          session.canWorkAsBarber && session.canManageShop
+                              ? _RoleSwitch(
+                                  selectedRole: effectiveRole,
+                                  onChanged: (role) async {
+                                    setState(() {
+                                      selectedRole = role;
+                                      selectedTab = 0;
+                                    });
+                                    final prefs =
+                                        await SharedPreferences.getInstance();
+                                    await prefs.setString(
+                                      'clubedaregua.last_mode',
+                                      role == ManagementRole.admin
+                                          ? 'owner'
+                                          : 'barber',
+                                    );
+                                  },
+                                )
+                              : _AvailabilityStatus(
+                                  label: isAdmin
+                                      ? 'MODO DONO'
+                                      : 'MODO BARBEIRO',
+                                  color: SharedAppColors.orange,
+                                ),
                     ),
                     const SizedBox(height: 20),
-                    Consumer<ManagementSession>(
-                      builder: (context, session, _) => _Header(
-                        isAdmin: isAdmin,
-                        title: isAdmin
-                            ? session.barberShopName ?? 'Barbearia'
-                            : session.barberHeaderName,
-                      ),
+                    _Header(
+                      isAdmin: isAdmin,
+                      title: isAdmin
+                          ? session.barberShopName ?? 'Barbearia'
+                          : session.barberHeaderName,
                     ),
                     const SizedBox(height: 28),
                     page.child,
@@ -3272,8 +3458,8 @@ class _RoleSwitch extends StatelessWidget {
         ),
         ButtonSegment(
           value: ManagementRole.admin,
-          label: Text('Admin'),
-          icon: Icon(Icons.admin_panel_settings_rounded),
+          label: Text('Dono'),
+          icon: Icon(Icons.storefront_rounded),
         ),
       ],
       selected: {selectedRole},
