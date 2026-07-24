@@ -3888,14 +3888,20 @@ class _ClientsPage extends StatelessWidget {
           children: [
             _ActionPanel(
               title: 'Clientes atendidos',
-              subtitle: '$activeCount cliente(s) ativo(s) na barbearia.',
+              subtitle: '$activeCount clientes ativos na barbearia.',
               buttonLabel: 'Atualizar',
               icon: Icons.refresh_rounded,
               onPressed: session.fetchCustomers,
             ),
             const SizedBox(height: 18),
             _CustomerFilters(session: session),
-            const SizedBox(height: 18),
+            const SizedBox(height: 28),
+            _SectionTitle(
+              'Base de clientes',
+              eyebrow: 'RELACIONAMENTO',
+              trailing: '${customers.length} clientes',
+            ),
+            const SizedBox(height: 12),
             if (session.isCustomersLoading) ...[
               const CDRLoading.section(height: 88),
               const SizedBox(height: 12),
@@ -3958,59 +3964,62 @@ class _CustomerFilters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        TextField(
-          onChanged: session.setCustomerSearchQuery,
-          decoration: InputDecoration(
-            hintText: 'Buscar por nome ou telefone',
-            prefixIcon: const Icon(Icons.search_rounded),
-            filled: true,
-            fillColor: SharedAppColors.elevated,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(18),
-              borderSide: BorderSide.none,
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: SharedAppColors.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: SharedAppColors.stroke),
+      ),
+      child: Column(
+        children: [
+          TextField(
+            onChanged: session.setCustomerSearchQuery,
+            textInputAction: TextInputAction.search,
+            decoration: const InputDecoration(
+              hintText: 'Buscar por nome ou telefone',
+              prefixIcon: Icon(Icons.search_rounded),
             ),
           ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 44,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              _FilterChipButton(
-                label: 'Todos',
-                selected:
-                    session.customerStatusFilter == CustomerStatusFilter.all,
-                onSelected: () =>
-                    session.setCustomerStatusFilter(CustomerStatusFilter.all),
-              ),
-              _FilterChipButton(
-                label: 'Ativos',
-                selected:
-                    session.customerStatusFilter == CustomerStatusFilter.active,
-                onSelected: () => session
-                    .setCustomerStatusFilter(CustomerStatusFilter.active),
-              ),
-              _FilterChipButton(
-                label: 'Inativos',
-                selected: session.customerStatusFilter ==
-                    CustomerStatusFilter.inactive,
-                onSelected: () => session
-                    .setCustomerStatusFilter(CustomerStatusFilter.inactive),
-              ),
-              _FilterChipButton(
-                label: 'Novos 30 dias',
-                selected:
-                    session.customerStatusFilter == CustomerStatusFilter.recent,
-                onSelected: () => session
-                    .setCustomerStatusFilter(CustomerStatusFilter.recent),
-              ),
-            ],
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 44,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                _FilterChipButton(
+                  label: 'Todos',
+                  selected:
+                      session.customerStatusFilter == CustomerStatusFilter.all,
+                  onSelected: () => session
+                      .setCustomerStatusFilter(CustomerStatusFilter.all),
+                ),
+                _FilterChipButton(
+                  label: 'Ativos',
+                  selected: session.customerStatusFilter ==
+                      CustomerStatusFilter.active,
+                  onSelected: () => session
+                      .setCustomerStatusFilter(CustomerStatusFilter.active),
+                ),
+                _FilterChipButton(
+                  label: 'Inativos',
+                  selected: session.customerStatusFilter ==
+                      CustomerStatusFilter.inactive,
+                  onSelected: () => session
+                      .setCustomerStatusFilter(CustomerStatusFilter.inactive),
+                ),
+                _FilterChipButton(
+                  label: 'Novos 30 dias',
+                  selected: session.customerStatusFilter ==
+                      CustomerStatusFilter.recent,
+                  onSelected: () => session
+                      .setCustomerStatusFilter(CustomerStatusFilter.recent),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -4070,12 +4079,24 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    customer.name,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'PERFIL DO CLIENTE',
+                        style: TextStyle(
+                          color: SharedAppColors.orange,
+                          fontSize: 10,
+                          letterSpacing: 1.3,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        customer.name,
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                    ],
                   ),
                 ),
                 IconButton(
@@ -4086,6 +4107,8 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
             ),
             const SizedBox(height: 12),
             Center(child: _CustomerAvatar(customer: customer, radius: 34)),
+            const SizedBox(height: 20),
+            const Divider(height: 1),
             const SizedBox(height: 16),
             TextFormField(
               controller: _nameController,
@@ -4114,7 +4137,7 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
             const SizedBox(height: 12),
             _RequestInfoRow(
               icon: Icons.mail_outline_rounded,
-              label: 'Email',
+              label: 'E-mail',
               value: customer.email,
             ),
             _RequestInfoRow(
@@ -4149,7 +4172,7 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
                   ? null
                   : (value) => setState(() => _isActive = value),
               title: const Text('Cliente ativo'),
-              subtitle: const Text('Clientes inativos ficam filtraveis.'),
+              subtitle: const Text('Clientes inativos ficam filtráveis.'),
             ),
             const SizedBox(height: 12),
             if (!customer.canEdit)
@@ -4160,22 +4183,23 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
                     'Este cliente ainda não possui cadastro vinculado. Ele aparece pelo agendamento realizado, mas a edição fica bloqueada.',
               )
             else
-              FilledButton(
+              CDRButton.primary(
+                label: 'SALVAR ALTERAÇÕES',
                 onPressed: _isSaving ? null : () => _save(customer),
-                style: FilledButton.styleFrom(
-                  backgroundColor: SharedAppColors.orange,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size.fromHeight(52),
-                ),
-                child: Text(_isSaving ? 'Salvando...' : 'Salvar'),
+                isLoading: _isSaving,
+                leading: const Icon(Icons.save_outlined),
               ),
-            const SizedBox(height: 22),
-            const _SectionTitle('Historico de agendamentos'),
+            const SizedBox(height: 28),
+            _SectionTitle(
+              'Histórico de agendamentos',
+              eyebrow: 'ATENDIMENTOS',
+              trailing: '${appointments.length} registros',
+            ),
             const SizedBox(height: 12),
             if (appointments.isEmpty)
               const _InlineNotice(
                 icon: Icons.event_busy_rounded,
-                title: 'Sem historico',
+                title: 'Sem histórico',
                 subtitle: 'Nenhum atendimento registrado para este cliente.',
               )
             else
@@ -4221,14 +4245,19 @@ class _CustomerAppointmentTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final normalizedStatus = appointment.status.toLowerCase();
+    final statusColor = normalizedStatus.contains('conclu')
+        ? CDRColorTokens.success
+        : normalizedStatus.contains('cancel')
+            ? CDRColorTokens.error
+            : SharedAppColors.orange;
     return _SurfaceTile(
       leading: const _IconBadge(Icons.event_available_rounded),
       title: appointment.service,
       subtitle: '${appointment.barber} - ${appointment.dateLabel}',
-      trailing: Chip(
-        label: Text(appointment.status),
-        side: BorderSide.none,
-        backgroundColor: SharedAppColors.background,
+      trailing: _AvailabilityStatus(
+        label: appointment.status.toUpperCase(),
+        color: statusColor,
       ),
     );
   }
@@ -6620,6 +6649,7 @@ class _AvailabilityStatus extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      constraints: const BoxConstraints(maxWidth: 110),
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
         color: color.withOpacity(.1),
@@ -6627,6 +6657,8 @@ class _AvailabilityStatus extends StatelessWidget {
       ),
       child: Text(
         label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           color: color,
           fontSize: 9,
@@ -6650,36 +6682,79 @@ class _ClientTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusColor =
-        customer.isActive ? Colors.green.shade700 : Colors.red.shade700;
-    return InkWell(
-      borderRadius: BorderRadius.circular(20),
-      onTap: onTap,
-      child: _SurfaceTile(
-        leading: _CustomerAvatar(customer: customer),
-        title: customer.name,
-        subtitle:
-            '${customer.phone.isEmpty ? 'Sem telefone' : customer.phone} - Ultimo: ${customer.lastAppointmentLabel}',
-        trailing: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              '${customer.appointmentCount} ag.',
-              style: const TextStyle(
-                color: SharedAppColors.orange,
-                fontWeight: FontWeight.w900,
+        customer.isActive ? CDRColorTokens.success : CDRColorTokens.error;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: SharedAppColors.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: SharedAppColors.stroke),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              _CustomerAvatar(customer: customer),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      customer.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      customer.phone.isEmpty
+                          ? 'Telefone não informado'
+                          : customer.phone,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'Último atendimento: ${customer.lastAppointmentLabel}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              customer.statusLabel,
-              style: TextStyle(
-                color: statusColor,
-                fontWeight: FontWeight.w800,
-                fontSize: 12,
+              const SizedBox(width: 10),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${customer.appointmentCount} ag.',
+                    style: const TextStyle(
+                      color: SharedAppColors.orange,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  _AvailabilityStatus(
+                    label: customer.statusLabel.toUpperCase(),
+                    color: statusColor,
+                  ),
+                  const SizedBox(height: 5),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: SharedAppColors.muted,
+                    size: 20,
+                  ),
+                ],
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
