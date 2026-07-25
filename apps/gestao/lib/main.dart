@@ -1767,7 +1767,10 @@ class ManagementSession extends ChangeNotifier {
     }
   }
 
-  Future<void> saveShopConfiguration(ShopConfiguration config) async {
+  Future<void> saveShopConfiguration(
+    ShopConfiguration config, {
+    bool applyHoursToTeam = false,
+  }) async {
     final token = _accessToken;
     if (token == null) return;
 
@@ -1815,6 +1818,31 @@ class ManagementSession extends ChangeNotifier {
           query: {'id': 'eq.${config.settingsId}'},
           data: settingsData,
         );
+      }
+
+      if (applyHoursToTeam) {
+        final activeBarbers =
+            teamBarbers.where((barber) => barber.isActive).toList();
+        for (final barber in activeBarbers) {
+          await _postRpc(
+            token,
+            'replace_barber_weekly_schedule',
+            data: {
+              'p_barber_id': barber.id,
+              'p_days': [
+                for (final day in config.days)
+                  {
+                    'weekday': _weekdayForBusinessDay(day.key),
+                    'is_active': day.isOpen,
+                    'start_time': day.openTime,
+                    'end_time': day.closeTime,
+                    'slot_minutes': config.bookingIntervalMinutes,
+                  },
+              ],
+            },
+          );
+        }
+        await fetchWeeklyAvailability();
       }
 
       shopConfiguration = config;
@@ -1880,6 +1908,19 @@ class ManagementSession extends ChangeNotifier {
       if (day.isOpen) return day.closeTime;
     }
     return null;
+  }
+
+  int _weekdayForBusinessDay(String key) {
+    return switch (key) {
+      'monday' => 1,
+      'tuesday' => 2,
+      'wednesday' => 3,
+      'thursday' => 4,
+      'friday' => 5,
+      'saturday' => 6,
+      'sunday' => 0,
+      _ => throw StateError('Dia de funcionamento inválido: $key'),
+    };
   }
 
   Future<void> fetchServiceCatalog() async {
@@ -6223,6 +6264,7 @@ class _SettingsFormState extends State<_SettingsForm> {
   late List<ShopBusinessDay> _days;
   late bool _lunchEnabled;
   late int _bookingInterval;
+  var _applyHoursToTeam = false;
   var _isSaving = false;
   var _isUploadingLogo = false;
   var _isUploadingCover = false;
@@ -6489,6 +6531,21 @@ class _SettingsFormState extends State<_SettingsForm> {
                   day: _days[index],
                   onChanged: (day) => setState(() => _days[index] = day),
                 ),
+              const Divider(color: SharedAppColors.stroke, height: 28),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _applyHoursToTeam,
+                activeColor: SharedAppColors.orange,
+                title: const Text(
+                  'Aplicar à agenda dos profissionais',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+                subtitle: const Text(
+                  'Substitui a disponibilidade semanal dos barbeiros ativos pelos horários acima.',
+                ),
+                onChanged: (value) =>
+                    setState(() => _applyHoursToTeam = value),
+              ),
             ],
           ),
           const SizedBox(height: 22),
@@ -6710,11 +6767,21 @@ class _SettingsFormState extends State<_SettingsForm> {
         minCancelHours: int.parse(_cancelHoursController.text.trim()),
         secondaryColor: _secondaryColorController.text,
       );
-      await context.read<ManagementSession>().saveShopConfiguration(config);
+      await context.read<ManagementSession>().saveShopConfiguration(
+            config,
+            applyHoursToTeam: _applyHoursToTeam,
+          );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Configurações salvas com sucesso.')),
+        SnackBar(
+          content: Text(
+            _applyHoursToTeam
+                ? 'Configurações e agendas da equipe atualizadas.'
+                : 'Configurações salvas com sucesso.',
+          ),
+        ),
       );
+      setState(() => _applyHoursToTeam = false);
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
