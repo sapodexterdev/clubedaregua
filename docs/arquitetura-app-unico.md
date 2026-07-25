@@ -62,3 +62,45 @@ Perfil. A operação `create_owner_barbershop` executa atomicamente:
 O usuário não atribui permissões diretamente à própria conta. A função valida
 a sessão, impede uma segunda barbearia ativa no MVP e cria todos os registros
 em uma única transação.
+
+## Entrada de profissionais por convite
+
+O dono ou gerente cadastra o profissional em **Gestão > Equipe**, informando
+nome, e-mail, comissão e dados públicos. A operação
+`create_shop_invitation`:
+
+1. valida que o solicitante administra a unidade;
+2. cria a ficha profissional inicialmente indisponível para agendamentos;
+3. gera um convite individual com validade de sete dias;
+4. vincula o convite ao e-mail informado;
+5. retorna o link que poderá ser enviado por WhatsApp ou e-mail.
+
+O profissional abre o link no mesmo app e entra ou cria sua conta. Durante o
+carregamento da sessão, `accept_shop_invitation` valida o token e exige que o
+e-mail autenticado seja igual ao e-mail convidado. Somente depois disso o
+sistema:
+
+- cria ou reativa o vínculo em `shop_members`;
+- associa a conta à ficha em `barbers`;
+- ativa o profissional para agenda;
+- libera o Modo Barbeiro na seleção de experiências.
+
+Convites expirados, revogados ou utilizados por outro e-mail não concedem
+acesso. A escolha visual de um modo continua sem poder para alterar
+autorizações.
+
+## Agendamento rápido do cliente
+
+O cliente pode solicitar um horário sem criar conta. O fluxo público exige
+somente nome e WhatsApp, mantendo `client_id` vazio quando não existe sessão.
+O pedido continua sujeito às mesmas validações de barbearia, profissional,
+serviço e conflito de horário.
+
+Com consentimento visível, nome e WhatsApp podem ser lembrados localmente no
+dispositivo para preencher o próximo agendamento. Esses dados podem ser
+editados, não incluem senha nem pagamento e são removidos quando o cliente
+desmarca a opção.
+
+A conta permanece opcional e agrega histórico, favoritos, cancelamentos e
+notificações. Donos, gerentes e barbeiros continuam obrigatoriamente
+autenticados e vinculados por autorização do banco.

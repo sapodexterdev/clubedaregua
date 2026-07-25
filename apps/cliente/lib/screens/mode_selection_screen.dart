@@ -48,6 +48,21 @@ class ModeSelectionScreen extends StatelessWidget {
                 'Olá, ${state.currentUserName?.trim().isNotEmpty == true ? state.currentUserName!.trim() : 'profissional'}. Escolha sua experiência no Clube da Régua.',
                 style: const TextStyle(color: AppColors.muted, height: 1.45),
               ),
+              if (state.teamInvitationMessage != null) ...[
+                const SizedBox(height: 18),
+                _AccessNotice(
+                  icon: Icons.verified_rounded,
+                  message: state.teamInvitationMessage!,
+                  isSuccess: true,
+                ),
+              ],
+              if (state.teamInvitationError != null) ...[
+                const SizedBox(height: 18),
+                _AccessNotice(
+                  icon: Icons.error_outline_rounded,
+                  message: state.teamInvitationError!,
+                ),
+              ],
               const SizedBox(height: 30),
               _ModeCard(
                 icon: Icons.search_rounded,
@@ -120,6 +135,47 @@ class ModeSelectionScreen extends StatelessWidget {
     await prefs.setString(appLastModeKey, mode);
     navigate();
   }
+}
+
+class _AccessNotice extends StatelessWidget {
+  const _AccessNotice({
+    required this.icon,
+    required this.message,
+    this.isSuccess = false,
+  });
+
+  final IconData icon;
+  final String message;
+  final bool isSuccess;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isSuccess
+              ? AppColors.orange.withOpacity(.10)
+              : const Color(0x1FEF4444),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSuccess ? AppColors.orange : const Color(0x66EF4444),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: isSuccess ? AppColors.orange : const Color(0xFFFF8A8A),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(fontSize: 13, height: 1.4),
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
 class _ModeCard extends StatelessWidget {

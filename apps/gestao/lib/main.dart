@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
@@ -312,7 +313,11 @@ class TeamBarber {
 
   String get detail {
     final commission = commissionPercent.toStringAsFixed(0);
-    final status = isActive ? 'agenda ativa' : 'inativo';
+    final status = userId.isEmpty
+        ? 'convite pendente'
+        : isActive
+            ? 'agenda ativa'
+            : 'inativo';
     return '$commission% comissão - $status';
   }
 
@@ -329,6 +334,16 @@ class TeamBarber {
       isActive: map['is_active'] != false,
     );
   }
+}
+
+class TeamInvitationLink {
+  const TeamInvitationLink({
+    required this.email,
+    required this.url,
+  });
+
+  final String email;
+  final String url;
 }
 
 class ScheduleEntry {
@@ -2143,7 +2158,8 @@ class ManagementSession extends ChangeNotifier {
     }
   }
 
-  Future<void> createTeamBarber({
+  Future<TeamInvitationLink> createTeamBarber({
+    required String email,
     required String name,
     required String bio,
     required String photoUrl,
@@ -2151,7 +2167,9 @@ class ManagementSession extends ChangeNotifier {
     required double commissionPercent,
   }) async {
     final token = _accessToken;
-    if (token == null) return;
+    if (token == null) {
+      throw StateError('Sua sessão expirou. Entre novamente.');
+    }
 
     isLoading = true;
     errorMessage = null;
@@ -2159,20 +2177,41 @@ class ManagementSession extends ChangeNotifier {
 
     try {
       final shopId = await _ensureBarberShopId(token);
-      final rows = await _postRestRows(
+      final result = await _postRpc(
         token,
-        'barbers',
+        'create_shop_invitation',
         data: {
-          'barber_shop_id': shopId,
-          'name': name.trim(),
-          'bio': bio.trim().isEmpty ? null : bio.trim(),
-          'photo_url': photoUrl.trim().isEmpty ? null : photoUrl.trim(),
-          'starting_price': startingPrice,
-          'commission_percent': commissionPercent,
-          'is_active': true,
+          'p_barber_shop_id': shopId,
+          'p_email': email.trim().toLowerCase(),
+          'p_name': name.trim(),
+          'p_role': 'barber',
+          'p_bio': bio.trim().isEmpty ? null : bio.trim(),
+          'p_photo_url': photoUrl.trim().isEmpty ? null : photoUrl.trim(),
+          'p_starting_price': startingPrice,
+          'p_commission_percent': commissionPercent,
         },
       );
 
+      if (result is! Map) {
+        throw StateError('O servidor não retornou o convite criado.');
+      }
+      final invitation = Map<String, dynamic>.from(result);
+      final barberId = invitation['barber_id']?.toString() ?? '';
+      final rawInviteToken = invitation['token']?.toString() ?? '';
+      if (barberId.isEmpty || rawInviteToken.isEmpty) {
+        throw StateError('O convite foi criado sem os dados necessários.');
+      }
+
+      final rows = await _getRestRows(
+        token,
+        'barbers',
+        query: {
+          'select':
+              'id,barber_shop_id,user_id,name,bio,photo_url,starting_price,commission_percent,is_active',
+          'id': 'eq.$barberId',
+          'limit': '1',
+        },
+      );
       final created = rows.isEmpty ? null : TeamBarber.fromMap(rows.first);
       if (created != null) {
         await _postRpc(
@@ -2209,6 +2248,15 @@ class ManagementSession extends ChangeNotifier {
       } else {
         await fetchTeamBarbers();
       }
+      final inviteUri = Uri.base.replace(
+        path: '/',
+        queryParameters: {'team_invite': rawInviteToken},
+        fragment: '',
+      );
+      return TeamInvitationLink(
+        email: invitation['email']?.toString() ?? email.trim().toLowerCase(),
+        url: inviteUri.toString(),
+      );
     } catch (error) {
       errorMessage = _cleanErrorMessage(error);
       rethrow;
@@ -5942,6 +5990,7 @@ class _TeamBarberForm extends StatefulWidget {
 class _TeamBarberFormState extends State<_TeamBarberForm> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
+  late final TextEditingController _emailController;
   late final TextEditingController _bioController;
   late final TextEditingController _photoUrlController;
   late final TextEditingController _startingPriceController;
@@ -5956,6 +6005,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
     super.initState();
     final barber = widget.barber;
     _nameController = TextEditingController(text: barber?.name ?? '');
+    _emailController = TextEditingController();
     _bioController = TextEditingController(text: barber?.bio ?? '');
     _photoUrlController = TextEditingController(text: barber?.photoUrl ?? '');
     _startingPriceController = TextEditingController(
@@ -5970,6 +6020,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
   @override
   void dispose() {
     _nameController.dispose();
+    _emailController.dispose();
     _bioController.dispose();
     _photoUrlController.dispose();
     _startingPriceController.dispose();
@@ -6022,6 +6073,29 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
                 return null;
               },
             ),
+            if (!_isEditing) ...[
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.email],
+                decoration: const InputDecoration(
+                  labelText: 'E-mail de acesso',
+                  prefixIcon: Icon(Icons.mail_outline_rounded),
+                  helperText:
+                      'O convite será válido somente para este e-mail.',
+                ),
+                validator: (value) {
+                  final email = value?.trim() ?? '';
+                  if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+                      .hasMatch(email)) {
+                    return 'Informe um e-mail válido.';
+                  }
+                  return null;
+                },
+              ),
+            ],
             const SizedBox(height: 12),
             TextFormField(
               controller: _bioController,
@@ -6132,13 +6206,16 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
       final session = context.read<ManagementSession>();
       final barber = widget.barber;
       if (barber == null) {
-        await session.createTeamBarber(
+        final invitation = await session.createTeamBarber(
+          email: _emailController.text,
           name: _nameController.text,
           bio: _bioController.text,
           photoUrl: _photoUrlController.text,
           startingPrice: _parseNumber(_startingPriceController.text)!,
           commissionPercent: _parseNumber(_commissionController.text)!,
         );
+        if (!mounted) return;
+        await _showInvitationCreated(invitation);
       } else {
         await session.updateTeamBarber(
           barber,
@@ -6160,6 +6237,56 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  Future<void> _showInvitationCreated(TeamInvitationLink invitation) {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(
+          Icons.mark_email_read_outlined,
+          color: SharedAppColors.orange,
+          size: 34,
+        ),
+        title: const Text('Convite criado'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Envie este link para ${invitation.email}. '
+              'O profissional deverá entrar ou criar a conta usando esse mesmo e-mail.',
+            ),
+            const SizedBox(height: 14),
+            SelectableText(
+              invitation.url,
+              style: const TextStyle(
+                color: SharedAppColors.muted,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Concluir'),
+          ),
+          FilledButton.icon(
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: invitation.url));
+              if (!dialogContext.mounted) return;
+              ScaffoldMessenger.of(dialogContext).showSnackBar(
+                const SnackBar(content: Text('Link do convite copiado.')),
+              );
+            },
+            icon: const Icon(Icons.copy_rounded),
+            label: const Text('Copiar link'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _deactivate() async {

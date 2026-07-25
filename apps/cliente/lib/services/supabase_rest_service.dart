@@ -148,6 +148,35 @@ class SupabaseRestService {
     return decoded is List && decoded.isNotEmpty;
   }
 
+  Future<dynamic> postRpc(
+    String functionName, {
+    required Map<String, dynamic> data,
+    required String accessToken,
+  }) async {
+    if (!isConfigured) return null;
+
+    final uri = Uri.parse(
+      '${SupabaseConfig.url}/rest/v1/rpc/$functionName',
+    );
+    final response = await http
+        .post(
+          uri,
+          headers: {
+            'apikey': SupabaseConfig.anonKey,
+            'authorization': 'Bearer $accessToken',
+            'content-type': 'application/json',
+          },
+          body: jsonEncode(data),
+        )
+        .timeout(_requestTimeout);
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw StateError('Supabase RPC ${response.statusCode}: ${response.body}');
+    }
+    if (response.body.trim().isEmpty) return null;
+    return jsonDecode(response.body);
+  }
+
   Future<bool> exists(
     String table, {
     Map<String, String> filters = const {},

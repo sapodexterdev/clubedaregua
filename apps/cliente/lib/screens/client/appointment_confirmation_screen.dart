@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 
 import '../../providers/app_state.dart';
+import '../../screens/auth/register_screen.dart';
 import '../../theme/app_colors.dart';
 import 'home_screen.dart';
 
@@ -65,6 +66,22 @@ class AppointmentConfirmationScreen extends StatelessWidget {
                       const SizedBox(height: 26),
                       const _NextSteps(),
                       const SizedBox(height: 28),
+                      if (!state.isSignedIn) ...[
+                        OutlinedButton.icon(
+                          onPressed: () => Navigator.pushNamed(
+                            context,
+                            RegisterScreen.route,
+                          ),
+                          icon: const Icon(Icons.person_add_alt_1_rounded),
+                          label: const Text(
+                            'CRIAR MINHA CONTA',
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(52),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       FilledButton(
                         onPressed: () => _goHome(context),
                         style: FilledButton.styleFrom(

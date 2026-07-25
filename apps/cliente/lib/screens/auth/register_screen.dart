@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../core/app_constants.dart';
 import '../../providers/app_state.dart';
 import '../../screens/client/home_screen.dart';
+import '../../screens/mode_selection_screen.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_colors.dart';
 
@@ -66,7 +67,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         appState.requireSignedIn();
         final returnRoute = ModalRoute.of(context)?.settings.arguments;
         navigator.pushReplacementNamed(
-          returnRoute is String ? returnRoute : HomeScreen.route,
+          returnRoute is String
+              ? returnRoute
+              : appState.hasProfessionalAccess
+                  ? ModeSelectionScreen.route
+                  : HomeScreen.route,
         );
       }
     } catch (error) {

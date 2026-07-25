@@ -40,7 +40,6 @@ class AppointmentRepository {
 
     try {
       final session = await _authenticatedSession();
-      if (session == null) return false;
       final hasConflict = await hasBookingConflict(
         barberId: barberId,
         date: date,
@@ -50,7 +49,7 @@ class AppointmentRepository {
 
       return await _rest.insertRow('booking_requests', {
         'barber_shop_id': barberShopId,
-        'client_id': session.user.id,
+        if (session != null) 'client_id': session.user.id,
         'barber_id': barberId,
         'service_id': serviceId,
         'requested_date': _dateOnly(date),
@@ -60,7 +59,7 @@ class AppointmentRepository {
         'total_price': total,
         'notes':
             'Solicitacao criada pelo PWA Cliente. Pagamento: $paymentMethodLabel',
-      }, accessToken: session.accessToken);
+      }, accessToken: session?.accessToken);
     } catch (_) {
       return false;
     }

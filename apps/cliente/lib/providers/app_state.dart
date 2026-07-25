@@ -10,6 +10,7 @@ import '../repositories/barber_repository.dart';
 import '../repositories/client_profile_repository.dart';
 import '../repositories/favorite_repository.dart';
 import '../repositories/notification_repository.dart';
+import '../repositories/team_invitation_repository.dart';
 import '../repositories/user_access_repository.dart';
 import '../services/auth_service.dart';
 import '../services/mock_data.dart';
@@ -23,6 +24,7 @@ class AppState extends ChangeNotifier {
   final _clientProfileRepository = const ClientProfileRepository();
   final _favoriteRepository = FavoriteRepository();
   final _notificationRepository = const NotificationRepository();
+  final _teamInvitationRepository = const TeamInvitationRepository();
   final _userAccessRepository = const UserAccessRepository();
   final _locationService = const LocationService();
 
@@ -38,6 +40,8 @@ class AppState extends ChangeNotifier {
   String? favoritesLoadError;
   String? clientProfileError;
   String? notificationsLoadError;
+  String? teamInvitationMessage;
+  String? teamInvitationError;
   String selectedTab = 'home';
   Barber? selectedBarber = MockData.barbers.first;
   ServiceItem? selectedService = MockData.services.first;
@@ -270,6 +274,18 @@ class AppState extends ChangeNotifier {
     ClientProfile? clientProfile;
     UserAccess userAccess = const UserAccess.client();
     if (session != null) {
+      teamInvitationMessage = null;
+      teamInvitationError = null;
+      try {
+        final invitation =
+            await _teamInvitationRepository.acceptPendingInvitation();
+        if (invitation != null) {
+          teamInvitationMessage =
+              'Convite aceito. Seu acesso profissional foi liberado.';
+        }
+      } catch (error) {
+        teamInvitationError = _cleanTeamInvitationError(error);
+      }
       try {
         clientProfile = await _clientProfileRepository.fetchProfile();
       } catch (_) {
@@ -321,6 +337,12 @@ class AppState extends ChangeNotifier {
 
     isLoading = false;
     notifyListeners();
+  }
+
+  String _cleanTeamInvitationError(Object error) {
+    final message = error.toString();
+    final match = RegExp(r'"message"\s*:\s*"([^"]+)"').firstMatch(message);
+    return match?.group(1) ?? 'Não foi possível aceitar o convite.';
   }
 
   void _applyData({

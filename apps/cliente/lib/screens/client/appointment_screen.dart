@@ -3,8 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 
 import '../../providers/app_state.dart';
-import '../../screens/auth/login_screen.dart';
-import '../../screens/auth/register_screen.dart';
+import '../../repositories/guest_identity_repository.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/whatsapp_input_formatter.dart';
 import 'appointment_confirmation_screen.dart';
@@ -22,10 +21,13 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _guestIdentityRepository = const GuestIdentityRepository();
   var _selectedPaymentMethod = PaymentMethod.pix;
   var _isSubmitting = false;
   var _seededName = false;
   var _seededPhone = false;
+  var _rememberData = true;
+  var _loadingRememberedData = false;
 
   @override
   void dispose() {
@@ -49,6 +51,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
         if (!_seededName) {
           _seededName = true;
           _nameController.text = state.currentUserName?.trim() ?? '';
+          _loadRememberedData(state);
         }
         if (!_seededPhone) {
           _seededPhone = true;
@@ -70,7 +73,6 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
             ),
           ),
           bottomNavigationBar: _SubmitBar(
-            signedIn: state.isSignedIn,
             enabled: hasSelection && !_isSubmitting,
             submitting: _isSubmitting,
             onPressed: () => _handlePrimaryAction(state),
@@ -98,12 +100,6 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                         total: service.price,
                       ),
                       const SizedBox(height: 22),
-                      if (!state.isSignedIn)
-                        _AuthRequired(
-                          onLogin: () => _openLogin(context),
-                          onRegister: () => _openRegister(context),
-                        )
-                      else ...[
                         const _SectionTitle('Seus dados'),
                         const SizedBox(height: 6),
                         const Text(
@@ -145,6 +141,34 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                                   ? 'Use o formato (00)00000-0000.'
                                   : null,
                         ),
+                        if (!state.isSignedIn) ...[
+                          const SizedBox(height: 8),
+                          CheckboxListTile(
+                            value: _rememberData,
+                            contentPadding: EdgeInsets.zero,
+                            controlAffinity: ListTileControlAffinity.leading,
+                            activeColor: AppColors.orange,
+                            title: const Text(
+                              'Lembrar meus dados neste dispositivo',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            subtitle: const Text(
+                              'Você poderá editar os dados no próximo agendamento.',
+                              style: TextStyle(
+                                color: AppColors.muted,
+                                fontSize: 12,
+                              ),
+                            ),
+                            onChanged: _loadingRememberedData
+                                ? null
+                                : (value) => setState(
+                                      () => _rememberData = value ?? true,
+                                    ),
+                          ),
+                        ],
                         const SizedBox(height: 26),
                         const _SectionTitle('Preferência de pagamento'),
                         const SizedBox(height: 6),
@@ -175,7 +199,6 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                         const SizedBox(height: 22),
                         const _RequestNotice(),
                       ],
-                        ],
                       ),
                     ),
                   ),
@@ -186,27 +209,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
     );
   }
 
-  void _openLogin(BuildContext context) {
-    Navigator.pushNamed(
-      context,
-      LoginScreen.route,
-      arguments: AppointmentScreen.route,
-    );
-  }
-
-  void _openRegister(BuildContext context) {
-    Navigator.pushNamed(
-      context,
-      RegisterScreen.route,
-      arguments: AppointmentScreen.route,
-    );
-  }
-
   Future<void> _handlePrimaryAction(AppState state) async {
-    if (!state.isSignedIn) {
-      _openLogin(context);
-      return;
-    }
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (state.selectedTime.isEmpty) {
       _showMessage('O horário selecionado não está mais disponível.');
@@ -223,6 +226,14 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
     if (!mounted) return;
     setState(() => _isSubmitting = false);
     if (created) {
+      if (!state.isSignedIn) {
+        await _guestIdentityRepository.save(
+          name: _nameController.text,
+          phone: _phoneController.text,
+          remember: _rememberData,
+        );
+      }
+      if (!mounted) return;
       Navigator.pushReplacementNamed(
         context,
         AppointmentConfirmationScreen.route,
@@ -232,6 +243,23 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
         'Não foi possível enviar. Confira o horário e tente novamente.',
       );
     }
+  }
+
+  Future<void> _loadRememberedData(AppState state) async {
+    if (state.isSignedIn || _loadingRememberedData) return;
+    _loadingRememberedData = true;
+    final identity = await _guestIdentityRepository.load();
+    if (!mounted) return;
+    setState(() {
+      if (_nameController.text.trim().isEmpty) {
+        _nameController.text = identity.name;
+      }
+      if (_phoneController.text.trim().isEmpty) {
+        _phoneController.text = formatWhatsapp(identity.phone);
+      }
+      _rememberData = identity.remember;
+      _loadingRememberedData = false;
+    });
   }
 
   void _showMessage(String message) {
@@ -628,13 +656,11 @@ class _RequestNotice extends StatelessWidget {
 
 class _SubmitBar extends StatelessWidget {
   const _SubmitBar({
-    required this.signedIn,
     required this.enabled,
     required this.submitting,
     required this.onPressed,
   });
 
-  final bool signedIn;
   final bool enabled;
   final bool submitting;
   final VoidCallback onPressed;
@@ -659,9 +685,7 @@ class _SubmitBar extends StatelessWidget {
           child: submitting
               ? const CDRLoading.compact(size: 24)
               : Text(
-                  signedIn
-                      ? 'ENVIAR SOLICITAÇÃO'
-                      : 'ENTRAR PARA CONTINUAR',
+                  'ENVIAR SOLICITAÇÃO',
                 ),
         ),
       ),

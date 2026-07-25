@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/app_constants.dart';
 import '../providers/app_state.dart';
 import '../services/app_mode_navigation.dart';
+import 'auth/login_screen.dart';
 import 'client/home_screen.dart';
 import 'mode_selection_screen.dart';
 import 'onboarding_screen.dart';
@@ -114,13 +115,22 @@ class _SplashScreenState extends State<SplashScreen>
         prefs.getBool(SplashScreen.onboardingSeenKey) ?? false;
     final forceOnboardingPreview = kIsWeb &&
         Uri.base.queryParameters['preview'] == 'onboarding';
+    final hasTeamInvitation = kIsWeb &&
+        Uri.base.queryParameters['team_invite']?.trim().isNotEmpty == true;
     final requestedMode = Uri.base.queryParameters['mode'];
     if (requestedMode == 'client') {
       await prefs.setString(appLastModeKey, 'client');
     }
 
     String route;
-    if (!hasSeenOnboarding || forceOnboardingPreview) {
+    if (hasTeamInvitation) {
+      final state = context.read<AppState>();
+      await _waitForInitialData(state);
+      if (!mounted) return;
+      route = state.isSignedIn
+          ? ModeSelectionScreen.route
+          : LoginScreen.route;
+    } else if (!hasSeenOnboarding || forceOnboardingPreview) {
       route = OnboardingScreen.route;
     } else {
       final state = context.read<AppState>();
