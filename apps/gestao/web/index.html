@@ -150,17 +150,6 @@
     }
 
     window.addEventListener('flutter-first-frame', hideBootSplash);
-
-    const observer = new MutationObserver(() => {
-      const flutterReady = document.querySelector(
-        'flutter-view, flt-glass-pane, flt-scene-host'
-      );
-      if (flutterReady) {
-        observer.disconnect();
-        hideBootSplash();
-      }
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
   </script>
   <script src="flutter_bootstrap.js" defer></script>
 </body>
