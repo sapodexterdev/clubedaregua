@@ -124,13 +124,26 @@ class AppointmentRepository {
         final end = _timeOfDay(schedule['end_time']?.toString());
         final slotMinutes =
             (schedule['slot_minutes'] as num?)?.toInt() ?? 30;
-        if (start == null || end == null || slotMinutes <= 0) continue;
+        if (start == null ||
+            end == null ||
+            slotMinutes <= 0 ||
+            durationMinutes <= 0) {
+          continue;
+        }
 
-        var slotStart = _dateTimeFor(date, start);
-        final scheduleEnd = _dateTimeFor(date, end);
+        final startMinutes = start.hour * 60 + start.minute;
+        final endMinutes = end.hour * 60 + end.minute;
 
-        while (slotStart.add(Duration(minutes: durationMinutes)).isAtSameMomentAs(scheduleEnd) ||
-            slotStart.add(Duration(minutes: durationMinutes)).isBefore(scheduleEnd)) {
+        for (var minute = startMinutes;
+            minute + durationMinutes <= endMinutes;
+            minute += slotMinutes) {
+          final slotStart = DateTime(
+            date.year,
+            date.month,
+            date.day,
+            minute ~/ 60,
+            minute % 60,
+          );
           final slotEnd = slotStart.add(Duration(minutes: durationMinutes));
           final isPast = selectedDay.isAtSameMomentAs(today) &&
               !slotStart.isAfter(now);
@@ -144,7 +157,6 @@ class AppointmentRepository {
           );
 
           if (!isPast && !conflicts) times.add(_formatTime(slotStart));
-          slotStart = slotStart.add(Duration(minutes: slotMinutes));
         }
       }
 
