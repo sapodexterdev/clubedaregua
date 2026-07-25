@@ -73,7 +73,7 @@ class SupabaseRestService {
             'authorization':
                 'Bearer ${accessToken ?? SupabaseConfig.anonKey}',
             'content-type': 'application/json',
-            'prefer': 'return=representation',
+            'prefer': 'return=minimal',
           },
           body: jsonEncode(data),
         )
@@ -83,8 +83,7 @@ class SupabaseRestService {
       throw StateError('Supabase REST ${response.statusCode}: ${response.body}');
     }
 
-    final decoded = jsonDecode(response.body);
-    return decoded is List && decoded.isNotEmpty;
+    return true;
   }
 
   Future<bool> updateRows(

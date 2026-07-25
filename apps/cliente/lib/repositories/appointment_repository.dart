@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../models/appointment.dart';
 import '../services/auth_service.dart';
 import '../services/mock_data.dart';
@@ -60,7 +62,9 @@ class AppointmentRepository {
         'notes':
             'Solicitacao criada pelo PWA Cliente. Pagamento: $paymentMethodLabel',
       }, accessToken: session?.accessToken);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      debugPrint('Falha ao criar solicitação: $error');
+      debugPrintStack(stackTrace: stackTrace);
       return false;
     }
   }
