@@ -1072,7 +1072,6 @@ class ManagementSession extends ChangeNotifier {
   bool _professionalAccessResolved = false;
 
   Future<void> restoreUnifiedSession() async {
-    var shouldLoadManagementData = false;
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_unifiedSessionKey);
@@ -1090,17 +1089,13 @@ class ManagementSession extends ChangeNotifier {
         return;
       }
       _professionalAccessResolved = false;
-      shouldLoadManagementData = true;
+      await _loadRestoredManagementData();
     } catch (error) {
       _clearSessionInMemory();
       errorMessage = 'Sua conta não possui acesso profissional ativo.';
     } finally {
       isRestoringSession = false;
       notifyListeners();
-    }
-
-    if (shouldLoadManagementData) {
-      Future.microtask(_loadRestoredManagementData);
     }
   }
 
