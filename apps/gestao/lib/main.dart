@@ -192,6 +192,7 @@ class PasswordRecoverySession {
 class BookingRequest {
   const BookingRequest({
     required this.id,
+    required this.barberId,
     required this.client,
     required this.phone,
     required this.clientPhotoUrl,
@@ -206,6 +207,7 @@ class BookingRequest {
   });
 
   final String id;
+  final String barberId;
   final String client;
   final String phone;
   final String clientPhotoUrl;
@@ -248,6 +250,7 @@ class BookingRequest {
   }) {
     return BookingRequest(
       id: id,
+      barberId: barberId,
       client: client,
       phone: phone,
       clientPhotoUrl: clientPhotoUrl,
@@ -265,6 +268,7 @@ class BookingRequest {
   factory BookingRequest.fromMap(Map<String, dynamic> map) {
     return BookingRequest(
       id: map['id']?.toString() ?? '',
+      barberId: map['barber_id']?.toString() ?? '',
       client: map['customer_name']?.toString() ?? 'Cliente',
       phone: map['customer_phone']?.toString() ?? '',
       clientPhotoUrl: map['customer_photo_url']?.toString() ?? '',
@@ -1142,6 +1146,14 @@ class ManagementSession extends ChangeNotifier {
     return null;
   }
 
+  List<BookingRequest> get currentBarberBookingRequests {
+    final barberId = currentBarber?.id;
+    if (barberId == null || barberId.isEmpty) return const [];
+    return bookingRequests
+        .where((request) => request.barberId == barberId)
+        .toList();
+  }
+
   String get barberHeaderName =>
       currentBarber?.name ?? barberShopName ?? 'Agenda do barbeiro';
 
@@ -1268,14 +1280,16 @@ class ManagementSession extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final shopId = await _ensureBarberShopId(token);
       final rows = await _getRestRows(
         token,
         'booking_requests',
         query: {
           'select':
-              'id,customer_name,customer_phone,requested_date,requested_time,status,total_price,notes,updated_at,barbers(name),services(name)',
+              'id,barber_id,customer_name,customer_phone,requested_date,requested_time,status,total_price,notes,updated_at,barbers(name),services(name)',
+          'barber_shop_id': 'eq.$shopId',
           'order': 'created_at.desc',
-          'limit': '20',
+          'limit': '200',
         },
       );
       bookingRequests = rows
@@ -3733,7 +3747,7 @@ const _adminTabs = [
     title: 'Solicitações recebidas',
     icon: Icons.inbox_outlined,
     selectedIcon: Icons.inbox_rounded,
-    child: _BookingRequestsPage(),
+    child: _BookingRequestsPage(adminView: true),
   ),
   _ManagementTab(
     label: 'Painel',
@@ -4197,13 +4211,17 @@ class _ScheduleFilters extends StatelessWidget {
 }
 
 class _BookingRequestsPage extends StatelessWidget {
-  const _BookingRequestsPage();
+  const _BookingRequestsPage({this.adminView = false});
+
+  final bool adminView;
 
   @override
   Widget build(BuildContext context) {
     return Consumer<ManagementSession>(
       builder: (context, session, _) {
-        final requests = session.bookingRequests;
+        final requests = adminView
+            ? session.bookingRequests
+            : session.currentBarberBookingRequests;
         final newCount =
             requests.where((request) => request.status == 'new').length;
 
