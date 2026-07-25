@@ -103,22 +103,29 @@ ThemeData _buildManagementTheme() {
       dragHandleColor: SharedAppColors.stroke,
     ),
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: SharedAppColors.card,
-      indicatorColor: SharedAppColors.orange,
+      height: 72,
+      backgroundColor: SharedAppColors.background,
+      indicatorColor: SharedAppColors.orange.withOpacity(.14),
+      elevation: 0,
+      surfaceTintColor: Colors.transparent,
       labelTextStyle: WidgetStateProperty.resolveWith(
         (states) => TextStyle(
           color: states.contains(WidgetState.selected)
               ? SharedAppColors.orange
               : SharedAppColors.muted,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
+          fontSize: 10,
+          letterSpacing: .1,
+          fontWeight: states.contains(WidgetState.selected)
+              ? FontWeight.w800
+              : FontWeight.w600,
         ),
       ),
       iconTheme: WidgetStateProperty.resolveWith(
         (states) => IconThemeData(
           color: states.contains(WidgetState.selected)
-              ? SharedAppColors.onGold
+              ? SharedAppColors.orange
               : SharedAppColors.muted,
+          size: 23,
         ),
       ),
     ),
@@ -3412,6 +3419,7 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
         final useSideNavigation = constraints.maxWidth >= 900;
         final extendedNavigation = constraints.maxWidth >= 1280;
         return Scaffold(
+          backgroundColor: SharedAppColors.background,
           appBar: _ManagementTopBar(title: page.title),
           bottomNavigationBar: useSideNavigation
               ? null
@@ -3432,7 +3440,7 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
                 ),
               Expanded(
                 child: _ManagementPageContent(
-                  horizontalPadding: useSideNavigation ? 32 : 18,
+                  horizontalPadding: useSideNavigation ? 32 : 16,
                   children: [
                     Align(
                       alignment: Alignment.centerLeft,
@@ -3462,14 +3470,14 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
                                   color: SharedAppColors.orange,
                                 ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                     _Header(
                       isAdmin: isAdmin,
                       title: isAdmin
                           ? session.barberShopName ?? 'Barbearia'
                           : session.barberHeaderName,
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 24),
                     page.child,
                   ],
                 ),
@@ -3490,23 +3498,24 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
 
   @override
-  Size get preferredSize => const Size.fromHeight(72);
+  Size get preferredSize => const Size.fromHeight(68);
 
   @override
   Widget build(BuildContext context) {
     final compact = MediaQuery.sizeOf(context).width < 700;
     return AppBar(
-      toolbarHeight: 72,
-      titleSpacing: 20,
+      toolbarHeight: 68,
+      titleSpacing: compact ? 16 : 22,
+      backgroundColor: SharedAppColors.background,
       title: Row(
         children: [
           Container(
-            width: 44,
-            height: 44,
-            padding: const EdgeInsets.all(5),
+            width: 40,
+            height: 40,
+            padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: SharedAppColors.background,
-              borderRadius: BorderRadius.circular(14),
+              color: SharedAppColors.card,
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: SharedAppColors.stroke),
             ),
             child: SvgPicture.asset(
@@ -3515,34 +3524,38 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
               semanticsLabel: 'Clube da Régua',
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 11),
           Expanded(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'CLUBE DA RÉGUA',
+                  'CLUBE DA RÉGUA • GESTÃO',
                   style: TextStyle(
                     color: SharedAppColors.orange,
-                    fontFamily: 'Inter',
-                    fontSize: 10,
-                    letterSpacing: 1.1,
-                    fontWeight: FontWeight.w800,
+                    fontSize: 9,
+                    letterSpacing: 1,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 3),
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
               ],
             ),
           ),
         ],
       ),
       actions: [
-        IconButton(
+        _TopBarAction(
           tooltip: 'Notificações',
           onPressed: () {},
-          icon: const Icon(Icons.notifications_none_rounded),
+          icon: Icons.notifications_none_rounded,
         ),
         if (compact)
           PopupMenuButton<String>(
@@ -3568,28 +3581,58 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
             ],
           )
         else ...[
-          IconButton(
+          _TopBarAction(
             tooltip: 'Modo cliente',
             onPressed: openClientMode,
-            icon: const Icon(Icons.swap_horiz_rounded),
+            icon: Icons.swap_horiz_rounded,
           ),
-          IconButton(
+          _TopBarAction(
             tooltip: 'Atualizar',
             onPressed: () =>
                 context.read<ManagementSession>().refreshManagementData(),
-            icon: const Icon(Icons.refresh_rounded),
+            icon: Icons.refresh_rounded,
           ),
-          IconButton(
+          _TopBarAction(
             tooltip: 'Sair',
             onPressed: () => context.read<ManagementSession>().signOut(),
-            icon: const Icon(Icons.logout_rounded),
+            icon: Icons.logout_rounded,
           ),
         ],
-        const SizedBox(width: 10),
+        SizedBox(width: compact ? 8 : 14),
       ],
       bottom: const PreferredSize(
         preferredSize: Size.fromHeight(1),
         child: Divider(height: 1, color: SharedAppColors.stroke),
+      ),
+    );
+  }
+}
+
+class _TopBarAction extends StatelessWidget {
+  const _TopBarAction({
+    required this.tooltip,
+    required this.onPressed,
+    required this.icon,
+  });
+
+  final String tooltip;
+  final VoidCallback onPressed;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 6),
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: onPressed,
+        icon: Icon(icon),
+        style: IconButton.styleFrom(
+          backgroundColor: SharedAppColors.card,
+          foregroundColor: SharedAppColors.muted,
+          side: const BorderSide(color: SharedAppColors.stroke),
+          minimumSize: const Size(40, 40),
+        ),
       ),
     );
   }
@@ -3606,7 +3649,12 @@ class _ManagementPageContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView(
-        padding: EdgeInsets.fromLTRB(horizontalPadding, 24, horizontalPadding, 40),
+        padding: EdgeInsets.fromLTRB(
+          horizontalPadding,
+          18,
+          horizontalPadding,
+          36,
+        ),
         children: [
           Center(
             child: ConstrainedBox(
@@ -3635,29 +3683,41 @@ class _ManagementSideNavigation extends StatelessWidget {
   final ValueChanged<int> onSelected;
 
   @override
-  Widget build(BuildContext context) => NavigationRail(
-        selectedIndex: selectedIndex,
-        extended: extended,
-        minWidth: 82,
-        minExtendedWidth: 220,
-        backgroundColor: SharedAppColors.card,
-        indicatorColor: SharedAppColors.orange,
-        selectedIconTheme: const IconThemeData(color: SharedAppColors.onGold),
-        unselectedIconTheme: const IconThemeData(color: SharedAppColors.muted),
-        selectedLabelTextStyle: const TextStyle(
-          color: SharedAppColors.text,
-          fontWeight: FontWeight.w800,
+  Widget build(BuildContext context) => Container(
+        decoration: const BoxDecoration(
+          color: SharedAppColors.card,
+          border: Border(
+            right: BorderSide(color: SharedAppColors.stroke),
+          ),
         ),
-        unselectedLabelTextStyle: const TextStyle(color: SharedAppColors.muted),
-        onDestinationSelected: onSelected,
-        destinations: [
-          for (final tab in tabs)
-            NavigationRailDestination(
-              icon: Icon(tab.icon),
-              selectedIcon: Icon(tab.selectedIcon),
-              label: Text(tab.label),
-            ),
-        ],
+        child: NavigationRail(
+          selectedIndex: selectedIndex,
+          extended: extended,
+          minWidth: 82,
+          minExtendedWidth: 220,
+          groupAlignment: -.72,
+          backgroundColor: SharedAppColors.card,
+          indicatorColor: SharedAppColors.orange.withOpacity(.14),
+          selectedIconTheme:
+              const IconThemeData(color: SharedAppColors.orange),
+          unselectedIconTheme:
+              const IconThemeData(color: SharedAppColors.muted),
+          selectedLabelTextStyle: const TextStyle(
+            color: SharedAppColors.text,
+            fontWeight: FontWeight.w800,
+          ),
+          unselectedLabelTextStyle:
+              const TextStyle(color: SharedAppColors.muted),
+          onDestinationSelected: onSelected,
+          destinations: [
+            for (final tab in tabs)
+              NavigationRailDestination(
+                icon: Icon(tab.icon),
+                selectedIcon: Icon(tab.selectedIcon),
+                label: Text(tab.label),
+              ),
+          ],
+        ),
       );
 }
 
@@ -3673,17 +3733,28 @@ class _ManagementBottomNavigation extends StatelessWidget {
   final ValueChanged<int> onSelected;
 
   @override
-  Widget build(BuildContext context) => NavigationBar(
-        selectedIndex: selectedIndex,
-        onDestinationSelected: onSelected,
-        destinations: [
-          for (final tab in tabs)
-            NavigationDestination(
-              icon: Icon(tab.icon),
-              selectedIcon: Icon(tab.selectedIcon),
-              label: tab.label,
-            ),
-        ],
+  Widget build(BuildContext context) => Container(
+        decoration: const BoxDecoration(
+          color: SharedAppColors.background,
+          border: Border(
+            top: BorderSide(color: SharedAppColors.stroke),
+          ),
+        ),
+        child: SafeArea(
+          top: false,
+          child: NavigationBar(
+            selectedIndex: selectedIndex,
+            onDestinationSelected: onSelected,
+            destinations: [
+              for (final tab in tabs)
+                NavigationDestination(
+                  icon: Icon(tab.icon),
+                  selectedIcon: Icon(tab.selectedIcon),
+                  label: tab.label,
+                ),
+            ],
+          ),
+        ),
       );
 }
 
@@ -3804,37 +3875,61 @@ class _RoleSwitch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SegmentedButton<ManagementRole>(
-      segments: const [
-        ButtonSegment(
-          value: ManagementRole.barber,
-          label: Text('Barbeiro'),
-          icon: Icon(Icons.content_cut_rounded),
-        ),
-        ButtonSegment(
-          value: ManagementRole.admin,
-          label: Text('Dono'),
-          icon: Icon(Icons.storefront_rounded),
-        ),
-      ],
-      selected: {selectedRole},
-      onSelectionChanged: (value) => onChanged(value.first),
-      style: ButtonStyle(
-        visualDensity: VisualDensity.compact,
-        backgroundColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected)
-              ? SharedAppColors.orange
-              : SharedAppColors.card,
-        ),
-        foregroundColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected)
-              ? SharedAppColors.onGold
-              : SharedAppColors.muted,
-        ),
-        side: WidgetStateProperty.all(
-          const BorderSide(color: SharedAppColors.stroke),
-        ),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final expanded = constraints.maxWidth < 520;
+        return Container(
+          width: expanded ? double.infinity : null,
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: SharedAppColors.card,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: SharedAppColors.stroke),
+          ),
+          child: SegmentedButton<ManagementRole>(
+            segments: const [
+              ButtonSegment(
+                value: ManagementRole.barber,
+                label: Text('Barbeiro'),
+                icon: Icon(Icons.content_cut_rounded),
+              ),
+              ButtonSegment(
+                value: ManagementRole.admin,
+                label: Text('Dono'),
+                icon: Icon(Icons.storefront_rounded),
+              ),
+            ],
+            selected: {selectedRole},
+            onSelectionChanged: (value) => onChanged(value.first),
+            showSelectedIcon: false,
+            expandedInsets: expanded ? EdgeInsets.zero : null,
+            style: ButtonStyle(
+              visualDensity: VisualDensity.compact,
+              minimumSize: WidgetStateProperty.all(
+                Size(expanded ? 0 : 112, 40),
+              ),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              backgroundColor: WidgetStateProperty.resolveWith(
+                (states) => states.contains(WidgetState.selected)
+                    ? SharedAppColors.orange
+                    : Colors.transparent,
+              ),
+              foregroundColor: WidgetStateProperty.resolveWith(
+                (states) => states.contains(WidgetState.selected)
+                    ? SharedAppColors.onGold
+                    : SharedAppColors.muted,
+              ),
+              side: WidgetStateProperty.all(BorderSide.none),
+              textStyle: WidgetStateProperty.all(
+                const TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+            selectedIcon: const Icon(Icons.check_rounded),
+            multiSelectionEnabled: false,
+            emptySelectionAllowed: false,
+          ),
+        );
+      },
     );
   }
 }
@@ -3853,63 +3948,81 @@ class _Header extends StatelessWidget {
     final logoUrl =
         context.watch<ManagementSession>().shopConfiguration?.logoUrl.trim() ??
             '';
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: SharedAppColors.card,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: SharedAppColors.stroke),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: SharedAppColors.elevated,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: SharedAppColors.stroke),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: logoUrl.isEmpty
-                ? const Icon(
-                    Icons.storefront_rounded,
-                    color: SharedAppColors.orange,
-                  )
-                : Image.network(
-                    logoUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Icon(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 520;
+        return Container(
+          padding: EdgeInsets.all(compact ? 18 : 22),
+          decoration: BoxDecoration(
+            color: SharedAppColors.card,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: SharedAppColors.stroke),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: compact ? 50 : 58,
+                height: compact ? 50 : 58,
+                decoration: BoxDecoration(
+                  color: SharedAppColors.elevated,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: SharedAppColors.stroke),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: logoUrl.isEmpty
+                    ? const Icon(
                       Icons.storefront_rounded,
                       color: SharedAppColors.orange,
+                    )
+                    : Image.network(
+                        logoUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.storefront_rounded,
+                          color: SharedAppColors.orange,
+                        ),
+                      ),
+              ),
+              SizedBox(width: compact ? 14 : 18),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isAdmin ? 'VISÃO DA BARBEARIA' : 'MINHA OPERAÇÃO',
+                      style: const TextStyle(
+                        color: SharedAppColors.orange,
+                        fontSize: 9,
+                        letterSpacing: 1.2,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
-                  ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.headlineMedium,
+                    const SizedBox(height: 5),
+                    Text(
+                      title,
+                      maxLines: compact ? 2 : 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: compact
+                          ? Theme.of(context).textTheme.headlineSmall
+                          : Theme.of(context).textTheme.headlineMedium,
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      isAdmin
+                          ? 'Equipe, serviços, caixa e desempenho em um só lugar.'
+                          : 'Pedidos, agenda, horários e comissão do seu dia.',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  isAdmin
-                      ? 'Controle equipe, serviços, caixa e desempenho da unidade.'
-                      : 'Confirme atendimentos, bloqueie horários e acompanhe sua comissão.',
-                  style: const TextStyle(
-                    color: SharedAppColors.muted,
-                    height: 1.35,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -7104,14 +7217,14 @@ class _MetricsGrid extends StatelessWidget {
         builder: (context, constraints) {
           final columns = constraints.maxWidth >= 900
               ? cards.length.clamp(1, 4)
-              : constraints.maxWidth >= 520
-                  ? 2
-                  : 1;
+              : cards.length == 1
+                  ? 1
+                  : 2;
           final width =
-              (constraints.maxWidth - ((columns - 1) * 12)) / columns;
+              (constraints.maxWidth - ((columns - 1) * 10)) / columns;
           return Wrap(
-            spacing: 12,
-            runSpacing: 12,
+            spacing: 10,
+            runSpacing: 10,
             children: [
               for (final card in cards)
                 SizedBox(width: width, child: _MetricCard(data: card)),
@@ -7129,32 +7242,39 @@ class _MetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      constraints: const BoxConstraints(minHeight: 132),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: SharedAppColors.card,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: SharedAppColors.stroke),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 42,
-            height: 42,
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
               color: SharedAppColors.orange.withOpacity(.12),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(data.icon, color: SharedAppColors.orange, size: 21),
+            child: Icon(data.icon, color: SharedAppColors.orange, size: 20),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
           Text(
             data.value,
-            style: Theme.of(context).textTheme.headlineMedium,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.headlineSmall,
           ),
-          const SizedBox(height: 4),
-          Text(data.label,
-              style: const TextStyle(color: SharedAppColors.muted)),
+          const SizedBox(height: 3),
+          Text(
+            data.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
         ],
       ),
     );
@@ -7171,7 +7291,7 @@ class _SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
           child: Column(
@@ -7182,21 +7302,29 @@ class _SectionTitle extends StatelessWidget {
                   eyebrow!,
                   style: const TextStyle(
                     color: SharedAppColors.orange,
-                    fontSize: 10,
-                    letterSpacing: 1.4,
+                    fontSize: 9,
+                    letterSpacing: 1.25,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 4),
               ],
               Text(title, style: Theme.of(context).textTheme.headlineSmall),
             ],
           ),
         ),
         if (trailing != null)
-          Text(
-            trailing!,
-            style: Theme.of(context).textTheme.bodySmall,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: SharedAppColors.card,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: SharedAppColors.stroke),
+            ),
+            child: Text(
+              trailing!,
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
           ),
       ],
     );
@@ -7240,22 +7368,21 @@ class _InlineNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: SharedAppColors.card,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: SharedAppColors.stroke),
       ),
       child: Row(
         children: [
           _IconBadge(icon),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: const TextStyle(fontWeight: FontWeight.w900)),
+                Text(title, style: Theme.of(context).textTheme.titleSmall),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
@@ -7294,17 +7421,17 @@ class _AppointmentTile extends StatelessWidget {
                 : SharedAppColors.orange;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: SharedAppColors.card,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: SharedAppColors.stroke),
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(16),
           child: Row(
             children: [
               _TimeBadge(entry.time),
@@ -7419,9 +7546,9 @@ class _BookingRequestTile extends StatelessWidget {
       _ => 'Novo',
     };
     final statusColor = switch (status) {
-      'contacted' => Colors.blue.shade700,
-      'converted' => Colors.green.shade700,
-      'cancelled' => Colors.red.shade700,
+      'contacted' => CDRColorTokens.info,
+      'converted' => CDRColorTokens.success,
+      'cancelled' => CDRColorTokens.error,
       _ => SharedAppColors.orange,
     };
 
@@ -7429,25 +7556,25 @@ class _BookingRequestTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: SharedAppColors.card,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: SharedAppColors.stroke),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
           Container(
-            height: 3,
+            height: 2,
             color: isClosed ? SharedAppColors.stroke : statusColor,
           ),
           Padding(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
                     _ClientAvatar(photoUrl: request.clientPhotoUrl),
-                    const SizedBox(width: 14),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -7470,7 +7597,7 @@ class _BookingRequestTile extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
@@ -7660,12 +7787,15 @@ class _TimeBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 58,
-      height: 58,
+      width: 54,
+      height: 54,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: SharedAppColors.orange.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: SharedAppColors.orange.withOpacity(.22),
+        ),
       ),
       child: Text(
         time,
@@ -8184,7 +8314,7 @@ class _SurfaceTile extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: SharedAppColors.card,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: SharedAppColors.stroke),
       ),
       child: Row(
@@ -8195,8 +8325,7 @@ class _SurfaceTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: const TextStyle(fontWeight: FontWeight.w900)),
+                Text(title, style: Theme.of(context).textTheme.titleSmall),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
@@ -8225,14 +8354,14 @@ class _IconBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 50,
-      height: 50,
+      width: 46,
+      height: 46,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: SharedAppColors.orange.withOpacity(.12),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
       ),
-      child: Icon(icon, color: SharedAppColors.orange),
+      child: Icon(icon, color: SharedAppColors.orange, size: 21),
     );
   }
 }
