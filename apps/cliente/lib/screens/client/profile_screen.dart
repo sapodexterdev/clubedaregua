@@ -9,6 +9,7 @@ import '../../screens/owner_onboarding_screen.dart';
 import '../../services/auth_service.dart';
 import '../../services/app_mode_navigation.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/whatsapp_input_formatter.dart';
 import '../../widgets/premium_bottom_nav.dart';
 import 'favorites_screen.dart';
 import 'history_screen.dart';
@@ -202,7 +203,9 @@ class ProfileScreen extends StatelessWidget {
     AppState state,
   ) async {
     final nameController = TextEditingController(text: state.currentUserName);
-    final phoneController = TextEditingController(text: state.currentUserPhone);
+    final phoneController = TextEditingController(
+      text: formatWhatsapp(state.currentUserPhone),
+    );
     final formKey = GlobalKey<FormState>();
     final saved = await showModalBottomSheet<bool>(
       context: context,
@@ -263,11 +266,19 @@ class ProfileScreen extends StatelessWidget {
                 controller: phoneController,
                 keyboardType: TextInputType.phone,
                 autofillHints: const [AutofillHints.telephoneNumber],
+                inputFormatters: const [WhatsappInputFormatter()],
                 decoration: const InputDecoration(
                   labelText: 'WhatsApp',
-                  hintText: '(34) 99999-9999',
+                  hintText: '(00)00000-0000',
                   prefixIcon: Icon(Icons.phone_outlined),
                 ),
+                validator: (value) {
+                  final digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
+                  if (digits.isEmpty) return null;
+                  return digits.length == 11
+                      ? null
+                      : 'Use o formato (00)00000-0000.';
+                },
               ),
               const SizedBox(height: 18),
               FilledButton(
@@ -425,7 +436,7 @@ class _IdentityCard extends StatelessWidget {
                 if (state.currentUserPhone?.isNotEmpty == true) ...[
                   const SizedBox(height: 3),
                   Text(
-                    state.currentUserPhone!,
+                    formatWhatsapp(state.currentUserPhone),
                     style: const TextStyle(
                       color: AppColors.muted,
                       fontSize: 12,

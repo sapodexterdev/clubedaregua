@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 
@@ -7,6 +6,7 @@ import '../../providers/app_state.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/register_screen.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/whatsapp_input_formatter.dart';
 import 'appointment_confirmation_screen.dart';
 
 class AppointmentScreen extends StatefulWidget {
@@ -52,7 +52,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
         }
         if (!_seededPhone) {
           _seededPhone = true;
-          _phoneController.text = state.currentUserPhone?.trim() ?? '';
+          _phoneController.text = formatWhatsapp(state.currentUserPhone);
         }
 
         return Scaffold(
@@ -134,7 +134,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                           keyboardType: TextInputType.phone,
                           textInputAction: TextInputAction.done,
                           autofillHints: const [AutofillHints.telephoneNumber],
-                          inputFormatters: const [_WhatsappInputFormatter()],
+                          inputFormatters: const [WhatsappInputFormatter()],
                           decoration: const InputDecoration(
                             labelText: 'WhatsApp',
                             hintText: '(00)00000-0000',
@@ -665,31 +665,6 @@ class _SubmitBar extends StatelessWidget {
                 ),
         ),
       ),
-    );
-  }
-}
-
-class _WhatsappInputFormatter extends TextInputFormatter {
-  const _WhatsappInputFormatter();
-
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
-    final limited = digits.length > 11 ? digits.substring(0, 11) : digits;
-    final buffer = StringBuffer();
-    for (var index = 0; index < limited.length; index++) {
-      if (index == 0) buffer.write('(');
-      if (index == 2) buffer.write(')');
-      if (index == 7) buffer.write('-');
-      buffer.write(limited[index]);
-    }
-    final text = buffer.toString();
-    return TextEditingValue(
-      text: text,
-      selection: TextSelection.collapsed(offset: text.length),
     );
   }
 }
