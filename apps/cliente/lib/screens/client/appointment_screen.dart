@@ -64,6 +64,11 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
             backgroundColor: AppColors.background,
             foregroundColor: AppColors.text,
             elevation: 0,
+            leadingWidth: 68,
+            leading: const Padding(
+              padding: EdgeInsets.only(left: 16),
+              child: CDRBackButton(),
+            ),
             title: Text(
               'Revisar agendamento',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(

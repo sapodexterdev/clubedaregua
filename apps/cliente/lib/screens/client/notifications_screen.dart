@@ -54,6 +54,11 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        leadingWidth: 68,
+        leading: const Padding(
+          padding: EdgeInsets.only(left: 16),
+          child: CDRBackButton(),
+        ),
         title: Text(
           'Notificações',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(

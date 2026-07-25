@@ -55,6 +55,11 @@ class _HistoryScreenState extends State<HistoryScreen>
         backgroundColor: AppColors.background,
         foregroundColor: AppColors.text,
         elevation: 0,
+        leadingWidth: 68,
+        leading: const Padding(
+          padding: EdgeInsets.only(left: 16),
+          child: CDRBackButton(),
+        ),
         title: Text(
           'Agenda',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(

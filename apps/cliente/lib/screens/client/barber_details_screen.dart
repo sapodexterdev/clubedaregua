@@ -22,7 +22,14 @@ class BarberDetailsScreen extends StatelessWidget {
         if (shop == null) {
           return Scaffold(
             backgroundColor: AppColors.background,
-            appBar: AppBar(backgroundColor: AppColors.background),
+            appBar: AppBar(
+              backgroundColor: AppColors.background,
+              leadingWidth: 68,
+              leading: const Padding(
+                padding: EdgeInsets.only(left: 16),
+                child: CDRBackButton(),
+              ),
+            ),
             body: const _MissingSelection(
               message: 'Escolha uma barbearia para consultar os horários.',
             ),
@@ -41,6 +48,11 @@ class BarberDetailsScreen extends StatelessWidget {
             backgroundColor: AppColors.background,
             foregroundColor: AppColors.text,
             elevation: 0,
+            leadingWidth: 68,
+            leading: const Padding(
+              padding: EdgeInsets.only(left: 16),
+              child: CDRBackButton(),
+            ),
             title: Text(
               'Escolha seu horário',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(

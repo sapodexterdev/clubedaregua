@@ -58,6 +58,11 @@ class _OwnerOnboardingScreenState extends State<OwnerOnboardingScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        leadingWidth: 68,
+        leading: const Padding(
+          padding: EdgeInsets.only(left: 16),
+          child: CDRBackButton(),
+        ),
         title: const Text('Cadastrar minha barbearia'),
       ),
       body: SafeArea(

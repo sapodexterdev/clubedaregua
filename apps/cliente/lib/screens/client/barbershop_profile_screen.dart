@@ -24,7 +24,14 @@ class BarbershopProfileScreen extends StatelessWidget {
         if (shop == null) {
           return Scaffold(
             backgroundColor: AppColors.background,
-            appBar: AppBar(backgroundColor: AppColors.background),
+            appBar: AppBar(
+              backgroundColor: AppColors.background,
+              leadingWidth: 68,
+              leading: const Padding(
+                padding: EdgeInsets.only(left: 16),
+                child: CDRBackButton(),
+              ),
+            ),
             body: const _MissingShop(),
           );
         }
@@ -171,13 +178,10 @@ class _CoverAppBar extends StatelessWidget {
       stretch: true,
       backgroundColor: AppColors.background,
       foregroundColor: AppColors.text,
+      leadingWidth: 60,
       leading: Padding(
         padding: const EdgeInsets.all(8),
-        child: _RoundAction(
-          tooltip: 'Voltar',
-          icon: Icons.arrow_back_rounded,
-          onTap: () => Navigator.maybePop(context),
-        ),
+        child: const CDRBackButton(),
       ),
       actions: [
         Padding(
