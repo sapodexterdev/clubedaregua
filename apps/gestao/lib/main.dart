@@ -5314,13 +5314,6 @@ class _AdminDashboardPage extends StatelessWidget {
     return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _InlineNotice(
-          icon: Icons.science_outlined,
-          title: 'Painel demonstrativo',
-          subtitle:
-              'Os indicadores serão atualizados com dados reais quando a integração financeira estiver concluída.',
-        ),
-        SizedBox(height: 18),
         _MetricsGrid(
           cards: [
             _MetricData(
@@ -5335,7 +5328,14 @@ class _AdminDashboardPage extends StatelessWidget {
             ),
           ],
         ),
-        SizedBox(height: 28),
+        SizedBox(height: 14),
+        _InlineNotice(
+          icon: Icons.science_outlined,
+          title: 'Painel em evolução',
+          subtitle:
+              'Os indicadores financeiros serão substituídos por dados reais após a integração.',
+        ),
+        SizedBox(height: 24),
         _SectionTitle(
           'Indicadores operacionais',
           eyebrow: 'VISÃO GERAL',
@@ -5394,7 +5394,7 @@ class _DashboardInsightsGrid extends StatelessWidget {
       builder: (context, constraints) {
         final columns = constraints.maxWidth >= 900
             ? 3
-            : constraints.maxWidth >= 600
+            : constraints.maxWidth >= 540
                 ? 2
                 : 1;
         final width =
@@ -5423,17 +5423,18 @@ class _DashboardInsightCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      constraints: const BoxConstraints(minHeight: 164),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: SharedAppColors.card,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: SharedAppColors.stroke),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _IconBadge(data.icon),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           Text(
             data.label.toUpperCase(),
             style: const TextStyle(
@@ -5476,7 +5477,12 @@ class _ServicesPage extends StatelessWidget {
               icon: Icons.add_circle_rounded,
               onPressed: () => _openServiceForm(context),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 22),
+            const _SectionTitle(
+              'Encontre e organize',
+              eyebrow: 'SERVIÇOS',
+            ),
+            const SizedBox(height: 12),
             _ServiceFilters(session: session),
             const SizedBox(height: 24),
             _SectionTitle(
@@ -5577,10 +5583,10 @@ class _ServiceFilters extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: SharedAppColors.card,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: SharedAppColors.stroke),
       ),
       child: Column(
@@ -5593,7 +5599,7 @@ class _ServiceFilters extends StatelessWidget {
               prefixIcon: Icon(Icons.search_rounded),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           SizedBox(
             height: 44,
             child: ListView(
@@ -5623,7 +5629,7 @@ class _ServiceFilters extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           DropdownButtonFormField<String>(
             value: _validCategoryFilterValue(session),
             decoration: const InputDecoration(
@@ -5851,10 +5857,9 @@ class _ServiceFormState extends State<_ServiceForm> {
               ),
             ),
             const SizedBox(height: 12),
-            Row(
+            _ResponsiveFieldRow(
               children: [
-                Expanded(
-                  child: TextFormField(
+                TextFormField(
                     controller: _priceController,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
@@ -5864,10 +5869,7 @@ class _ServiceFormState extends State<_ServiceForm> {
                     ),
                     validator: _validatePrice,
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
+                TextFormField(
                     controller: _durationController,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
@@ -5876,7 +5878,6 @@ class _ServiceFormState extends State<_ServiceForm> {
                     ),
                     validator: _validateDuration,
                   ),
-                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -6074,10 +6075,28 @@ class _TeamPage extends StatelessWidget {
       builder: (context, session, _) {
         final activeCount =
             session.teamBarbers.where((barber) => barber.isActive).length;
+        final pendingCount = session.teamBarbers
+            .where((barber) => barber.userId.isEmpty)
+            .length;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _MetricsGrid(
+              cards: [
+                _MetricData(
+                  'Profissionais ativos',
+                  '$activeCount',
+                  Icons.groups_2_outlined,
+                ),
+                _MetricData(
+                  'Convites pendentes',
+                  '$pendingCount',
+                  Icons.mark_email_unread_outlined,
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
             _ActionPanel(
               title: 'Equipe da unidade',
               subtitle:
@@ -6086,7 +6105,13 @@ class _TeamPage extends StatelessWidget {
               icon: Icons.person_add_alt_1_rounded,
               onPressed: () => _openTeamBarberForm(context),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 24),
+            _SectionTitle(
+              'Profissionais cadastrados',
+              eyebrow: 'EQUIPE',
+              trailing: '${session.teamBarbers.length} no total',
+            ),
+            const SizedBox(height: 12),
             if (session.isLoading) ...[
               const CDRLoading.section(height: 88),
               const SizedBox(height: 12),
@@ -6305,10 +6330,9 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
               ),
             ),
             const SizedBox(height: 12),
-            Row(
+            _ResponsiveFieldRow(
               children: [
-                Expanded(
-                  child: TextFormField(
+                TextFormField(
                     controller: _startingPriceController,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
@@ -6318,10 +6342,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
                     ),
                     validator: _validateMoney,
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
+                TextFormField(
                     controller: _commissionController,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
@@ -6331,7 +6352,6 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
                     ),
                     validator: _validateCommission,
                   ),
-                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -6346,14 +6366,11 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
               subtitle: const Text('Barbeiros inativos deixam de aparecer.'),
             ),
             const SizedBox(height: 12),
-            FilledButton(
+            CDRButton.primary(
               onPressed: _isSaving ? null : _save,
-              style: FilledButton.styleFrom(
-                backgroundColor: SharedAppColors.orange,
-                foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(52),
-              ),
-              child: Text(_isSaving ? 'Salvando...' : 'Salvar'),
+              label: 'SALVAR PROFISSIONAL',
+              isLoading: _isSaving,
+              leading: const Icon(Icons.save_outlined),
             ),
             if (_isEditing) ...[
               const SizedBox(height: 8),
@@ -6644,7 +6661,10 @@ class _SettingsFormState extends State<_SettingsForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _SectionTitle('Informações gerais'),
+          const _SectionTitle(
+            'Informações gerais',
+            eyebrow: 'PERFIL DA BARBEARIA',
+          ),
           const SizedBox(height: 12),
           _SettingsCard(
             children: [
@@ -6745,27 +6765,22 @@ class _SettingsFormState extends State<_SettingsForm> {
                 ),
               ),
               const SizedBox(height: 12),
-              Row(
+              _ResponsiveFieldRow(
                 children: [
-                  Expanded(
-                    child: TextFormField(
+                  TextFormField(
                       controller: _phoneController,
                       decoration: const InputDecoration(
                         labelText: 'Telefone',
                         prefixIcon: Icon(Icons.phone_outlined),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
+                  TextFormField(
                       controller: _whatsappController,
                       decoration: const InputDecoration(
                         labelText: 'WhatsApp',
                         prefixIcon: Icon(Icons.chat_outlined),
                       ),
                     ),
-                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -6794,29 +6809,20 @@ class _SettingsFormState extends State<_SettingsForm> {
                 ),
               ),
               const SizedBox(height: 12),
-              Row(
+              _ResponsiveFieldRow(
                 children: [
-                  Expanded(
-                    child: TextFormField(
+                  TextFormField(
                       controller: _zipController,
                       decoration: const InputDecoration(labelText: 'CEP'),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
+                  TextFormField(
                       controller: _cityController,
                       decoration: const InputDecoration(labelText: 'Cidade'),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  SizedBox(
-                    width: 82,
-                    child: TextFormField(
+                  TextFormField(
                       controller: _stateController,
                       decoration: const InputDecoration(labelText: 'UF'),
                     ),
-                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -6833,7 +6839,10 @@ class _SettingsFormState extends State<_SettingsForm> {
             ],
           ),
           const SizedBox(height: 22),
-          const _SectionTitle('Horário de funcionamento'),
+          const _SectionTitle(
+            'Horário de funcionamento',
+            eyebrow: 'OPERAÇÃO',
+          ),
           const SizedBox(height: 12),
           _SettingsCard(
             children: [
@@ -6860,7 +6869,10 @@ class _SettingsFormState extends State<_SettingsForm> {
             ],
           ),
           const SizedBox(height: 22),
-          const _SectionTitle('Intervalo'),
+          const _SectionTitle(
+            'Intervalo',
+            eyebrow: 'PAUSAS',
+          ),
           const SizedBox(height: 12),
           _SettingsCard(
             children: [
@@ -6872,31 +6884,29 @@ class _SettingsFormState extends State<_SettingsForm> {
                 subtitle: const Text('Bloqueia intervalo recorrente.'),
                 onChanged: (value) => setState(() => _lunchEnabled = value),
               ),
-              Row(
+              _ResponsiveFieldRow(
                 children: [
-                  Expanded(
-                    child: TextFormField(
+                  TextFormField(
                       enabled: _lunchEnabled,
                       controller: _lunchStartController,
                       decoration: const InputDecoration(labelText: 'Início'),
                       validator: _validateTime,
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
+                  TextFormField(
                       enabled: _lunchEnabled,
                       controller: _lunchEndController,
                       decoration: const InputDecoration(labelText: 'Fim'),
                       validator: _validateTime,
                     ),
-                  ),
                 ],
               ),
             ],
           ),
           const SizedBox(height: 22),
-          const _SectionTitle('Configuração de agendamento'),
+          const _SectionTitle(
+            'Configuração de agendamento',
+            eyebrow: 'REGRAS DA AGENDA',
+          ),
           const SizedBox(height: 12),
           _SettingsCard(
             children: [
@@ -6961,14 +6971,11 @@ class _SettingsFormState extends State<_SettingsForm> {
             ],
           ),
           const SizedBox(height: 18),
-          FilledButton(
+          CDRButton.primary(
             onPressed: _isSaving ? null : _save,
-            style: FilledButton.styleFrom(
-              backgroundColor: SharedAppColors.orange,
-              foregroundColor: SharedAppColors.onGold,
-              minimumSize: const Size.fromHeight(52),
-            ),
-            child: Text(_isSaving ? 'Salvando...' : 'Salvar configurações'),
+            label: 'SALVAR CONFIGURAÇÕES',
+            isLoading: _isSaving,
+            leading: const Icon(Icons.save_outlined),
           ),
         ],
       ),
@@ -7104,6 +7111,42 @@ class _SettingsFormState extends State<_SettingsForm> {
   }
 }
 
+class _ResponsiveFieldRow extends StatelessWidget {
+  const _ResponsiveFieldRow({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final stack = constraints.maxWidth < 560;
+        if (stack) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var index = 0; index < children.length; index++) ...[
+                children[index],
+                if (index < children.length - 1) const SizedBox(height: 12),
+              ],
+            ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var index = 0; index < children.length; index++) ...[
+              Expanded(child: children[index]),
+              if (index < children.length - 1) const SizedBox(width: 12),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
 class _SettingsCard extends StatelessWidget {
   const _SettingsCard({required this.children});
 
@@ -7112,10 +7155,10 @@ class _SettingsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: SharedAppColors.card,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: SharedAppColors.stroke),
       ),
       child: Theme(
@@ -7241,14 +7284,29 @@ class _CashPage extends StatelessWidget {
             _MetricData('Saídas', 'R\$ 180', Icons.north_east_rounded),
           ],
         ),
-        SizedBox(height: 22),
-        _SectionTitle('Movimentos de caixa'),
+        SizedBox(height: 14),
+        _InlineNotice(
+          icon: Icons.science_outlined,
+          title: 'Prévia do caixa',
+          subtitle:
+              'Movimentos ilustrativos enquanto a integração financeira não está ativa.',
+        ),
+        SizedBox(height: 24),
+        _SectionTitle(
+          'Movimentos de caixa',
+          eyebrow: 'FINANCEIRO',
+          trailing: 'Hoje',
+        ),
         SizedBox(height: 12),
         _CashMovementTile(title: 'PIX - Marcos Lima', value: '+ R\$ 85'),
         _CashMovementTile(title: 'Dinheiro - João Pedro', value: '+ R\$ 55'),
         _CashMovementTile(title: 'Compra de pomada', value: '- R\$ 180'),
-        SizedBox(height: 22),
-        _SectionTitle('Estoque crítico'),
+        SizedBox(height: 24),
+        _SectionTitle(
+          'Estoque crítico',
+          eyebrow: 'PRODUTOS',
+          trailing: '2 alertas',
+        ),
         SizedBox(height: 12),
         _StockTile(name: 'Pomada modeladora', quantity: '3 un'),
         _StockTile(name: 'Lâmina descartável', quantity: '18 un'),
@@ -8219,7 +8277,8 @@ class _CashMovementTile extends StatelessWidget {
       trailing: Text(
         value,
         style: TextStyle(
-          color: isPositive ? Colors.green.shade700 : Colors.red.shade700,
+          color:
+              isPositive ? CDRColorTokens.success : CDRColorTokens.error,
           fontWeight: FontWeight.w900,
         ),
       ),
@@ -8317,10 +8376,10 @@ class _ActionPanel extends StatelessWidget {
               );
 
         return Container(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: SharedAppColors.card,
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(color: SharedAppColors.stroke),
           ),
           child: compact
@@ -8329,7 +8388,7 @@ class _ActionPanel extends StatelessWidget {
                   children: [
                     content,
                     const SizedBox(height: 16),
-                    Align(alignment: Alignment.centerLeft, child: action),
+                    action,
                   ],
                 )
               : Row(
