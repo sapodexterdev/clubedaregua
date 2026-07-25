@@ -22,6 +22,7 @@ declare
   current_user_id uuid := auth.uid();
   new_shop_id uuid := gen_random_uuid();
   selected_plan_id uuid;
+  new_barber_id uuid;
   normalized_name text;
   generated_slug text;
 begin
@@ -160,7 +161,9 @@ begin
   );
 
   if coalesce(p_serves_as_barber, false) then
+    new_barber_id := gen_random_uuid();
     insert into public.barbers (
+      id,
       barber_shop_id,
       user_id,
       name,
@@ -169,6 +172,7 @@ begin
       is_active
     )
     values (
+      new_barber_id,
       new_shop_id,
       current_user_id,
       coalesce(nullif(trim(p_owner_name), ''), normalized_name),
@@ -176,6 +180,33 @@ begin
       100,
       true
     );
+
+    insert into public.schedules (
+      barber_shop_id,
+      barber_id,
+      weekday,
+      start_time,
+      end_time,
+      slot_minutes,
+      is_active
+    )
+    select
+      new_shop_id,
+      new_barber_id,
+      day.weekday,
+      day.start_time,
+      day.end_time,
+      30,
+      true
+    from (
+      values
+        (1, time '09:00', time '18:00'),
+        (2, time '09:00', time '18:00'),
+        (3, time '09:00', time '18:00'),
+        (4, time '09:00', time '18:00'),
+        (5, time '09:00', time '18:00'),
+        (6, time '09:00', time '14:00')
+    ) as day(weekday, start_time, end_time);
   end if;
 
   return jsonb_build_object(

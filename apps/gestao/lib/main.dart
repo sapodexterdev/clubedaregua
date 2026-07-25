@@ -11,6 +11,18 @@ import 'utils/app_mode_navigation.dart';
 import 'utils/logo_file.dart';
 import 'utils/logo_picker.dart';
 
+String _managementTime(dynamic value, String fallback) {
+  final text = value?.toString() ?? '';
+  return text.length >= 5 ? text.substring(0, 5) : fallback;
+}
+
+int _minutesFromTime(String value) {
+  final parts = value.split(':');
+  if (parts.length != 2) return 0;
+  return (int.tryParse(parts[0]) ?? 0) * 60 +
+      (int.tryParse(parts[1]) ?? 0);
+}
+
 // A identidade oficial da plataforma e carregada pelos assets da Gestao.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -394,6 +406,92 @@ class ScheduleEntry {
         .trim();
     return clean.isEmpty ? 'Sem observações.' : clean;
   }
+}
+
+class BarberAvailabilityDay {
+  const BarberAvailabilityDay({
+    required this.weekday,
+    required this.label,
+    required this.isActive,
+    required this.startTime,
+    required this.endTime,
+    this.slotMinutes = 30,
+  });
+
+  final int weekday;
+  final String label;
+  final bool isActive;
+  final String startTime;
+  final String endTime;
+  final int slotMinutes;
+
+  BarberAvailabilityDay copyWith({
+    bool? isActive,
+    String? startTime,
+    String? endTime,
+    int? slotMinutes,
+  }) {
+    return BarberAvailabilityDay(
+      weekday: weekday,
+      label: label,
+      isActive: isActive ?? this.isActive,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      slotMinutes: slotMinutes ?? this.slotMinutes,
+    );
+  }
+
+  static List<BarberAvailabilityDay> defaults() => const [
+        BarberAvailabilityDay(
+          weekday: 1,
+          label: 'Segunda-feira',
+          isActive: true,
+          startTime: '09:00',
+          endTime: '18:00',
+        ),
+        BarberAvailabilityDay(
+          weekday: 2,
+          label: 'Terça-feira',
+          isActive: true,
+          startTime: '09:00',
+          endTime: '18:00',
+        ),
+        BarberAvailabilityDay(
+          weekday: 3,
+          label: 'Quarta-feira',
+          isActive: true,
+          startTime: '09:00',
+          endTime: '18:00',
+        ),
+        BarberAvailabilityDay(
+          weekday: 4,
+          label: 'Quinta-feira',
+          isActive: true,
+          startTime: '09:00',
+          endTime: '18:00',
+        ),
+        BarberAvailabilityDay(
+          weekday: 5,
+          label: 'Sexta-feira',
+          isActive: true,
+          startTime: '09:00',
+          endTime: '18:00',
+        ),
+        BarberAvailabilityDay(
+          weekday: 6,
+          label: 'Sábado',
+          isActive: true,
+          startTime: '09:00',
+          endTime: '14:00',
+        ),
+        BarberAvailabilityDay(
+          weekday: 0,
+          label: 'Domingo',
+          isActive: false,
+          startTime: '09:00',
+          endTime: '14:00',
+        ),
+      ];
 }
 
 class ServiceCategory {
@@ -938,16 +1036,21 @@ class ManagementSession extends ChangeNotifier {
   List<CustomerAppointment> customerAppointments = [];
   ShopConfiguration? shopConfiguration;
   bool isScheduleLoading = false;
+  bool isAvailabilityLoading = false;
+  bool isAvailabilitySaving = false;
   bool isServicesLoading = false;
   bool isCustomersLoading = false;
   bool isSettingsLoading = false;
   String? scheduleError;
+  String? availabilityError;
   String? servicesError;
   String? customersError;
   String? settingsError;
   DateTime selectedScheduleDate = DateTime.now();
   String? selectedScheduleBarberId;
   bool scheduleAdminView = false;
+  List<BarberAvailabilityDay> weeklyAvailability =
+      BarberAvailabilityDay.defaults();
   ServiceStatusFilter serviceStatusFilter = ServiceStatusFilter.all;
   CustomerStatusFilter customerStatusFilter = CustomerStatusFilter.all;
   String? selectedServiceCategoryId;
@@ -1139,6 +1242,7 @@ class ManagementSession extends ChangeNotifier {
   Future<void> refreshManagementData() async {
     await fetchBookingRequests();
     await fetchTeamBarbers();
+    await fetchWeeklyAvailability();
     await fetchServiceCatalog();
     await fetchCustomers();
     await fetchShopConfiguration();
@@ -1202,6 +1306,110 @@ class ManagementSession extends ChangeNotifier {
       errorMessage = _cleanErrorMessage(error);
     } finally {
       isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchWeeklyAvailability() async {
+    final token = _accessToken;
+    final barber = currentBarber;
+    if (token == null || barber == null) {
+      weeklyAvailability = BarberAvailabilityDay.defaults();
+      return;
+    }
+
+    isAvailabilityLoading = true;
+    availabilityError = null;
+    notifyListeners();
+
+    try {
+      final rows = await _getRestRows(
+        token,
+        'schedules',
+        query: {
+          'select': 'weekday,start_time,end_time,slot_minutes,is_active',
+          'barber_id': 'eq.${barber.id}',
+          'order': 'weekday.asc,start_time.asc',
+        },
+      );
+      final byWeekday = <int, Map<String, dynamic>>{};
+      for (final row in rows) {
+        final weekday = (row['weekday'] as num?)?.toInt();
+        if (weekday != null) byWeekday.putIfAbsent(weekday, () => row);
+      }
+      weeklyAvailability = [
+        for (final fallback in BarberAvailabilityDay.defaults())
+          if (byWeekday[fallback.weekday] case final row?)
+            BarberAvailabilityDay(
+              weekday: fallback.weekday,
+              label: fallback.label,
+              isActive: row['is_active'] != false,
+              startTime: _managementTime(row['start_time'], fallback.startTime),
+              endTime: _managementTime(row['end_time'], fallback.endTime),
+              slotMinutes:
+                  (row['slot_minutes'] as num?)?.toInt() ?? fallback.slotMinutes,
+            )
+          else
+            fallback.copyWith(isActive: false),
+      ];
+    } catch (error) {
+      availabilityError = _cleanErrorMessage(error);
+    } finally {
+      isAvailabilityLoading = false;
+      notifyListeners();
+    }
+  }
+
+  void updateAvailabilityDay(BarberAvailabilityDay updated) {
+    weeklyAvailability = [
+      for (final day in weeklyAvailability)
+        if (day.weekday == updated.weekday) updated else day,
+    ];
+    availabilityError = null;
+    notifyListeners();
+  }
+
+  Future<void> saveWeeklyAvailability() async {
+    final token = _accessToken;
+    final barber = currentBarber;
+    if (token == null || barber == null) {
+      throw StateError('Não foi possível identificar o barbeiro.');
+    }
+    for (final day in weeklyAvailability.where((day) => day.isActive)) {
+      if (_minutesFromTime(day.endTime) <= _minutesFromTime(day.startTime)) {
+        throw StateError(
+          'Em ${day.label}, o horário final deve ser depois do inicial.',
+        );
+      }
+    }
+
+    isAvailabilitySaving = true;
+    availabilityError = null;
+    notifyListeners();
+    try {
+      await _postRpc(
+        token,
+        'replace_barber_weekly_schedule',
+        data: {
+          'p_barber_id': barber.id,
+          'p_days': [
+            for (final day in weeklyAvailability)
+              {
+                'weekday': day.weekday,
+                'is_active': day.isActive,
+                'start_time': day.startTime,
+                'end_time': day.endTime,
+                'slot_minutes': day.slotMinutes,
+              },
+          ],
+        },
+      );
+      await fetchWeeklyAvailability();
+    } catch (error) {
+      availabilityError = _cleanErrorMessage(error);
+      rethrow;
+    } finally {
+      isAvailabilitySaving = false;
       notifyListeners();
     }
   }
@@ -1767,7 +1975,7 @@ class ManagementSession extends ChangeNotifier {
 
     try {
       final shopId = await _ensureBarberShopId(token);
-      await _postRestRows(
+      final createdRows = await _postRestRows(
         token,
         'services',
         data: {
@@ -1782,6 +1990,22 @@ class ManagementSession extends ChangeNotifier {
           'is_active': isActive,
         },
       );
+      final serviceId =
+          createdRows.isEmpty ? null : createdRows.first['id']?.toString();
+      if (serviceId != null && serviceId.isNotEmpty) {
+        for (final barber in teamBarbers.where((item) => item.isActive)) {
+          await _postRestRows(
+            token,
+            'barber_services',
+            data: {
+              'barber_shop_id': shopId,
+              'barber_id': barber.id,
+              'service_id': serviceId,
+              'is_active': isActive,
+            },
+          );
+        }
+      }
 
       await fetchServiceCatalog();
     } catch (error) {
@@ -1915,6 +2139,35 @@ class ManagementSession extends ChangeNotifier {
 
       final created = rows.isEmpty ? null : TeamBarber.fromMap(rows.first);
       if (created != null) {
+        await _postRpc(
+          token,
+          'replace_barber_weekly_schedule',
+          data: {
+            'p_barber_id': created.id,
+            'p_days': [
+              for (final day in BarberAvailabilityDay.defaults())
+                {
+                  'weekday': day.weekday,
+                  'is_active': day.isActive,
+                  'start_time': day.startTime,
+                  'end_time': day.endTime,
+                  'slot_minutes': day.slotMinutes,
+                },
+            ],
+          },
+        );
+        for (final service in services.where((item) => item.isActive)) {
+          await _postRestRows(
+            token,
+            'barber_services',
+            data: {
+              'barber_shop_id': shopId,
+              'barber_id': created.id,
+              'service_id': service.id,
+              'is_active': true,
+            },
+          );
+        }
         teamBarbers = [...teamBarbers, created]
           ..sort((a, b) => a.name.compareTo(b.name));
       } else {
@@ -2100,6 +2353,10 @@ class ManagementSession extends ChangeNotifier {
     scheduleEntries = [];
     scheduleError = null;
     isScheduleLoading = false;
+    weeklyAvailability = BarberAvailabilityDay.defaults();
+    availabilityError = null;
+    isAvailabilityLoading = false;
+    isAvailabilitySaving = false;
     selectedScheduleBarberId = null;
     scheduleAdminView = false;
     services = [];
@@ -4013,47 +4270,241 @@ class _AvailabilityPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _MetricsGrid(
-          cards: [
-            _MetricData('Dias ativos', '6', Icons.event_available_rounded),
-            _MetricData('Bloqueios', '2', Icons.event_busy_rounded),
+    return Consumer<ManagementSession>(
+      builder: (context, session, _) {
+        final activeDays =
+            session.weeklyAvailability.where((day) => day.isActive).length;
+        final activeServices =
+            session.services.where((service) => service.isActive).length;
+        final barber = session.currentBarber;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _MetricsGrid(
+              cards: [
+                _MetricData(
+                  'Dias ativos',
+                  '$activeDays',
+                  Icons.event_available_rounded,
+                ),
+                _MetricData(
+                  'Serviços ativos',
+                  '$activeServices',
+                  Icons.content_cut_rounded,
+                ),
+              ],
+            ),
+            const SizedBox(height: 22),
+            if (barber == null)
+              const _InlineNotice(
+                icon: Icons.person_off_outlined,
+                title: 'Perfil de barbeiro não encontrado',
+                subtitle:
+                    'Cadastre ou vincule seu perfil profissional antes de configurar a agenda.',
+              )
+            else ...[
+              if (activeServices == 0) ...[
+                const _InlineNotice(
+                  icon: Icons.info_outline_rounded,
+                  title: 'Falta cadastrar um serviço',
+                  subtitle:
+                      'A agenda só aparece para o cliente quando existe ao menos um serviço ativo. Acesse o modo Dono e abra Serviços.',
+                ),
+                const SizedBox(height: 18),
+              ],
+              _SectionTitle(
+                'Jornada de ${barber.name}',
+                eyebrow: 'DISPONIBILIDADE SEMANAL',
+                trailing: 'Horário de Brasília',
+              ),
+              const SizedBox(height: 12),
+              if (session.isAvailabilityLoading)
+                const CDRLoading.section(height: 116)
+              else if (session.availabilityError != null)
+                _InlineNotice(
+                  icon: Icons.warning_amber_rounded,
+                  title: 'Não foi possível carregar os horários',
+                  subtitle: session.availabilityError!,
+                )
+              else
+                for (final day in session.weeklyAvailability)
+                  _AvailabilityDayTile(
+                    day: day,
+                    enabled: !session.isAvailabilitySaving,
+                    onChanged: session.updateAvailabilityDay,
+                    onPickTime: (isStart) =>
+                        _pickTime(context, session, day, isStart),
+                  ),
+              const SizedBox(height: 12),
+              CDRButton.primary(
+                label: 'SALVAR HORÁRIOS',
+                leading: const Icon(Icons.save_outlined),
+                isLoading: session.isAvailabilitySaving,
+                onPressed: session.isAvailabilityLoading ||
+                        session.isAvailabilitySaving
+                    ? null
+                    : () => _save(context, session),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Os horários disponíveis serão calculados automaticamente considerando duração do serviço, bloqueios e agendamentos confirmados.',
+                style: TextStyle(color: SharedAppColors.muted),
+              ),
+            ],
           ],
+        );
+      },
+    );
+  }
+
+  Future<void> _pickTime(
+    BuildContext context,
+    ManagementSession session,
+    BarberAvailabilityDay day,
+    bool isStart,
+  ) async {
+    final current = isStart ? day.startTime : day.endTime;
+    final parts = current.split(':');
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(
+        hour: int.tryParse(parts.first) ?? 9,
+        minute: parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0,
+      ),
+      helpText: isStart ? 'HORÁRIO DE INÍCIO' : 'HORÁRIO DE TÉRMINO',
+      cancelText: 'CANCELAR',
+      confirmText: 'CONFIRMAR',
+    );
+    if (picked == null) return;
+    final value =
+        '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+    session.updateAvailabilityDay(
+      isStart ? day.copyWith(startTime: value) : day.copyWith(endTime: value),
+    );
+  }
+
+  Future<void> _save(
+    BuildContext context,
+    ManagementSession session,
+  ) async {
+    try {
+      await session.saveWeeklyAvailability();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Horários atualizados com sucesso.')),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(session.availabilityError ?? error.toString())),
+      );
+    }
+  }
+}
+
+class _AvailabilityDayTile extends StatelessWidget {
+  const _AvailabilityDayTile({
+    required this.day,
+    required this.enabled,
+    required this.onChanged,
+    required this.onPickTime,
+  });
+
+  final BarberAvailabilityDay day;
+  final bool enabled;
+  final ValueChanged<BarberAvailabilityDay> onChanged;
+  final ValueChanged<bool> onPickTime;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: SharedAppColors.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: day.isActive
+              ? SharedAppColors.orange.withOpacity(.45)
+              : SharedAppColors.stroke,
         ),
-        SizedBox(height: 28),
-        _SectionTitle(
-          'Jornada semanal',
-          eyebrow: 'DISPONIBILIDADE',
-          trailing: 'Horário de Brasília',
-        ),
-        SizedBox(height: 12),
-        _ScheduleTile(day: 'Segunda a sexta', hours: '09:00 - 18:00'),
-        _ScheduleTile(day: 'Sábado', hours: '09:00 - 14:00'),
-        SizedBox(height: 28),
-        _SectionTitle(
-          'Bloqueios programados',
-          eyebrow: 'AGENDA',
-          trailing: '2 ativos',
-        ),
-        SizedBox(height: 12),
-        _BlockedTile(
-          title: 'Almoço estendido',
-          detail: 'Hoje, 12:00 - 13:30',
-        ),
-        _BlockedTile(
-          title: 'Férias programadas',
-          detail: '12/08 até 18/08',
-        ),
-        SizedBox(height: 22),
-        _ActionPanel(
-          title: 'Ajustar disponibilidade',
-          subtitle: 'Crie horários fixos, folgas ou bloqueios rápidos.',
-          buttonLabel: 'Novo bloqueio',
-          icon: Icons.event_busy_rounded,
-        ),
-      ],
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 520;
+          final times = Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _TimeButton(
+                label: day.startTime,
+                enabled: enabled && day.isActive,
+                onPressed: () => onPickTime(true),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                child: Text('até',
+                    style: TextStyle(color: SharedAppColors.muted)),
+              ),
+              _TimeButton(
+                label: day.endTime,
+                enabled: enabled && day.isActive,
+                onPressed: () => onPickTime(false),
+              ),
+            ],
+          );
+          final heading = Row(
+            children: [
+              Expanded(
+                child: Text(
+                  day.label,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+              Switch(
+                value: day.isActive,
+                activeColor: SharedAppColors.orange,
+                onChanged: enabled
+                    ? (value) => onChanged(day.copyWith(isActive: value))
+                    : null,
+              ),
+            ],
+          );
+          return compact
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [heading, const SizedBox(height: 8), times],
+                )
+              : Row(
+                  children: [
+                    Expanded(child: heading),
+                    const SizedBox(width: 18),
+                    times,
+                  ],
+                );
+        },
+      ),
+    );
+  }
+}
+
+class _TimeButton extends StatelessWidget {
+  const _TimeButton({
+    required this.label,
+    required this.enabled,
+    required this.onPressed,
+  });
+
+  final String label;
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: enabled ? onPressed : null,
+      icon: const Icon(Icons.schedule_rounded, size: 18),
+      label: Text(label),
     );
   }
 }
