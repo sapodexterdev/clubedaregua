@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 
 import '../../core/app_constants.dart';
 import '../../providers/app_state.dart';
@@ -56,11 +57,16 @@ class BarbershopProfileScreen extends StatelessWidget {
                 },
               ),
               SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(22, 4, 22, 34),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: CDRSizeTokens.contentMaxWidth,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 4, 18, 34),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                       _ProfileHeader(shop: shop),
                       const SizedBox(height: 20),
                       _QuickFacts(shop: shop),
@@ -121,7 +127,9 @@ class BarbershopProfileScreen extends StatelessWidget {
                           ),
                         ),
                       ],
-                    ],
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -291,13 +299,10 @@ class _ProfileHeader extends StatelessWidget {
           identity.name,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: AppColors.text,
-            fontFamily: 'Barlow Condensed',
-            fontSize: 32,
-            height: 1.03,
-            fontWeight: FontWeight.w700,
-          ),
+          style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                fontSize: 32,
+                fontWeight: FontWeight.w800,
+              ),
         ),
         const SizedBox(height: 10),
         Wrap(
@@ -389,7 +394,7 @@ class _InlineMeta extends StatelessWidget {
           value,
           style: TextStyle(
             color: color,
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -466,7 +471,11 @@ class _FactCard extends StatelessWidget {
           const SizedBox(height: 3),
           Text(
             label,
-            style: const TextStyle(color: AppColors.muted, fontSize: 10),
+            style: const TextStyle(
+              color: AppColors.muted,
+              fontSize: 12,
+              height: 1.35,
+            ),
           ),
         ],
       ),
@@ -490,7 +499,7 @@ class _AboutShop extends StatelessWidget {
       'e escolha a melhor opção para o seu próximo horário.',
       style: const TextStyle(
         color: AppColors.muted,
-        fontSize: 13,
+        fontSize: 14,
         height: 1.55,
         fontWeight: FontWeight.w500,
       ),
@@ -643,7 +652,7 @@ class _ProfessionalCard extends StatelessWidget {
                 '${rating.toStringAsFixed(1)} ★',
                 style: const TextStyle(
                   color: AppColors.muted,
-                  fontSize: 10,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -664,12 +673,10 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       title,
-      style: const TextStyle(
-        color: AppColors.text,
-        fontFamily: 'Barlow Condensed',
-        fontSize: 23,
-        fontWeight: FontWeight.w700,
-      ),
+      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+          ),
     );
   }
 }
@@ -689,7 +696,7 @@ class _SectionHeader extends StatelessWidget {
           caption,
           style: const TextStyle(
             color: AppColors.muted,
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: FontWeight.w600,
           ),
         ),

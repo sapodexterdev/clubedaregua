@@ -41,13 +41,12 @@ class BarberDetailsScreen extends StatelessWidget {
             backgroundColor: AppColors.background,
             foregroundColor: AppColors.text,
             elevation: 0,
-            title: const Text(
+            title: Text(
               'Escolha seu horário',
-              style: TextStyle(
-                fontFamily: 'Barlow Condensed',
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
-              ),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                  ),
             ),
           ),
           bottomNavigationBar: _ContinueBar(
@@ -57,9 +56,14 @@ class BarberDetailsScreen extends StatelessWidget {
               AppointmentScreen.route,
             ),
           ),
-          body: ListView(
-            padding: const EdgeInsets.fromLTRB(22, 8, 22, 32),
-            children: [
+          body: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: CDRSizeTokens.contentMaxWidth,
+              ),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(18, 8, 18, 32),
+                children: [
               _ShopContext(
                 name: shop.identity.name,
                 location: shop.identity.locationLabel,
@@ -140,7 +144,9 @@ class BarberDetailsScreen extends StatelessWidget {
                   time: state.selectedTime,
                 ),
               ],
-            ],
+                ],
+              ),
+            ),
           ),
         );
       },
@@ -202,7 +208,7 @@ class _ShopContext extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: AppColors.muted,
-                    fontSize: 11,
+                    fontSize: 13,
                   ),
                 ),
               ],
@@ -254,18 +260,19 @@ class _StepHeader extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  color: AppColors.text,
-                  fontFamily: 'Barlow Condensed',
-                  fontSize: 22,
-                  height: 1,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontSize: 21,
+                      fontWeight: FontWeight.w800,
+                    ),
               ),
               const SizedBox(height: 5),
               Text(
                 caption,
-                style: const TextStyle(color: AppColors.muted, fontSize: 11),
+                style: const TextStyle(
+                  color: AppColors.muted,
+                  fontSize: 13,
+                  height: 1.4,
+                ),
               ),
             ],
           ),
@@ -335,7 +342,7 @@ class _BarberStrip extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: AppColors.text,
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -398,7 +405,7 @@ class _DateStrip extends StatelessWidget {
                     _weekday(date.weekday),
                     style: TextStyle(
                       color: selected ? AppColors.onGold : AppColors.muted,
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -514,7 +521,7 @@ class _BookingSummary extends StatelessWidget {
             'Seu horário',
             style: TextStyle(
               color: AppColors.orange,
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -529,7 +536,11 @@ class _BookingSummary extends StatelessWidget {
           const SizedBox(height: 5),
           Text(
             '${_longDate(date)} às $time · R\$ ${service.price.toStringAsFixed(0)}',
-            style: const TextStyle(color: AppColors.muted, fontSize: 12),
+            style: const TextStyle(
+              color: AppColors.muted,
+              fontSize: 13,
+              height: 1.4,
+            ),
           ),
         ],
       ),
@@ -597,7 +608,11 @@ class _StateBlock extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.muted, fontSize: 12),
+            style: const TextStyle(
+              color: AppColors.muted,
+              fontSize: 14,
+              height: 1.45,
+            ),
           ),
           if (onAction != null && actionLabel != null) ...[
             const SizedBox(height: 10),

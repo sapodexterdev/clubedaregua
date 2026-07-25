@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 
 import '../../providers/app_state.dart';
 import '../../theme/app_colors.dart';
@@ -21,21 +22,24 @@ class AppointmentConfirmationScreen extends StatelessWidget {
           backgroundColor: AppColors.background,
           body: SafeArea(
             child: hasReceipt
-                ? ListView(
-                    padding: const EdgeInsets.fromLTRB(24, 36, 24, 28),
-                    children: [
+                ? Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxWidth: CDRSizeTokens.contentMaxWidth,
+                      ),
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(18, 36, 18, 28),
+                        children: [
                       const _SuccessMark(),
                       const SizedBox(height: 24),
-                      const Text(
+                      Text(
                         'Solicitação enviada!',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: AppColors.text,
-                          fontFamily: 'Barlow Condensed',
-                          fontSize: 34,
-                          height: 1,
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.displaySmall?.copyWith(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.w800,
+                                ),
                       ),
                       const SizedBox(height: 10),
                       const Text(
@@ -43,7 +47,7 @@ class AppointmentConfirmationScreen extends StatelessWidget {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: AppColors.muted,
-                          fontSize: 13,
+                          fontSize: 14,
                           height: 1.5,
                         ),
                       ),
@@ -70,7 +74,9 @@ class AppointmentConfirmationScreen extends StatelessWidget {
                         ),
                         child: const Text('VOLTAR PARA DESCOBRIR'),
                       ),
-                    ],
+                        ],
+                      ),
+                    ),
                   )
                 : _NoReceipt(onHome: () => _goHome(context)),
           ),
@@ -133,7 +139,7 @@ class _PendingBadge extends StatelessWidget {
             'AGUARDANDO CONFIRMAÇÃO',
             style: TextStyle(
               color: AppColors.orange,
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -176,7 +182,7 @@ class _ReceiptCard extends StatelessWidget {
             'RESUMO DA SOLICITAÇÃO',
             style: TextStyle(
               color: AppColors.muted,
-              fontSize: 10,
+              fontSize: 12,
               letterSpacing: .8,
               fontWeight: FontWeight.w800,
             ),
@@ -186,13 +192,10 @@ class _ReceiptCard extends StatelessWidget {
             shopName,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: AppColors.text,
-              fontFamily: 'Barlow Condensed',
-              fontSize: 24,
-              height: 1.05,
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                ),
           ),
           const SizedBox(height: 18),
           _ReceiptRow(
@@ -267,7 +270,7 @@ class _ReceiptRow extends StatelessWidget {
                   label,
                   style: const TextStyle(
                     color: AppColors.muted,
-                    fontSize: 10,
+                    fontSize: 12,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -295,31 +298,29 @@ class _NextSteps extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'O que acontece agora',
-          style: TextStyle(
-            color: AppColors.text,
-            fontFamily: 'Barlow Condensed',
-            fontSize: 23,
-            fontWeight: FontWeight.w700,
-          ),
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+              ),
         ),
-        SizedBox(height: 14),
-        _TimelineItem(
+        const SizedBox(height: 14),
+        const _TimelineItem(
           icon: Icons.check_rounded,
           title: 'Solicitação recebida',
           description: 'Os dados foram enviados para a barbearia.',
           active: true,
         ),
-        _TimelineItem(
+        const _TimelineItem(
           icon: Icons.storefront_outlined,
           title: 'Análise da barbearia',
           description: 'A equipe verificará o horário solicitado.',
         ),
-        _TimelineItem(
+        const _TimelineItem(
           icon: Icons.chat_outlined,
           title: 'Retorno pelo WhatsApp',
           description: 'Você receberá a confirmação ou uma alternativa.',
@@ -395,8 +396,8 @@ class _TimelineItem extends StatelessWidget {
                     description,
                     style: const TextStyle(
                       color: AppColors.muted,
-                      fontSize: 11,
-                      height: 1.35,
+                      fontSize: 13,
+                      height: 1.45,
                     ),
                   ),
                 ],

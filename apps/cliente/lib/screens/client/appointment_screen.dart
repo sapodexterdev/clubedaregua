@@ -61,13 +61,12 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
             backgroundColor: AppColors.background,
             foregroundColor: AppColors.text,
             elevation: 0,
-            title: const Text(
+            title: Text(
               'Revisar agendamento',
-              style: TextStyle(
-                fontFamily: 'Barlow Condensed',
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
-              ),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                  ),
             ),
           ),
           bottomNavigationBar: _SubmitBar(
@@ -77,11 +76,16 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
             onPressed: () => _handlePrimaryAction(state),
           ),
           body: hasSelection
-              ? Form(
-                  key: _formKey,
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(22, 8, 22, 32),
-                    children: [
+              ? Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: CDRSizeTokens.contentMaxWidth,
+                    ),
+                    child: Form(
+                      key: _formKey,
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(18, 8, 18, 32),
+                        children: [
                       const _Intro(),
                       const SizedBox(height: 20),
                       _AppointmentSummary(
@@ -106,7 +110,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                           'A barbearia usará estes dados para confirmar a solicitação.',
                           style: TextStyle(
                             color: AppColors.muted,
-                            fontSize: 12,
+                            fontSize: 14,
                             height: 1.4,
                           ),
                         ),
@@ -148,7 +152,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                           'O pagamento será combinado diretamente com a barbearia.',
                           style: TextStyle(
                             color: AppColors.muted,
-                            fontSize: 12,
+                            fontSize: 14,
                             height: 1.4,
                           ),
                         ),
@@ -164,13 +168,16 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                           _selectedPaymentMethod.description,
                           style: const TextStyle(
                             color: AppColors.muted,
-                            fontSize: 11,
+                            fontSize: 13,
+                            height: 1.4,
                           ),
                         ),
                         const SizedBox(height: 22),
                         const _RequestNotice(),
                       ],
-                    ],
+                        ],
+                      ),
+                    ),
                   ),
                 )
               : const _MissingAppointment(),
@@ -243,23 +250,24 @@ class _Intro extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Está tudo certo?',
-          style: TextStyle(
-            color: AppColors.text,
-            fontFamily: 'Barlow Condensed',
-            fontSize: 31,
-            height: 1,
-            fontWeight: FontWeight.w700,
-          ),
+          style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                fontSize: 30,
+                fontWeight: FontWeight.w800,
+              ),
         ),
-        SizedBox(height: 8),
-        Text(
+        const SizedBox(height: 8),
+        const Text(
           'Revise os detalhes antes de enviar sua solicitação.',
-          style: TextStyle(color: AppColors.muted, fontSize: 13),
+          style: TextStyle(
+            color: AppColors.muted,
+            fontSize: 14,
+            height: 1.45,
+          ),
         ),
       ],
     );
@@ -336,7 +344,7 @@ class _AppointmentSummary extends StatelessWidget {
                       _monthShort(date.month).toUpperCase(),
                       style: const TextStyle(
                         color: AppColors.onGold,
-                        fontSize: 9,
+                        fontSize: 12,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -361,7 +369,7 @@ class _AppointmentSummary extends StatelessWidget {
                       _fullDate(date),
                       style: const TextStyle(
                         color: AppColors.muted,
-                        fontSize: 11,
+                        fontSize: 13,
                       ),
                     ),
                   ],
@@ -425,7 +433,7 @@ class _SummaryLine extends StatelessWidget {
         const SizedBox(width: 9),
         Text(
           label,
-          style: const TextStyle(color: AppColors.muted, fontSize: 11),
+          style: const TextStyle(color: AppColors.muted, fontSize: 13),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -476,21 +484,23 @@ class _AuthRequired extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Entre para enviar a solicitação',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.text,
-              fontFamily: 'Barlow Condensed',
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                ),
           ),
           const SizedBox(height: 6),
           const Text(
             'Suas escolhas serão mantidas após o acesso.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.muted, fontSize: 12),
+            style: TextStyle(
+              color: AppColors.muted,
+              fontSize: 14,
+              height: 1.45,
+            ),
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -519,12 +529,10 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       title,
-      style: const TextStyle(
-        color: AppColors.text,
-        fontFamily: 'Barlow Condensed',
-        fontSize: 23,
-        fontWeight: FontWeight.w700,
-      ),
+      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+          ),
     );
   }
 }
@@ -608,8 +616,8 @@ class _RequestNotice extends StatelessWidget {
             'O envio não confirma automaticamente o horário. A barbearia retornará pelo WhatsApp.',
             style: TextStyle(
               color: AppColors.muted,
-              fontSize: 11,
-              height: 1.4,
+              fontSize: 13,
+              height: 1.45,
             ),
           ),
         ),
