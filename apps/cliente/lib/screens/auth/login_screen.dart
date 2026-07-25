@@ -89,6 +89,15 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  void _goBack(BuildContext context) {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+      return;
+    }
+    navigator.pushReplacementNamed(HomeScreen.route);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -99,12 +108,20 @@ class _LoginScreenState extends State<LoginScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
               children: [
-                Center(
-                  child: SvgPicture.asset(
-                    AppConstants.brandV3SecondaryLogo,
-                    width: 132,
-                    semanticsLabel: 'Clube da Régua',
-                  ),
+                Row(
+                  children: [
+                    CDRBackButton(onPressed: () => _goBack(context)),
+                    Expanded(
+                      child: Center(
+                        child: SvgPicture.asset(
+                          AppConstants.brandV3SecondaryLogo,
+                          width: 132,
+                          semanticsLabel: 'Clube da Régua',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 44),
+                  ],
                 ),
                 const SizedBox(height: 30),
                 Text(
