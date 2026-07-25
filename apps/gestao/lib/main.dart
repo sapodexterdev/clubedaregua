@@ -4531,7 +4531,7 @@ class _AvailabilityPage extends StatelessWidget {
               _SectionTitle(
                 'Jornada de ${barber.name}',
                 eyebrow: 'DISPONIBILIDADE SEMANAL',
-                trailing: 'Horário de Brasília',
+                trailing: '$activeDays dias ativos',
               ),
               const SizedBox(height: 12),
               if (session.isAvailabilityLoading)
@@ -4562,9 +4562,22 @@ class _AvailabilityPage extends StatelessWidget {
                     : () => _save(context, session),
               ),
               const SizedBox(height: 10),
-              const Text(
-                'Os horários disponíveis serão calculados automaticamente considerando duração do serviço, bloqueios e agendamentos confirmados.',
-                style: TextStyle(color: SharedAppColors.muted),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.info_outline_rounded,
+                    size: 17,
+                    color: SharedAppColors.muted,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Os horários disponíveis consideram a duração do serviço, bloqueios e agendamentos confirmados.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                ],
               ),
             ],
           ],
@@ -4634,14 +4647,14 @@ class _AvailabilityDayTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: SharedAppColors.card,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: day.isActive
-              ? SharedAppColors.orange.withOpacity(.45)
+              ? SharedAppColors.orange.withOpacity(.32)
               : SharedAppColors.stroke,
         ),
       ),
@@ -4670,10 +4683,41 @@ class _AvailabilityDayTile extends StatelessWidget {
           );
           final heading = Row(
             children: [
+              Container(
+                width: 38,
+                height: 38,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: day.isActive
+                      ? SharedAppColors.orange.withOpacity(.12)
+                      : SharedAppColors.elevated,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  day.isActive
+                      ? Icons.event_available_outlined
+                      : Icons.event_busy_outlined,
+                  size: 19,
+                  color: day.isActive
+                      ? SharedAppColors.orange
+                      : SharedAppColors.muted,
+                ),
+              ),
+              const SizedBox(width: 11),
               Expanded(
-                child: Text(
-                  day.label,
-                  style: const TextStyle(fontWeight: FontWeight.w900),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      day.label,
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      day.isActive ? 'Atendimento ativo' : 'Dia fechado',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
                 ),
               ),
               Switch(
@@ -4734,20 +4778,34 @@ class _ClientsPage extends StatelessWidget {
         final customers = session.filteredCustomers;
         final activeCount =
             session.customers.where((customer) => customer.isActive).length;
+        final recentCount =
+            session.customers.where((customer) => customer.isRecent).length;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _ActionPanel(
-              title: 'Clientes atendidos',
-              subtitle: '$activeCount clientes ativos na barbearia.',
-              buttonLabel: 'Atualizar',
-              icon: Icons.refresh_rounded,
-              onPressed: session.fetchCustomers,
+            _MetricsGrid(
+              cards: [
+                _MetricData(
+                  'Clientes ativos',
+                  '$activeCount',
+                  Icons.people_alt_outlined,
+                ),
+                _MetricData(
+                  'Novos em 30 dias',
+                  '$recentCount',
+                  Icons.person_add_alt_rounded,
+                ),
+              ],
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 22),
+            const _SectionTitle(
+              'Encontre rapidamente',
+              eyebrow: 'CLIENTES',
+            ),
+            const SizedBox(height: 12),
             _CustomerFilters(session: session),
-            const SizedBox(height: 28),
+            const SizedBox(height: 24),
             _SectionTitle(
               'Base de clientes',
               eyebrow: 'RELACIONAMENTO',
@@ -4817,10 +4875,10 @@ class _CustomerFilters extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: SharedAppColors.card,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: SharedAppColors.stroke),
       ),
       child: Column(
@@ -4833,7 +4891,7 @@ class _CustomerFilters extends StatelessWidget {
               prefixIcon: Icon(Icons.search_rounded),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           SizedBox(
             height: 44,
             child: ListView(
@@ -5123,13 +5181,6 @@ class _CommissionPage extends StatelessWidget {
     return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _InlineNotice(
-          icon: Icons.science_outlined,
-          title: 'Dados de demonstração',
-          subtitle:
-              'Os valores abaixo são ilustrativos e ainda não representam movimentações financeiras reais.',
-        ),
-        SizedBox(height: 18),
         _MetricsGrid(
           cards: [
             _MetricData(
@@ -5144,7 +5195,14 @@ class _CommissionPage extends StatelessWidget {
             ),
           ],
         ),
-        SizedBox(height: 28),
+        SizedBox(height: 14),
+        _InlineNotice(
+          icon: Icons.science_outlined,
+          title: 'Prévia financeira',
+          subtitle:
+              'Valores ilustrativos enquanto a movimentação financeira real não está ativa.',
+        ),
+        SizedBox(height: 24),
         _SectionTitle(
           'Desempenho da semana',
           eyebrow: 'COMISSÃO',
@@ -7892,21 +7950,21 @@ class _ClientTile extends StatelessWidget {
     final statusColor =
         customer.isActive ? CDRColorTokens.success : CDRColorTokens.error;
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: SharedAppColors.card,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: SharedAppColors.stroke),
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(15),
           child: Row(
             children: [
               _CustomerAvatar(customer: customer),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -7941,23 +7999,16 @@ class _ClientTile extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    '${customer.appointmentCount} ag.',
-                    style: const TextStyle(
-                      color: SharedAppColors.orange,
-                      fontWeight: FontWeight.w900,
-                    ),
+                  _AvailabilityStatus(
+                    label: customer.appointmentCount == 1
+                        ? '1 ATENDIMENTO'
+                        : '${customer.appointmentCount} ATEND.',
+                    color: SharedAppColors.orange,
                   ),
                   const SizedBox(height: 6),
                   _AvailabilityStatus(
                     label: customer.statusLabel.toUpperCase(),
                     color: statusColor,
-                  ),
-                  const SizedBox(height: 5),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    color: SharedAppColors.muted,
-                    size: 20,
                   ),
                 ],
               ),
