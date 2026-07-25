@@ -4080,6 +4080,8 @@ class _BarberAgendaPage extends StatelessWidget {
                 icon: Icons.warning_amber_rounded,
                 title: 'Não foi possível carregar a agenda',
                 subtitle: session.scheduleError!,
+                actionLabel: 'TENTAR NOVAMENTE',
+                onAction: session.fetchScheduleEntries,
               )
             else if (entries.isEmpty)
               const _InlineNotice(
@@ -4370,6 +4372,8 @@ class _BookingRequestsPage extends StatelessWidget {
                 icon: Icons.warning_amber_rounded,
                 title: 'Não foi possível carregar',
                 subtitle: session.bookingRequestsError!,
+                actionLabel: 'TENTAR NOVAMENTE',
+                onAction: session.fetchBookingRequests,
               )
             else if (session.bookingRequestActionError != null) ...[
               _InlineNotice(
@@ -4435,20 +4439,25 @@ class _BookingRequestsPage extends StatelessWidget {
       context: context,
       builder: (context) {
         return AlertDialog(
+          icon: const Icon(
+            Icons.block_outlined,
+            color: SharedAppColors.orange,
+          ),
           title: const Text('Recusar solicitação'),
-          content: TextField(
+          content: CDRTextField(
             controller: controller,
             maxLines: 3,
-            decoration: const InputDecoration(labelText: 'Motivo opcional'),
+            label: 'Motivo opcional',
+            leading: Icons.notes_outlined,
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Voltar'),
+              child: const Text('VOLTAR'),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, controller.text),
-              child: const Text('Recusar'),
+              child: const Text('RECUSAR'),
             ),
           ],
         );
@@ -4541,6 +4550,8 @@ class _AvailabilityPage extends StatelessWidget {
                   icon: Icons.warning_amber_rounded,
                   title: 'Não foi possível carregar os horários',
                   subtitle: session.availabilityError!,
+                  actionLabel: 'TENTAR NOVAMENTE',
+                  onAction: session.fetchWeeklyAvailability,
                 )
               else
                 for (final day in session.weeklyAvailability)
@@ -4821,6 +4832,8 @@ class _ClientsPage extends StatelessWidget {
                 icon: Icons.warning_amber_rounded,
                 title: 'Não foi possível carregar os clientes',
                 subtitle: session.customersError!,
+                actionLabel: 'TENTAR NOVAMENTE',
+                onAction: session.fetchCustomers,
               )
             else if (customers.isEmpty)
               const _InlineNotice(
@@ -4986,34 +4999,11 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'PERFIL DO CLIENTE',
-                        style: TextStyle(
-                          color: SharedAppColors.orange,
-                          fontSize: 10,
-                          letterSpacing: 1.3,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        customer.name,
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  onPressed: _isSaving ? null : () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
-                ),
-              ],
+            _SheetHeader(
+              eyebrow: 'PERFIL DO CLIENTE',
+              title: customer.name,
+              onClose:
+                  _isSaving ? null : () => Navigator.pop(context),
             ),
             const SizedBox(height: 12),
             Center(child: _CustomerAvatar(customer: customer, radius: 34)),
@@ -5502,6 +5492,8 @@ class _ServicesPage extends StatelessWidget {
                 icon: Icons.warning_amber_rounded,
                 title: 'Não foi possível carregar os serviços',
                 subtitle: session.servicesError!,
+                actionLabel: 'TENTAR NOVAMENTE',
+                onAction: session.fetchServiceCatalog,
               )
             else if (services.isEmpty)
               const _InlineNotice(
@@ -5773,36 +5765,12 @@ class _ServiceFormState extends State<_ServiceForm> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _isEditing ? 'EDITAR SERVIÇO' : 'NOVO SERVIÇO',
-                        style: const TextStyle(
-                          color: SharedAppColors.orange,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.4,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        _isEditing
-                            ? 'Atualize o serviço'
-                            : 'Cadastre um serviço',
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  onPressed: _isSaving ? null : () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
-                ),
-              ],
+            _SheetHeader(
+              eyebrow: _isEditing ? 'EDITAR SERVIÇO' : 'NOVO SERVIÇO',
+              title:
+                  _isEditing ? 'Atualize o serviço' : 'Cadastre um serviço',
+              onClose:
+                  _isSaving ? null : () => Navigator.pop(context),
             ),
             const SizedBox(height: 16),
             const Divider(color: SharedAppColors.stroke),
@@ -6020,6 +5988,10 @@ class _ServiceFormState extends State<_ServiceForm> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        icon: Icon(
+          canDelete ? Icons.delete_outline_rounded : Icons.block_outlined,
+          color: CDRColorTokens.error,
+        ),
         title: Text(canDelete ? 'Excluir serviço?' : 'Inativar serviço?'),
         content: Text(
           canDelete
@@ -6029,15 +6001,15 @@ class _ServiceFormState extends State<_ServiceForm> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: const Text('CANCELAR'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(
-              backgroundColor: SharedAppColors.orange,
+              backgroundColor: CDRColorTokens.error,
               foregroundColor: Colors.white,
             ),
-            child: Text(canDelete ? 'Excluir' : 'Inativar'),
+            child: Text(canDelete ? 'EXCLUIR' : 'INATIVAR'),
           ),
         ],
       ),
@@ -6121,6 +6093,8 @@ class _TeamPage extends StatelessWidget {
                 icon: Icons.warning_amber_rounded,
                 title: 'Não foi possível carregar a equipe',
                 subtitle: session.errorMessage!,
+                actionLabel: 'TENTAR NOVAMENTE',
+                onAction: session.fetchTeamBarbers,
               )
             else if (session.teamBarbers.isEmpty)
               const _InlineNotice(
@@ -6254,23 +6228,11 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _isEditing ? 'Editar barbeiro' : 'Novo barbeiro',
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Fechar',
-                  onPressed: _isSaving ? null : () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
-                ),
-              ],
+            _SheetHeader(
+              eyebrow: _isEditing ? 'EDITAR PROFISSIONAL' : 'NOVA CONTRATAÇÃO',
+              title: _isEditing ? 'Dados do barbeiro' : 'Convide um barbeiro',
+              onClose:
+                  _isSaving ? null : () => Navigator.pop(context),
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -6477,7 +6439,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Concluir'),
+            child: const Text('CONCLUIR'),
           ),
           FilledButton.icon(
             onPressed: () async {
@@ -6488,7 +6450,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
               );
             },
             icon: const Icon(Icons.copy_rounded),
-            label: const Text('Copiar link'),
+            label: const Text('COPIAR LINK'),
           ),
         ],
       ),
@@ -6543,6 +6505,8 @@ class _SettingsPage extends StatelessWidget {
                 icon: Icons.warning_amber_rounded,
                 title: 'Não foi possível carregar as configurações',
                 subtitle: session.settingsError!,
+                actionLabel: 'TENTAR NOVAMENTE',
+                onAction: session.fetchShopConfiguration,
               )
             else if (config == null)
               const _InlineNotice(
@@ -7111,6 +7075,58 @@ class _SettingsFormState extends State<_SettingsForm> {
   }
 }
 
+class _SheetHeader extends StatelessWidget {
+  const _SheetHeader({
+    required this.eyebrow,
+    required this.title,
+    required this.onClose,
+  });
+
+  final String eyebrow;
+  final String title;
+  final VoidCallback? onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                eyebrow,
+                style: const TextStyle(
+                  color: SharedAppColors.orange,
+                  fontSize: 9,
+                  letterSpacing: 1.25,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        IconButton(
+          tooltip: 'Fechar',
+          onPressed: onClose,
+          icon: const Icon(Icons.close_rounded),
+          style: IconButton.styleFrom(
+            backgroundColor: SharedAppColors.elevated,
+            foregroundColor: SharedAppColors.muted,
+            side: const BorderSide(color: SharedAppColors.stroke),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _ResponsiveFieldRow extends StatelessWidget {
   const _ResponsiveFieldRow({required this.children});
 
@@ -7475,11 +7491,15 @@ class _InlineNotice extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
+    this.actionLabel,
+    this.onAction,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -7490,23 +7510,36 @@ class _InlineNotice extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: SharedAppColors.stroke),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _IconBadge(icon),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: const TextStyle(color: SharedAppColors.muted),
+          Row(
+            children: [
+              _IconBadge(icon),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: Theme.of(context).textTheme.titleSmall),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
+          if (actionLabel != null && onAction != null) ...[
+            const SizedBox(height: 14),
+            CDRButton.outlined(
+              label: actionLabel!,
+              onPressed: onAction,
+              leading: const Icon(Icons.refresh_rounded),
+            ),
+          ],
         ],
       ),
     );
