@@ -24,7 +24,7 @@ class PremiumBottomNav extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Container(
-        height: 72,
+        height: 76,
         decoration: const BoxDecoration(
           color: AppColors.background,
           border: Border(top: BorderSide(color: AppColors.stroke)),
@@ -43,7 +43,7 @@ class PremiumBottomNav extends StatelessWidget {
                   onTap: () => onTap(index),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
-                    padding: const EdgeInsets.only(top: 8, bottom: 6),
+                    padding: const EdgeInsets.only(top: 9, bottom: 7),
                     decoration: BoxDecoration(
                       color: selected
                           ? AppColors.orange.withOpacity(.08)
@@ -55,7 +55,7 @@ class PremiumBottomNav extends StatelessWidget {
                         Icon(
                           item.icon,
                           color: selected ? AppColors.orange : AppColors.muted,
-                          size: 23,
+                          size: 24,
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -65,7 +65,8 @@ class PremiumBottomNav extends StatelessWidget {
                           style: TextStyle(
                             color:
                                 selected ? AppColors.orange : AppColors.muted,
-                            fontSize: 11,
+                            fontSize: 12,
+                            height: 1.2,
                             fontWeight:
                                 selected ? FontWeight.w900 : FontWeight.w700,
                           ),

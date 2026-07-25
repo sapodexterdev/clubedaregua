@@ -108,13 +108,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 .where((shop) => !usedIds.contains(shop.identity.id))
                 .toList();
 
-            return RefreshIndicator(
-              color: AppColors.orange,
-              backgroundColor: AppColors.card,
-              onRefresh: state.loadInitialData,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(22, 18, 22, 28),
-                children: [
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final horizontalPadding =
+                    constraints.maxWidth < 380 ? 16.0 : 20.0;
+                return RefreshIndicator(
+                  color: AppColors.orange,
+                  backgroundColor: AppColors.card,
+                  onRefresh: state.loadInitialData,
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxWidth: CDRSizeTokens.contentMaxWidth,
+                      ),
+                      child: ListView(
+                        padding: EdgeInsets.fromLTRB(
+                          horizontalPadding,
+                          18,
+                          horizontalPadding,
+                          32,
+                        ),
+                        children: [
                   _DiscoveryHeader(
                     greeting: state.discoveryGreeting,
                     unreadCount: state.unreadNotificationCount,
@@ -188,9 +202,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         shops: otherShops,
                         compact: true,
                       ),
-                  ],
-                ],
-              ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
             );
           },
         ),
@@ -218,9 +235,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       'Filtros',
                       style: TextStyle(
                         color: AppColors.text,
-                        fontFamily: 'Barlow Condensed',
                         fontSize: 24,
-                        fontWeight: FontWeight.w700,
+                        height: 1.2,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -287,16 +304,12 @@ class _DiscoveryHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
-              const Text(
-                'Onde você quer dar\naquela renovada hoje?',
-                style: TextStyle(
-                  color: AppColors.text,
-                  fontFamily: 'Barlow Condensed',
-                  fontSize: 32,
-                  height: 1.125,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0,
-                ),
+              Text(
+                'Onde você quer dar aquela renovada hoje?',
+                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w800,
+                    ),
               ),
             ],
           ),
@@ -326,8 +339,8 @@ class _DiscoveryHeader extends StatelessWidget {
                     right: -3,
                     top: -3,
                     child: Container(
-                      constraints: const BoxConstraints(minWidth: 18),
-                      height: 18,
+                      constraints: const BoxConstraints(minWidth: 20),
+                      height: 20,
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
@@ -340,7 +353,7 @@ class _DiscoveryHeader extends StatelessWidget {
                         unreadCount > 9 ? '9+' : '$unreadCount',
                         style: const TextStyle(
                           color: AppColors.onGold,
-                          fontSize: 9,
+                          fontSize: 12,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -409,11 +422,11 @@ class _SearchAndFilterState extends State<_SearchAndFilter> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 52,
+      height: CDRSizeTokens.inputHeight,
       child: TextField(
         controller: _controller,
         onChanged: _onChanged,
-        style: const TextStyle(color: AppColors.text),
+        style: Theme.of(context).textTheme.bodyLarge,
         cursorColor: AppColors.orange,
         decoration: InputDecoration(
           prefixIcon: const Icon(Icons.search_rounded, color: AppColors.muted),
@@ -468,7 +481,7 @@ class _LocationPill extends StatelessWidget {
                 label,
                 style: const TextStyle(
                   color: AppColors.text,
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -503,9 +516,9 @@ class _LocationPill extends StatelessWidget {
                     'Escolha sua localização',
                     style: TextStyle(
                       color: AppColors.text,
-                      fontFamily: 'Barlow Condensed',
                       fontSize: 24,
-                      fontWeight: FontWeight.w700,
+                      height: 1.2,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
@@ -605,7 +618,7 @@ class _DiscoveryCategories extends StatelessWidget {
             label: Text(category.name),
             labelStyle: TextStyle(
               color: selected ? AppColors.text : AppColors.muted,
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
             backgroundColor: AppColors.card,
@@ -688,7 +701,7 @@ class _DiscoverySection extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           SizedBox(
-            height: compact ? 150 : 292,
+            height: compact ? 164 : 304,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: visible.length,
@@ -740,9 +753,9 @@ class _SearchResults extends StatelessWidget {
           '${shops.length} ${shops.length == 1 ? 'resultado' : 'resultados'}',
           style: const TextStyle(
             color: AppColors.text,
-            fontFamily: 'Barlow Condensed',
             fontSize: 22,
-            fontWeight: FontWeight.w700,
+            height: 1.2,
+            fontWeight: FontWeight.w800,
           ),
         ),
         const SizedBox(height: 12),
@@ -797,9 +810,9 @@ class _AllBarbershopsSheet extends StatelessWidget {
                         title,
                         style: const TextStyle(
                           color: AppColors.text,
-                          fontFamily: 'Barlow Condensed',
                           fontSize: 26,
-                          fontWeight: FontWeight.w700,
+                          height: 1.2,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ),
@@ -854,15 +867,15 @@ class _BarbershopCard extends StatelessWidget {
         : shop.identity.coverUrl;
 
     return InkWell(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(CDRRadiusTokens.large),
       onTap: () => _openProfile(context),
       child: Container(
         width: fullWidth ? double.infinity : (compact ? 282 : 300),
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: AppColors.card,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.stroke),
+          borderRadius: BorderRadius.circular(CDRRadiusTokens.large),
+          border: Border.all(color: AppColors.stroke.withOpacity(.8)),
         ),
         child: compact
             ? _CompactCardContent(shop: shop)
@@ -951,7 +964,7 @@ class _LargeCardContent extends StatelessWidget {
                     service.name,
                     style: const TextStyle(
                       color: AppColors.muted,
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -969,7 +982,7 @@ class _LargeCardContent extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: AppColors.muted,
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -1032,7 +1045,7 @@ class _SectionHeader extends StatelessWidget {
           ),
           child: const Text(
             'Ver todas',
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
           ),
         ),
       ],
@@ -1097,7 +1110,7 @@ class _CompactCardContent extends StatelessWidget {
                     shop.rating.toStringAsFixed(1),
                     style: const TextStyle(
                       color: AppColors.text,
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -1111,7 +1124,7 @@ class _CompactCardContent extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: AppColors.muted,
-                        fontSize: 11,
+                        fontSize: 12,
                       ),
                     ),
                   ),
@@ -1124,7 +1137,7 @@ class _CompactCardContent extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: shop.isOpen ? AppColors.success : AppColors.muted,
-                  fontSize: 10,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -1135,7 +1148,7 @@ class _CompactCardContent extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: AppColors.orange,
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -1244,7 +1257,7 @@ class _RatingBadge extends StatelessWidget {
             'CDR',
             style: TextStyle(
               color: AppColors.orange,
-              fontSize: 9,
+              fontSize: 12,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -1364,7 +1377,7 @@ class _EmptyDiscovery extends StatelessWidget {
           const Text(
             'Tente alterar a busca, os filtros ou a localização.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.muted, fontSize: 12),
+            style: TextStyle(color: AppColors.muted, fontSize: 14, height: 1.45),
           ),
           const SizedBox(height: 14),
           OutlinedButton(
@@ -1411,7 +1424,7 @@ class _DiscoveryError extends StatelessWidget {
           const Text(
             'Verifique sua conexão e tente novamente.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.muted, fontSize: 12),
+            style: TextStyle(color: AppColors.muted, fontSize: 14, height: 1.45),
           ),
           const SizedBox(height: 16),
           FilledButton.icon(
