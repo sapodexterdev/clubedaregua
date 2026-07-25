@@ -54,13 +54,12 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Notificações',
-          style: TextStyle(
-            fontFamily: 'Barlow Condensed',
-            fontSize: 27,
-            fontWeight: FontWeight.w700,
-          ),
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+              ),
         ),
         actions: [
           Consumer<AppState>(
@@ -107,21 +106,30 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                   onRetry: state.refreshNotifications,
                 ),
               Expanded(
-                child: RefreshIndicator(
-                  color: AppColors.orange,
-                  onRefresh: state.refreshNotifications,
-                  child: ListView.separated(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-                    itemCount: state.notifications.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final item = state.notifications[index];
-                      return _NotificationCard(
-                        item: item,
-                        onTap: () => state.markNotificationAsRead(item.id),
-                      );
-                    },
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: CDRSizeTokens.contentMaxWidth,
+                    ),
+                    child: RefreshIndicator(
+                      color: AppColors.orange,
+                      onRefresh: state.refreshNotifications,
+                      child: ListView.separated(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(18, 8, 18, 28),
+                        itemCount: state.notifications.length,
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: 10),
+                        itemBuilder: (context, index) {
+                          final item = state.notifications[index];
+                          return _NotificationCard(
+                            item: item,
+                            onTap: () =>
+                                state.markNotificationAsRead(item.id),
+                          );
+                        },
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -164,7 +172,11 @@ class _InlineRefreshError extends StatelessWidget {
             Expanded(
               child: Text(
                 message,
-                style: const TextStyle(color: AppColors.muted, fontSize: 11),
+                style: const TextStyle(
+                  color: AppColors.muted,
+                  fontSize: 13,
+                  height: 1.4,
+                ),
               ),
             ),
             TextButton(onPressed: onRetry, child: const Text('Tentar')),
@@ -249,7 +261,7 @@ class _NotificationCard extends StatelessWidget {
                       _dateLabel(item.createdAt),
                       style: const TextStyle(
                         color: AppColors.orange,
-                        fontSize: 10,
+                        fontSize: 12,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -303,17 +315,20 @@ class _NotificationState extends StatelessWidget {
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontFamily: 'Barlow Condensed',
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontSize: 23,
+                      fontWeight: FontWeight.w800,
+                    ),
               ),
               const SizedBox(height: 7),
               Text(
                 description,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.muted, fontSize: 12),
+                style: const TextStyle(
+                  color: AppColors.muted,
+                  fontSize: 14,
+                  height: 1.45,
+                ),
               ),
               if (actionLabel != null && onAction != null) ...[
                 const SizedBox(height: 16),

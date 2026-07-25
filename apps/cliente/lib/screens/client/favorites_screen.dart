@@ -27,13 +27,12 @@ class FavoritesScreen extends StatelessWidget {
         foregroundColor: AppColors.text,
         elevation: 0,
         automaticallyImplyLeading: false,
-        title: const Text(
+        title: Text(
           'Favoritos',
-          style: TextStyle(
-            fontFamily: 'Barlow Condensed',
-            fontSize: 26,
-            fontWeight: FontWeight.w700,
-          ),
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+              ),
         ),
       ),
       bottomNavigationBar: PremiumBottomNav(
@@ -71,16 +70,24 @@ class FavoritesScreen extends StatelessWidget {
           return RefreshIndicator(
             color: AppColors.orange,
             onRefresh: state.refreshFavorites,
-            child: ListView.separated(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-              itemCount: shops.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) => _FavoriteCard(
-                shop: shops[index],
-                removing: state.isFavoriteUpdating(shops[index].identity.id),
-                onOpen: () => _openShop(context, shops[index]),
-                onRemove: () => state.toggleFavorite(shops[index]),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: CDRSizeTokens.contentMaxWidth,
+                ),
+                child: ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 28),
+                  itemCount: shops.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) => _FavoriteCard(
+                    shop: shops[index],
+                    removing:
+                        state.isFavoriteUpdating(shops[index].identity.id),
+                    onOpen: () => _openShop(context, shops[index]),
+                    onRemove: () => state.toggleFavorite(shops[index]),
+                  ),
+                ),
               ),
             ),
           );
@@ -165,13 +172,10 @@ class _FavoriteCard extends StatelessWidget {
                     shop.identity.name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.text,
-                      fontFamily: 'Barlow Condensed',
-                      fontSize: 20,
-                      height: 1.05,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontSize: 19,
+                          fontWeight: FontWeight.w800,
+                        ),
                   ),
                   const SizedBox(height: 7),
                   Text(
@@ -180,7 +184,7 @@ class _FavoriteCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: AppColors.muted,
-                      fontSize: 11,
+                      fontSize: 13,
                     ),
                   ),
                   const SizedBox(height: 7),
@@ -191,7 +195,7 @@ class _FavoriteCard extends StatelessWidget {
                     style: TextStyle(
                       color:
                           shop.isOpen ? AppColors.success : AppColors.muted,
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -262,18 +266,20 @@ class _FavoriteState extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.text,
-                fontFamily: 'Barlow Condensed',
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
-              ),
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontSize: 23,
+                    fontWeight: FontWeight.w800,
+                  ),
             ),
             const SizedBox(height: 7),
             Text(
               description,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.muted, fontSize: 12),
+              style: const TextStyle(
+                color: AppColors.muted,
+                fontSize: 14,
+                height: 1.45,
+              ),
             ),
             const SizedBox(height: 16),
             FilledButton(onPressed: onAction, child: Text(actionLabel)),

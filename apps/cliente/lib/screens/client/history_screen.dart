@@ -55,13 +55,12 @@ class _HistoryScreenState extends State<HistoryScreen>
         backgroundColor: AppColors.background,
         foregroundColor: AppColors.text,
         elevation: 0,
-        title: const Text(
+        title: Text(
           'Agenda',
-          style: TextStyle(
-            fontFamily: 'Barlow Condensed',
-            fontSize: 26,
-            fontWeight: FontWeight.w700,
-          ),
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+              ),
         ),
       ),
       bottomNavigationBar: PremiumBottomNav(
@@ -84,21 +83,28 @@ class _HistoryScreenState extends State<HistoryScreen>
           return RefreshIndicator(
             color: AppColors.orange,
             onRefresh: state.refreshAppointments,
-            child: ListView.separated(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 28),
-              itemCount: state.appointments.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final appointment = state.appointments[index];
-                return _AppointmentCard(
-                  appointment: appointment,
-                  cancelling: _cancellingId == appointment.id,
-                  onCancel: _canCancel(appointment.status)
-                      ? () => _cancel(state, appointment)
-                      : null,
-                );
-              },
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: CDRSizeTokens.contentMaxWidth,
+                ),
+                child: ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(18, 10, 18, 28),
+                  itemCount: state.appointments.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final appointment = state.appointments[index];
+                    return _AppointmentCard(
+                      appointment: appointment,
+                      cancelling: _cancellingId == appointment.id,
+                      onCancel: _canCancel(appointment.status)
+                          ? () => _cancel(state, appointment)
+                          : null,
+                    );
+                  },
+                ),
+              ),
             ),
           );
         },
@@ -192,12 +198,10 @@ class _AppointmentCard extends StatelessWidget {
                       : appointment.shopName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.text,
-                    fontFamily: 'Barlow Condensed',
-                    fontSize: 21,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
                 ),
               ),
               _StatusBadge(info: status),
@@ -289,7 +293,7 @@ class _StatusBadge extends StatelessWidget {
         info.label,
         style: TextStyle(
           color: info.color,
-          fontSize: 9,
+          fontSize: 12,
           fontWeight: FontWeight.w900,
         ),
       ),
@@ -395,18 +399,20 @@ class _CenteredState extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.text,
-                fontFamily: 'Barlow Condensed',
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
-              ),
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontSize: 23,
+                    fontWeight: FontWeight.w800,
+                  ),
             ),
             const SizedBox(height: 6),
             Text(
               description,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.muted, fontSize: 12),
+              style: const TextStyle(
+                color: AppColors.muted,
+                fontSize: 14,
+                height: 1.45,
+              ),
             ),
             const SizedBox(height: 16),
             FilledButton(onPressed: onAction, child: Text(actionLabel)),
