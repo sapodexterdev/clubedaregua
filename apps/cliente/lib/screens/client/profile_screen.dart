@@ -25,13 +25,12 @@ class ProfileScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Text(
+        title: Text(
           'Meu perfil',
-          style: TextStyle(
-            fontFamily: 'Barlow Condensed',
-            fontSize: 27,
-            fontWeight: FontWeight.w700,
-          ),
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+              ),
         ),
       ),
       bottomNavigationBar: PremiumBottomNav(
@@ -44,10 +43,15 @@ class ProfileScreen extends StatelessWidget {
           return RefreshIndicator(
             color: AppColors.orange,
             onRefresh: state.refreshClientProfile,
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-              children: [
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: CDRSizeTokens.contentMaxWidth,
+                ),
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 32),
+                  children: [
                 _IdentityCard(state: state),
                 if (state.clientProfileError != null) ...[
                   const SizedBox(height: 12),
@@ -161,7 +165,9 @@ class ProfileScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-              ],
+                  ],
+                ),
+              ),
             ),
           );
         },
@@ -229,13 +235,15 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 22),
-              const Text(
+              Text(
                 'Editar dados pessoais',
-                style: TextStyle(
-                  fontFamily: 'Barlow Condensed',
-                  fontSize: 25,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: Theme.of(sheetContext)
+                    .textTheme
+                    .headlineSmall
+                    ?.copyWith(
+                      fontSize: 23,
+                      fontWeight: FontWeight.w800,
+                    ),
               ),
               const SizedBox(height: 18),
               TextFormField(
@@ -383,12 +391,11 @@ class _IdentityCard extends StatelessWidget {
             ),
             child: Text(
               initial,
-              style: const TextStyle(
-                color: AppColors.orange,
-                fontFamily: 'Barlow Condensed',
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-              ),
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    color: AppColors.orange,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                  ),
             ),
           ),
           const SizedBox(width: 15),
@@ -400,12 +407,10 @@ class _IdentityCard extends StatelessWidget {
                   displayName,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontFamily: 'Barlow Condensed',
-                    fontSize: 23,
-                    height: 1.05,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
                 ),
                 const SizedBox(height: 5),
                 Text(
@@ -448,7 +453,7 @@ class _SectionLabel extends StatelessWidget {
         text,
         style: const TextStyle(
           color: AppColors.orange,
-          fontSize: 11,
+          fontSize: 12,
           letterSpacing: 1.3,
           fontWeight: FontWeight.w800,
         ),
@@ -511,7 +516,11 @@ class _ProfileAction extends StatelessWidget {
         ),
         subtitle: Text(
           subtitle,
-          style: const TextStyle(color: AppColors.muted, fontSize: 11),
+          style: const TextStyle(
+            color: AppColors.muted,
+            fontSize: 13,
+            height: 1.4,
+          ),
         ),
         trailing: const Icon(
           Icons.chevron_right_rounded,
@@ -571,19 +580,22 @@ class _ProfileLoginRequired extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 18),
-              const Text(
+              Text(
                 'Seu espaço no Clube',
-                style: TextStyle(
-                  fontFamily: 'Barlow Condensed',
-                  fontSize: 25,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                    ),
               ),
               const SizedBox(height: 7),
               const Text(
                 'Entre para acessar seus dados, agenda e favoritos.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.muted),
+                style: TextStyle(
+                  color: AppColors.muted,
+                  fontSize: 14,
+                  height: 1.45,
+                ),
               ),
               const SizedBox(height: 20),
               FilledButton(

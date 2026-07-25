@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:clubedaregua_shared/clubedaregua_shared.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
+import '../core/app_constants.dart';
 import '../providers/app_state.dart';
 import '../services/app_mode_navigation.dart';
 import '../theme/app_colors.dart';
@@ -18,22 +21,27 @@ class ModeSelectionScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(22, 30, 22, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.workspace_premium_rounded,
-                  color: AppColors.orange, size: 42),
-              const SizedBox(height: 22),
-              const Text(
-                'Como você quer entrar?',
-                style: TextStyle(
-                  fontFamily: 'Barlow Condensed',
-                  fontSize: 34,
-                  height: 1,
-                  fontWeight: FontWeight.w700,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 28, 20, 28),
+              children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: SvgPicture.asset(
+                  AppConstants.brandV3SecondaryLogo,
+                  width: 112,
+                  semanticsLabel: 'Clube da Régua',
                 ),
+              ),
+              const SizedBox(height: 28),
+              Text(
+                'Como você quer entrar?',
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w800,
+                    ),
               ),
               const SizedBox(height: 10),
               Text(
@@ -75,13 +83,18 @@ class ModeSelectionScreen extends StatelessWidget {
                   ),
                 ),
               ],
-              const Spacer(),
+              const SizedBox(height: 28),
               const Text(
                 'Você poderá trocar de modo novamente pelo seu perfil.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.muted, fontSize: 11),
+                style: TextStyle(
+                  color: AppColors.muted,
+                  fontSize: 13,
+                  height: 1.4,
+                ),
               ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -156,8 +169,14 @@ class _ModeCard extends StatelessWidget {
                   children: [
                     Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
                     const SizedBox(height: 5),
-                    Text(description,
-                        style: const TextStyle(color: AppColors.muted, fontSize: 12, height: 1.35)),
+                    Text(
+                      description,
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 13,
+                        height: 1.4,
+                      ),
+                    ),
                   ],
                 ),
               ),

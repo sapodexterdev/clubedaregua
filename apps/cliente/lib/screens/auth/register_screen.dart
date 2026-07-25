@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:clubedaregua_shared/clubedaregua_shared.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
+import '../../core/app_constants.dart';
 import '../../providers/app_state.dart';
 import '../../screens/client/home_screen.dart';
 import '../../services/auth_service.dart';
@@ -84,47 +86,78 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(),
-      body: ListView(
-        padding: const EdgeInsets.all(22),
-        children: [
-          const Text(
-            'Criar conta',
-            style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900),
+      body: SafeArea(
+        top: false,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+              children: [
+                Center(
+                  child: SvgPicture.asset(
+                    AppConstants.brandV3SecondaryLogo,
+                    width: 104,
+                    semanticsLabel: 'Clube da Régua',
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Crie sua conta',
+                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Faça parte do Clube para encontrar barbearias e organizar seus agendamentos.',
+                  style: TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 15,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                CDRTextField(
+                  controller: nameController,
+                  label: 'Nome completo',
+                  leading: Icons.person_outline_rounded,
+                  textInputAction: TextInputAction.next,
+                  autofillHints: const [AutofillHints.name],
+                ),
+                const SizedBox(height: 14),
+                CDRTextField(
+                  controller: emailController,
+                  label: 'E-mail',
+                  leading: Icons.mail_outline_rounded,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  autofillHints: const [AutofillHints.email],
+                ),
+                const SizedBox(height: 14),
+                CDRPasswordField(
+                  controller: passwordController,
+                  onSubmitted: isLoading ? null : (_) => _register(),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Use pelo menos 6 caracteres.',
+                  style: TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 22),
+                CDRButton.primary(
+                  label: 'Criar conta',
+                  onPressed: isLoading ? null : _register,
+                  isLoading: isLoading,
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Entre para o clube e acumule pontos a cada corte.',
-            style: TextStyle(color: AppColors.muted),
-          ),
-          const SizedBox(height: 28),
-          CDRTextField(
-            controller: nameController,
-            label: 'Nome completo',
-            leading: Icons.person_outline_rounded,
-            textInputAction: TextInputAction.next,
-            autofillHints: const [AutofillHints.name],
-          ),
-          const SizedBox(height: 14),
-          CDRTextField(
-            controller: emailController,
-            label: 'E-mail',
-            leading: Icons.mail_outline_rounded,
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.next,
-            autofillHints: const [AutofillHints.email],
-          ),
-          const SizedBox(height: 14),
-          CDRPasswordField(
-            controller: passwordController,
-            onSubmitted: isLoading ? null : (_) => _register(),
-          ),
-          const SizedBox(height: 24),
-          CDRButton.primary(
-            label: 'CRIAR CONTA',
-            onPressed: isLoading ? null : _register,
-            isLoading: isLoading,
-          ),
-        ],
+        ),
       ),
     );
   }
