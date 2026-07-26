@@ -55,7 +55,7 @@ create or replace function public.create_shop_invitation(
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   normalized_email text := lower(trim(coalesce(p_email, '')));
@@ -193,7 +193,7 @@ create or replace function public.accept_shop_invitation(p_token text)
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   invitation public.shop_invitations%rowtype;
