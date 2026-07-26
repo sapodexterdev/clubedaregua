@@ -152,7 +152,9 @@ class _SplashScreenState extends State<SplashScreen>
         return;
       }
       route = state.isSignedIn &&
-              state.hasProfessionalAccess &&
+              (state.hasProfessionalAccess ||
+                  state.teamInvitationMessage != null ||
+                  state.teamInvitationError != null) &&
               lastMode != 'client'
           ? ModeSelectionScreen.route
           : HomeScreen.route;
