@@ -4754,9 +4754,9 @@ class _AvailabilityDayTile extends StatelessWidget {
                   ],
                 ),
               ),
-              Switch(
+              _CDRSwitch(
                 value: day.isActive,
-                activeColor: SharedAppColors.orange,
+                semanticLabel: '${day.label}: atendimento',
                 onChanged: enabled
                     ? (value) => onChanged(day.copyWith(isActive: value))
                     : null,
@@ -5087,15 +5087,13 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
               ),
             ),
             const SizedBox(height: 12),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
+            _CDRToggleTile(
               value: _isActive,
-              activeColor: SharedAppColors.orange,
               onChanged: _isSaving || !customer.canEdit
                   ? null
                   : (value) => setState(() => _isActive = value),
-              title: const Text('Cliente ativo'),
-              subtitle: const Text('Clientes inativos ficam filtráveis.'),
+              title: 'Cliente ativo',
+              subtitle: 'Clientes inativos ficam filtráveis.',
             ),
             const SizedBox(height: 12),
             if (!customer.canEdit)
@@ -5892,15 +5890,13 @@ class _ServiceFormState extends State<_ServiceForm> {
               ),
             ),
             const SizedBox(height: 12),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
+            _CDRToggleTile(
               value: _isActive,
-              activeColor: SharedAppColors.orange,
               onChanged: _isSaving
                   ? null
                   : (value) => setState(() => _isActive = value),
-              title: const Text('Serviço ativo'),
-              subtitle: const Text('Serviços inativos deixam de aparecer.'),
+              title: 'Serviço ativo',
+              subtitle: 'Serviços inativos deixam de aparecer.',
             ),
             const SizedBox(height: 12),
             CDRButton.primary(
@@ -6340,15 +6336,13 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
               ],
             ),
             const SizedBox(height: 12),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
+            _CDRToggleTile(
               value: _isActive,
-              activeColor: SharedAppColors.orange,
               onChanged: _isSaving
                   ? null
                   : (value) => setState(() => _isActive = value),
-              title: const Text('Agenda ativa'),
-              subtitle: const Text('Barbeiros inativos deixam de aparecer.'),
+              title: 'Agenda ativa',
+              subtitle: 'Barbeiros inativos deixam de aparecer.',
             ),
             const SizedBox(height: 12),
             CDRButton.primary(
@@ -6869,17 +6863,11 @@ class _SettingsFormState extends State<_SettingsForm> {
                   onChanged: (day) => setState(() => _days[index] = day),
                 ),
               const Divider(color: SharedAppColors.stroke, height: 28),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
+              _CDRToggleTile(
                 value: _applyHoursToTeam,
-                activeColor: SharedAppColors.orange,
-                title: const Text(
-                  'Aplicar à agenda dos profissionais',
-                  style: TextStyle(fontWeight: FontWeight.w800),
-                ),
-                subtitle: const Text(
-                  'Substitui a disponibilidade semanal dos barbeiros ativos pelos horários acima.',
-                ),
+                title: 'Aplicar à agenda dos profissionais',
+                subtitle:
+                    'Substitui a disponibilidade semanal dos barbeiros ativos pelos horários acima.',
                 onChanged: (value) =>
                     setState(() => _applyHoursToTeam = value),
               ),
@@ -6893,12 +6881,10 @@ class _SettingsFormState extends State<_SettingsForm> {
           const SizedBox(height: 12),
           _SettingsCard(
             children: [
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
+              _CDRToggleTile(
                 value: _lunchEnabled,
-                activeColor: SharedAppColors.orange,
-                title: const Text('Almoço'),
-                subtitle: const Text('Bloqueia intervalo recorrente.'),
+                title: 'Almoço',
+                subtitle: 'Bloqueia intervalo recorrente.',
                 onChanged: (value) => setState(() => _lunchEnabled = value),
               ),
               _ResponsiveFieldRow(
@@ -7216,6 +7202,157 @@ class _ResponsiveFieldRow extends StatelessWidget {
   }
 }
 
+class _CDRSwitch extends StatelessWidget {
+  const _CDRSwitch({
+    required this.value,
+    required this.onChanged,
+    required this.semanticLabel,
+  });
+
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+  final String semanticLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onChanged != null;
+    return Semantics(
+      label: semanticLabel,
+      toggled: value,
+      enabled: enabled,
+      button: true,
+      child: Opacity(
+        opacity: enabled ? 1 : .48,
+        child: InkWell(
+          onTap: enabled ? () => onChanged!(!value) : null,
+          borderRadius: BorderRadius.circular(18),
+          child: SizedBox(
+            width: 58,
+            height: 48,
+            child: Center(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                width: 52,
+                height: 30,
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: value
+                      ? SharedAppColors.orange
+                      : SharedAppColors.dark,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: value
+                        ? SharedAppColors.orange
+                        : SharedAppColors.stroke,
+                  ),
+                  boxShadow: value
+                      ? [
+                          BoxShadow(
+                            color: SharedAppColors.orange.withOpacity(.18),
+                            blurRadius: 10,
+                            spreadRadius: 1,
+                          ),
+                        ]
+                      : null,
+                ),
+                child: AnimatedAlign(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOutCubic,
+                  alignment:
+                      value ? Alignment.centerRight : Alignment.centerLeft,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: value
+                          ? SharedAppColors.onGold
+                          : SharedAppColors.muted,
+                      shape: BoxShape.circle,
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x33000000),
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: value
+                        ? const Icon(
+                            Icons.check_rounded,
+                            size: 16,
+                            color: SharedAppColors.orange,
+                          )
+                        : null,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CDRToggleTile extends StatelessWidget {
+  const _CDRToggleTile({
+    required this.value,
+    required this.title,
+    required this.subtitle,
+    required this.onChanged,
+  });
+
+  final bool value;
+  final String title;
+  final String subtitle;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onChanged != null;
+    return InkWell(
+      onTap: enabled ? () => onChanged!(!value) : null,
+      borderRadius: BorderRadius.circular(14),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: Opacity(
+                opacity: enabled ? 1 : .55,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            _CDRSwitch(
+              value: value,
+              onChanged: onChanged,
+              semanticLabel: title,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _SettingsCard extends StatelessWidget {
   const _SettingsCard({required this.children});
 
@@ -7251,13 +7388,6 @@ class _SettingsCard extends StatelessWidget {
                 bodyColor: SharedAppColors.text,
                 displayColor: SharedAppColors.text,
               ),
-          switchTheme: SwitchThemeData(
-            thumbColor: WidgetStateProperty.resolveWith(
-              (states) => states.contains(WidgetState.selected)
-                  ? SharedAppColors.orange
-                  : SharedAppColors.muted,
-            ),
-          ),
         ),
         child: DefaultTextStyle.merge(
           style: const TextStyle(color: SharedAppColors.text),
@@ -7286,12 +7416,10 @@ class _BusinessDayEditor extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(
         children: [
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
+          _CDRToggleTile(
             value: day.isOpen,
-            activeColor: SharedAppColors.orange,
-            title: Text(day.label),
-            subtitle: Text(day.isOpen ? 'Aberto' : 'Fechado'),
+            title: day.label,
+            subtitle: day.isOpen ? 'Aberto' : 'Fechado',
             onChanged: (value) => onChanged(day.copyWith(isOpen: value)),
           ),
           Row(
