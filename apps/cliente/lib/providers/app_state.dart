@@ -237,6 +237,8 @@ class AppState extends ChangeNotifier {
     notificationsLoadError = null;
     notifyListeners();
 
+    await _teamInvitationRepository.capturePendingInvitation();
+
     final barbersFuture = _barberRepository.fetchBarbers();
     final categoriesFuture = _barberRepository.fetchCategories();
     final servicesFuture = _barberRepository.fetchServices();
