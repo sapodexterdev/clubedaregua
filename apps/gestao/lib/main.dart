@@ -2271,7 +2271,11 @@ class ManagementSession extends ChangeNotifier {
       }
       final inviteUri = Uri.base.replace(
         path: '/',
-        queryParameters: {'team_invite': rawInviteToken},
+        queryParameters: {
+          'team_invite': rawInviteToken,
+          'invite_email':
+              invitation['email']?.toString() ?? email.trim().toLowerCase(),
+        },
         fragment: '',
       );
       return TeamInvitationLink(
