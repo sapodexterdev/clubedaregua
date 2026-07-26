@@ -351,10 +351,12 @@ class TeamInvitationLink {
   const TeamInvitationLink({
     required this.email,
     required this.url,
+    this.setupWarning,
   });
 
   final String email;
   final String url;
+  final String? setupWarning;
 }
 
 class ScheduleEntry {
@@ -2223,64 +2225,81 @@ class ManagementSession extends ChangeNotifier {
         throw StateError('O convite foi criado sem os dados necessários.');
       }
 
-      final rows = await _getRestRows(
-        token,
-        'barbers',
-        query: {
-          'select':
-              'id,barber_shop_id,user_id,name,bio,photo_url,starting_price,commission_percent,is_active',
-          'id': 'eq.$barberId',
-          'limit': '1',
-        },
-      );
-      final created = rows.isEmpty ? null : TeamBarber.fromMap(rows.first);
-      if (created != null) {
-        await _postRpc(
-          token,
-          'replace_barber_weekly_schedule',
-          data: {
-            'p_barber_id': created.id,
-            'p_days': [
-              for (final day in BarberAvailabilityDay.defaults())
-                {
-                  'weekday': day.weekday,
-                  'is_active': day.isActive,
-                  'start_time': day.startTime,
-                  'end_time': day.endTime,
-                  'slot_minutes': day.slotMinutes,
-                },
-            ],
-          },
-        );
-        for (final service in services.where((item) => item.isActive)) {
-          await _postRestRows(
-            token,
-            'barber_services',
-            data: {
-              'barber_shop_id': shopId,
-              'barber_id': created.id,
-              'service_id': service.id,
-              'is_active': true,
-            },
-          );
-        }
-        teamBarbers = [...teamBarbers, created]
-          ..sort((a, b) => a.name.compareTo(b.name));
-      } else {
-        await fetchTeamBarbers();
-      }
+      final invitedEmail =
+          invitation['email']?.toString() ?? email.trim().toLowerCase();
       final inviteUri = Uri.base.replace(
         path: '/',
         queryParameters: {
           'team_invite': rawInviteToken,
-          'invite_email':
-              invitation['email']?.toString() ?? email.trim().toLowerCase(),
+          'invite_email': invitedEmail,
         },
         fragment: '',
       );
+      String? setupWarning;
+
+      try {
+        final rows = await _getRestRows(
+          token,
+          'barbers',
+          query: {
+            'select':
+                'id,barber_shop_id,user_id,name,bio,photo_url,starting_price,commission_percent,is_active',
+            'id': 'eq.$barberId',
+            'limit': '1',
+          },
+        );
+        final created = rows.isEmpty ? null : TeamBarber.fromMap(rows.first);
+        if (created != null) {
+          teamBarbers = [
+            for (final item in teamBarbers)
+              if (item.id != created.id) item,
+            created,
+          ]..sort((a, b) => a.name.compareTo(b.name));
+
+          await _postRpc(
+            token,
+            'replace_barber_weekly_schedule',
+            data: {
+              'p_barber_id': created.id,
+              'p_days': [
+                for (final day in BarberAvailabilityDay.defaults())
+                  {
+                    'weekday': day.weekday,
+                    'is_active': day.isActive,
+                    'start_time': day.startTime,
+                    'end_time': day.endTime,
+                    'slot_minutes': day.slotMinutes,
+                  },
+              ],
+            },
+          );
+          for (final service in services.where((item) => item.isActive)) {
+            await _postRestRows(
+              token,
+              'barber_services',
+              data: {
+                'barber_shop_id': shopId,
+                'barber_id': created.id,
+                'service_id': service.id,
+                'is_active': true,
+              },
+            );
+          }
+        } else {
+          setupWarning =
+              'O convite foi criado, mas atualize a equipe para conferir o profissional.';
+        }
+      } catch (error) {
+        setupWarning =
+            'O convite foi criado. Revise os serviços e horários do profissional antes de liberar a agenda.';
+        await fetchTeamBarbers();
+      }
+
+      errorMessage = null;
       return TeamInvitationLink(
-        email: invitation['email']?.toString() ?? email.trim().toLowerCase(),
+        email: invitedEmail,
         url: inviteUri.toString(),
+        setupWarning: setupWarning,
       );
     } catch (error) {
       errorMessage = _cleanErrorMessage(error);
@@ -6438,6 +6457,36 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
                 fontSize: 12,
               ),
             ),
+            if (invitation.setupWarning != null) ...[
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: SharedAppColors.orange.withOpacity(.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: SharedAppColors.orange.withOpacity(.35),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.info_outline_rounded,
+                      color: SharedAppColors.orange,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        invitation.setupWarning!,
+                        style: const TextStyle(fontSize: 12, height: 1.4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
         actions: [
