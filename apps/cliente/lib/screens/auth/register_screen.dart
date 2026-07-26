@@ -26,6 +26,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final authService = AuthService();
   bool isLoading = false;
 
+  bool get _hasTeamInvitation =>
+      Uri.base.queryParameters['team_invite']?.trim().isNotEmpty == true;
+
+  @override
+  void initState() {
+    super.initState();
+    emailController.text =
+        Uri.base.queryParameters['invite_email']?.trim() ?? '';
+  }
+
   @override
   void dispose() {
     nameController.dispose();
@@ -69,7 +79,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         navigator.pushReplacementNamed(
           returnRoute is String
               ? returnRoute
-              : appState.hasProfessionalAccess
+              : appState.hasProfessionalAccess ||
+                      appState.teamInvitationMessage != null ||
+                      appState.teamInvitationError != null
                   ? ModeSelectionScreen.route
                   : HomeScreen.route,
         );
@@ -114,16 +126,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Crie sua conta',
+                  _hasTeamInvitation
+                      ? 'Crie sua conta profissional'
+                      : 'Crie sua conta',
                   style: Theme.of(context).textTheme.displaySmall?.copyWith(
                         fontSize: 32,
                         fontWeight: FontWeight.w800,
                       ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Faça parte do Clube para encontrar barbearias e organizar seus agendamentos.',
-                  style: TextStyle(
+                Text(
+                  _hasTeamInvitation
+                      ? 'Use o mesmo e-mail do convite. Após a confirmação, o acesso à equipe será liberado automaticamente.'
+                      : 'Faça parte do Clube para encontrar barbearias e organizar seus agendamentos.',
+                  style: const TextStyle(
                     color: AppColors.muted,
                     fontSize: 15,
                     height: 1.5,
