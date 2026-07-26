@@ -26,6 +26,16 @@ class _LoginScreenState extends State<LoginScreen> {
   final authService = AuthService();
   bool isLoading = false;
 
+  bool get _hasTeamInvitation =>
+      Uri.base.queryParameters['team_invite']?.trim().isNotEmpty == true;
+
+  @override
+  void initState() {
+    super.initState();
+    emailController.text =
+        Uri.base.queryParameters['invite_email']?.trim() ?? '';
+  }
+
   @override
   void dispose() {
     emailController.dispose();
@@ -51,7 +61,9 @@ class _LoginScreenState extends State<LoginScreen> {
           context,
           returnRoute is String
               ? returnRoute
-              : context.read<AppState>().hasProfessionalAccess
+              : context.read<AppState>().hasProfessionalAccess ||
+                      context.read<AppState>().teamInvitationMessage != null ||
+                      context.read<AppState>().teamInvitationError != null
                   ? ModeSelectionScreen.route
                   : HomeScreen.route,
         );
@@ -125,16 +137,20 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 30),
                 Text(
-                  'Bem-vindo de volta',
+                  _hasTeamInvitation
+                      ? 'Acesse seu convite'
+                      : 'Bem-vindo de volta',
                   style: Theme.of(context).textTheme.displaySmall?.copyWith(
                         fontSize: 32,
                         fontWeight: FontWeight.w800,
                       ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Entre para agendar, acompanhar seus horários e acessar seu perfil.',
-                  style: TextStyle(
+                Text(
+                  _hasTeamInvitation
+                      ? 'Entre com o e-mail convidado para liberar seu acesso profissional.'
+                      : 'Entre para agendar, acompanhar seus horários e acessar seu perfil.',
+                  style: const TextStyle(
                     color: AppColors.muted,
                     fontSize: 15,
                     height: 1.5,
