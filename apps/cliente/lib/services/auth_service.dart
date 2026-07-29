@@ -9,14 +9,36 @@ import 'auth_callback_url.dart';
 class AuthService {
   static const _sessionKey = 'clubedaregua.client.session';
   static AuthSession? _currentSession;
+  static Future<AuthSession?>? _restoreInProgress;
 
   AuthSession? get currentSession => _currentSession;
   AuthUser? get currentUser => _currentSession?.user;
   bool get isSignedIn => _currentSession?.accessToken.isNotEmpty == true;
 
   Future<AuthSession?> restoreSession() async {
-    final callbackSession = await _consumeAuthCallback();
-    if (callbackSession != null) return callbackSession;
+    final currentRestore = _restoreInProgress;
+    if (currentRestore != null) return currentRestore;
+
+    final restore = _restoreSessionSafely();
+    _restoreInProgress = restore;
+    try {
+      return await restore;
+    } finally {
+      if (identical(_restoreInProgress, restore)) {
+        _restoreInProgress = null;
+      }
+    }
+  }
+
+  Future<AuthSession?> _restoreSessionSafely() async {
+    try {
+      final callbackSession = await _consumeAuthCallback();
+      if (callbackSession != null) return callbackSession;
+    } catch (_) {
+      clearAuthCallbackUrl();
+      await _clearLocalSession();
+      return null;
+    }
 
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_sessionKey);
@@ -28,13 +50,17 @@ class AuthService {
       _currentSession = session;
 
       if (session.isExpired && session.refreshToken.isNotEmpty) {
-        return refreshSession();
+        try {
+          return await refreshSession();
+        } catch (_) {
+          await _clearLocalSession();
+          return null;
+        }
       }
 
       return session;
     } catch (_) {
-      await prefs.remove(_sessionKey);
-      _currentSession = null;
+      await _clearLocalSession();
       return null;
     }
   }
@@ -112,7 +138,12 @@ class AuthService {
       body: jsonEncode({'refresh_token': refreshToken}),
     );
 
-    if (!_isSuccess(response)) throw AuthException.fromResponse(response);
+    if (!_isSuccess(response)) {
+      if (response.statusCode == 400 || response.statusCode == 401) {
+        await _clearLocalSession();
+      }
+      throw AuthException.fromResponse(response);
+    }
 
     final session = AuthSession.fromMap(
       jsonDecode(response.body) as Map<String, dynamic>,
@@ -157,6 +188,12 @@ class AuthService {
     _currentSession = session;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_sessionKey, jsonEncode(session.toMap()));
+  }
+
+  Future<void> _clearLocalSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_sessionKey);
+    _currentSession = null;
   }
 
   Future<AuthSession?> _consumeAuthCallback() async {
