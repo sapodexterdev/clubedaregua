@@ -1893,7 +1893,11 @@ class ManagementSession extends ChangeNotifier {
   Future<String> uploadShopMedia(LogoFile file,
       {required String folder}) async {
     final token = _accessToken;
-    if (token == null) return '';
+    if (token == null) {
+      throw StateError(
+        'Sua sessão expirou. Entre novamente para enviar a imagem.',
+      );
+    }
 
     final shopId = await _ensureBarberShopId(token);
     final safeFolder = folder
@@ -1927,6 +1931,31 @@ class ManagementSession extends ChangeNotifier {
     }
 
     return '${GestaoSupabaseConfig.url}/storage/v1/object/public/shop-media/$objectPath';
+  }
+
+  Future<void> saveShopMediaUrl({
+    String? logoUrl,
+    String? coverUrl,
+  }) async {
+    final token = _accessToken;
+    if (token == null) {
+      throw StateError(
+        'Sua sessão expirou. Entre novamente para salvar a imagem.',
+      );
+    }
+
+    final shopId = await _ensureBarberShopId(token);
+    final data = <String, dynamic>{};
+    if (logoUrl != null) data['logo_url'] = logoUrl.trim();
+    if (coverUrl != null) data['cover_url'] = coverUrl.trim();
+    if (data.isEmpty) return;
+
+    await _patchRestRows(
+      token,
+      'barber_shops',
+      query: {'id': 'eq.$shopId'},
+      data: data,
+    );
   }
 
   String? _firstOpenTime(List<ShopBusinessDay> days) {
@@ -7019,10 +7048,11 @@ class _SettingsFormState extends State<_SettingsForm> {
       final file = await pickLogoFile();
       if (file == null) return;
       final url = await session.uploadShopMedia(file, folder: 'logos');
-      if (!mounted || url.isEmpty) return;
+      await session.saveShopMediaUrl(logoUrl: url);
+      if (!mounted) return;
       setState(() => _logoController.text = url);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Logo enviada com sucesso.')),
+        const SnackBar(content: Text('Logo enviada e salva com sucesso.')),
       );
     } catch (error) {
       if (!mounted) return;
@@ -7041,10 +7071,13 @@ class _SettingsFormState extends State<_SettingsForm> {
       final file = await pickLogoFile();
       if (file == null) return;
       final url = await session.uploadShopMedia(file, folder: 'banners');
-      if (!mounted || url.isEmpty) return;
+      await session.saveShopMediaUrl(coverUrl: url);
+      if (!mounted) return;
       setState(() => _coverController.text = url);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Foto de capa enviada com sucesso.')),
+        const SnackBar(
+          content: Text('Foto de capa enviada e salva com sucesso.'),
+        ),
       );
     } catch (error) {
       if (!mounted) return;
