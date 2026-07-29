@@ -183,6 +183,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       _DiscoverySection(
                         title: 'Destaque para você',
                         shops: [featured],
+                        viewAllTitle: 'Todas as barbearias',
+                        viewAllShops: shops,
                       ),
                     if (openShops.isNotEmpty)
                       _DiscoverySection(
@@ -657,11 +659,15 @@ class _DiscoverySection extends StatelessWidget {
     required this.title,
     required this.shops,
     this.compact = false,
+    this.viewAllTitle,
+    this.viewAllShops,
   });
 
   final String title;
   final List<PublicBarbershop> shops;
   final bool compact;
+  final String? viewAllTitle;
+  final List<PublicBarbershop>? viewAllShops;
 
   @override
   Widget build(BuildContext context) {
@@ -726,8 +732,8 @@ class _DiscoverySection extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: AppColors.background,
       builder: (context) => _AllBarbershopsSheet(
-        title: title,
-        shops: shops,
+        title: viewAllTitle ?? title,
+        shops: viewAllShops ?? shops,
       ),
     );
   }
@@ -807,14 +813,28 @@ class _AllBarbershopsSheet extends StatelessWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        title,
-                        style: const TextStyle(
-                          color: AppColors.text,
-                          fontSize: 26,
-                          height: 1.2,
-                          fontWeight: FontWeight.w800,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              color: AppColors.text,
+                              fontSize: 26,
+                              height: 1.2,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            '${shops.length} ${shops.length == 1 ? 'barbearia disponível' : 'barbearias disponíveis'}',
+                            style: const TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     IconButton(
