@@ -28,6 +28,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Timer? _notificationRefreshTimer;
+  Timer? _resumeRefreshTimer;
+  bool _isForeground = true;
 
   @override
   void initState() {
@@ -36,26 +38,47 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refreshNotificationCount();
     });
-    _notificationRefreshTimer = Timer.periodic(
-      const Duration(seconds: 8),
-      (_) => _refreshNotificationCount(),
-    );
+    _startNotificationRefresh();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _notificationRefreshTimer?.cancel();
+    _resumeRefreshTimer?.cancel();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _refreshNotificationCount();
+    if (state == AppLifecycleState.resumed) {
+      _isForeground = true;
+      _startNotificationRefresh();
+      _resumeRefreshTimer?.cancel();
+      _resumeRefreshTimer = Timer(
+        const Duration(milliseconds: 700),
+        _refreshNotificationCount,
+      );
+      return;
+    }
+
+    _isForeground = false;
+    _notificationRefreshTimer?.cancel();
+    _notificationRefreshTimer = null;
+    _resumeRefreshTimer?.cancel();
+    PaintingBinding.instance.imageCache.clearLiveImages();
+  }
+
+  void _startNotificationRefresh() {
+    _notificationRefreshTimer?.cancel();
+    _notificationRefreshTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _refreshNotificationCount(),
+    );
   }
 
   void _refreshNotificationCount() {
-    if (!mounted) return;
+    if (!mounted || !_isForeground) return;
     context.read<AppState>().refreshNotifications();
   }
 
