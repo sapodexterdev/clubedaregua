@@ -1914,16 +1914,23 @@ class ManagementSession extends ChangeNotifier {
       '${GestaoSupabaseConfig.url}/storage/v1/object/shop-media/$objectPath',
     );
 
-    final response = await http.post(
-      uri,
-      headers: {
-        'apikey': GestaoSupabaseConfig.anonKey,
-        'authorization': 'Bearer $token',
-        'content-type': file.contentType,
-        'x-upsert': 'true',
-      },
-      body: file.bytes,
-    );
+    final response = await http
+        .post(
+          uri,
+          headers: {
+            'apikey': GestaoSupabaseConfig.anonKey,
+            'authorization': 'Bearer $token',
+            'content-type': file.contentType,
+            'x-upsert': 'true',
+          },
+          body: file.bytes,
+        )
+        .timeout(
+          const Duration(seconds: 90),
+          onTimeout: () => throw StateError(
+            'O envio demorou mais que o esperado. Verifique sua conexão e tente novamente.',
+          ),
+        );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw StateError(
