@@ -17,6 +17,10 @@ class ShopIdentity {
     required this.address,
     required this.city,
     required this.state,
+    this.latitude,
+    this.longitude,
+    this.openingTime = '',
+    this.closingTime = '',
     required this.secondaryColor,
     required this.bookingIntervalMinutes,
     required this.bookingDaysAhead,
@@ -36,6 +40,10 @@ class ShopIdentity {
   final String address;
   final String city;
   final String state;
+  final double? latitude;
+  final double? longitude;
+  final String openingTime;
+  final String closingTime;
   final String secondaryColor;
   final int bookingIntervalMinutes;
   final int bookingDaysAhead;
@@ -46,6 +54,32 @@ class ShopIdentity {
   String get locationLabel {
     final parts = [city, state].where((part) => part.trim().isNotEmpty);
     return parts.isEmpty ? 'Barbearia parceira' : parts.join(' - ');
+  }
+
+  bool get hasCoordinates => latitude != null && longitude != null;
+
+  bool get isOpenNow {
+    final opening = _minutesFromTime(openingTime);
+    final closing = _minutesFromTime(closingTime);
+    if (opening == null || closing == null) return false;
+    final now = DateTime.now();
+    final current = now.hour * 60 + now.minute;
+    if (closing > opening) return current >= opening && current < closing;
+    return current >= opening || current < closing;
+  }
+
+  String get openingHoursLabel {
+    final opening = _displayTime(openingTime);
+    final closing = _displayTime(closingTime);
+    if (opening.isEmpty || closing.isEmpty) return 'Horário não informado';
+    return '$opening–$closing';
+  }
+
+  String get currentHoursDetail {
+    final opening = _displayTime(openingTime);
+    final closing = _displayTime(closingTime);
+    if (opening.isEmpty || closing.isEmpty) return 'Consulte os horários';
+    return isOpenNow ? 'Fecha às $closing' : 'Abre às $opening';
   }
 
   factory ShopIdentity.fromRows({
@@ -68,6 +102,10 @@ class ShopIdentity {
       address: shop['address']?.toString() ?? '',
       city: shop['city']?.toString() ?? '',
       state: shop['state']?.toString() ?? '',
+      latitude: _asDouble(shop['latitude']),
+      longitude: _asDouble(shop['longitude']),
+      openingTime: shop['opening_time']?.toString() ?? '',
+      closingTime: shop['closing_time']?.toString() ?? '',
       secondaryColor: settingsJson['secondary_color']?.toString() ?? '#F3B200',
       bookingIntervalMinutes: int.tryParse(
               settings?['booking_interval_minutes']?.toString() ?? '') ??
@@ -84,6 +122,26 @@ class ShopIdentity {
       minCancelHours:
           int.tryParse(settings?['min_cancel_hours']?.toString() ?? '') ?? 2,
     );
+  }
+
+  static double? _asDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '');
+  }
+
+  static int? _minutesFromTime(String value) {
+    final parts = value.split(':');
+    if (parts.length < 2) return null;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return null;
+    return hour * 60 + minute;
+  }
+
+  static String _displayTime(String value) {
+    final parts = value.split(':');
+    if (parts.length < 2) return '';
+    return '${parts[0].padLeft(2, '0')}:${parts[1].padLeft(2, '0')}';
   }
 }
 
@@ -119,7 +177,9 @@ class PublicBarbershop {
     return 'R\$ $min - R\$ $max';
   }
 
-  String get distanceLabel => '${distanceKm.toStringAsFixed(1)} km';
+  String get distanceLabel => distanceKm.isFinite
+      ? '${distanceKm.toStringAsFixed(1)} km'
+      : 'Distância indisponível';
   String get statusLabel => isOpen ? 'Aberto' : 'Fechado';
 }
 
@@ -179,7 +239,7 @@ class BarberRepository {
     try {
       final shops = await _rest.getRows(
         'barber_shops',
-        select: 'id,name,phone,whatsapp,address,city,state,logo_url,cover_url',
+        select: 'id,name,phone,whatsapp,address,city,state,latitude,longitude,opening_time,closing_time,logo_url,cover_url',
         filters: {
           'is_active': 'eq.true',
           if (barberShopId != null && barberShopId.isNotEmpty)
@@ -235,7 +295,7 @@ class BarberRepository {
     try {
       final shops = await _rest.getRows(
         'barber_shops',
-        select: 'id,name,phone,whatsapp,address,city,state,logo_url,cover_url',
+        select: 'id,name,phone,whatsapp,address,city,state,latitude,longitude,opening_time,closing_time,logo_url,cover_url',
         filters: const {'is_active': 'eq.true'},
         order: 'name.asc',
       );
@@ -259,7 +319,7 @@ class BarberRepository {
       }
       return identities;
     } catch (_) {
-      return const [];
+      rethrow;
     }
   }
 

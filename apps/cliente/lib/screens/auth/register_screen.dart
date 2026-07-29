@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:clubedaregua_shared/clubedaregua_shared.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
+import '../../core/app_constants.dart';
 import '../../providers/app_state.dart';
 import '../../screens/client/home_screen.dart';
+import '../../screens/mode_selection_screen.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/primary_button.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -22,6 +25,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final passwordController = TextEditingController();
   final authService = AuthService();
   bool isLoading = false;
+
+  bool get _hasTeamInvitation =>
+      Uri.base.queryParameters['team_invite']?.trim().isNotEmpty == true;
+
+  @override
+  void initState() {
+    super.initState();
+    emailController.text =
+        Uri.base.queryParameters['invite_email']?.trim() ?? '';
+  }
 
   @override
   void dispose() {
@@ -64,7 +77,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         appState.requireSignedIn();
         final returnRoute = ModalRoute.of(context)?.settings.arguments;
         navigator.pushReplacementNamed(
-          returnRoute is String ? returnRoute : HomeScreen.route,
+          returnRoute is String
+              ? returnRoute
+              : appState.hasProfessionalAccess ||
+                      appState.teamInvitationMessage != null ||
+                      appState.teamInvitationError != null
+                  ? ModeSelectionScreen.route
+                  : HomeScreen.route,
         );
       }
     } catch (error) {
@@ -83,41 +102,89 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(),
-      body: ListView(
-        padding: const EdgeInsets.all(22),
-        children: [
-          const Text(
-            'Criar conta',
-            style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900),
+      appBar: AppBar(
+        leadingWidth: 68,
+        leading: const Padding(
+          padding: EdgeInsets.only(left: 16),
+          child: CDRBackButton(),
+        ),
+      ),
+      body: SafeArea(
+        top: false,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+              children: [
+                Center(
+                  child: SvgPicture.asset(
+                    AppConstants.brandV3SecondaryLogo,
+                    width: 104,
+                    semanticsLabel: 'Clube da Régua',
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  _hasTeamInvitation
+                      ? 'Crie sua conta profissional'
+                      : 'Crie sua conta',
+                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _hasTeamInvitation
+                      ? 'Use o mesmo e-mail do convite. Após a confirmação, o acesso à equipe será liberado automaticamente.'
+                      : 'Faça parte do Clube para encontrar barbearias e organizar seus agendamentos.',
+                  style: const TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 15,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                CDRTextField(
+                  controller: nameController,
+                  label: 'Nome completo',
+                  leading: Icons.person_outline_rounded,
+                  textInputAction: TextInputAction.next,
+                  autofillHints: const [AutofillHints.name],
+                ),
+                const SizedBox(height: 14),
+                CDRTextField(
+                  controller: emailController,
+                  label: 'E-mail',
+                  leading: Icons.mail_outline_rounded,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  autofillHints: const [AutofillHints.email],
+                ),
+                const SizedBox(height: 14),
+                CDRPasswordField(
+                  controller: passwordController,
+                  onSubmitted: isLoading ? null : (_) => _register(),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Use pelo menos 6 caracteres.',
+                  style: TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 22),
+                CDRButton.primary(
+                  label: 'Criar conta',
+                  onPressed: isLoading ? null : _register,
+                  isLoading: isLoading,
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Entre para o clube e acumule pontos a cada corte.',
-            style: TextStyle(color: AppColors.muted),
-          ),
-          const SizedBox(height: 28),
-          TextField(
-            controller: nameController,
-            decoration: const InputDecoration(hintText: 'Nome completo'),
-          ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: emailController,
-            decoration: const InputDecoration(hintText: 'Email'),
-          ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: passwordController,
-            obscureText: true,
-            decoration: const InputDecoration(hintText: 'Senha'),
-          ),
-          const SizedBox(height: 24),
-          PrimaryButton(
-            label: isLoading ? 'Cadastrando...' : 'Cadastrar',
-            onPressed: isLoading ? null : _register,
-          ),
-        ],
+        ),
       ),
     );
   }

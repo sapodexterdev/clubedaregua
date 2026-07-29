@@ -48,6 +48,16 @@ Implementacao
 - `UI-004-Onboarding-03`
 - `UI-005-Onboarding-04`
 - `UI-006-Home-Publica`
+- `UI-007-Perfil-Barbearia`
+- `UI-008-Ver-Horarios`
+- `UI-009-Revisar-Agendamento`
+- `UI-010-Solicitacao-Enviada`
+- `UI-011-Agenda`
+- `UI-012-Favoritos`
+- `UI-013-Perfil-Cliente`
+- `UI-014-Notificacoes`
+- `UI-015-Conversao-Agendamento`
+- `UI-016-Gestao-Responsiva`
 
 ## Regra de Implementacao
 

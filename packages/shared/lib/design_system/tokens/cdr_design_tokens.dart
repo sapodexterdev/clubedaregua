@@ -8,6 +8,7 @@ class CDRColorTokens {
   static const night = Color(0xFF09090B);
   static const graphite = Color(0xFF18181B);
   static const graphiteLight = Color(0xFF27272A);
+  static const elevated = Color(0xFF202024);
   static const brandYellow = Color(0xFFF3B200);
   static const brandYellowHover = Color(0xFFFFC62B);
   static const brandYellowPressed = Color(0xFFD99F00);
@@ -15,7 +16,8 @@ class CDRColorTokens {
   static const goldHover = brandYellowHover;
   static const goldPressed = brandYellowPressed;
   static const white = Color(0xFFFFFFFF);
-  static const gray = Color(0xFFA1A1AA);
+  static const gray = Color(0xFFB3B3BC);
+  static const grayStrong = Color(0xFFD4D4D8);
   static const border = Color(0xFF3F3F46);
   static const disabledBackground = Color(0xFF27272A);
   static const disabledForeground = Color(0xFF71717A);
@@ -59,6 +61,17 @@ class CDRSizeTokens {
   static const buttonMinWidth = 64.0;
   static const icon = 20.0;
   static const loader = 18.0;
+  static const touchTarget = 48.0;
+  static const inputHeight = 56.0;
+  static const contentMaxWidth = 720.0;
+}
+
+class CDRBreakpointTokens {
+  const CDRBreakpointTokens._();
+
+  static const compact = 360.0;
+  static const tablet = 600.0;
+  static const desktop = 1024.0;
 }
 
 class CDRDurationTokens {
@@ -73,9 +86,15 @@ class CDRTypographyTokens {
   const CDRTypographyTokens._();
 
   static const button = TextStyle(
-    fontFamily: 'Inter',
     fontSize: 16,
     fontWeight: FontWeight.w700,
     letterSpacing: 0,
+  );
+
+  static const overline = TextStyle(
+    fontSize: 12,
+    height: 1.3,
+    fontWeight: FontWeight.w700,
+    letterSpacing: .3,
   );
 }

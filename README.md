@@ -111,6 +111,11 @@ Implementacao
 
 ## Apps
 
+O produto segue a arquitetura de **app único com modos por perfil**. Durante a
+migração progressiva, Cliente e Gestão ainda são compilados separadamente, mas
+compartilham autenticação e são apresentados ao usuário como uma única
+experiência. Consulte `docs/arquitetura-app-unico.md`.
+
 ### App Cliente
 
 Local: `apps/cliente`

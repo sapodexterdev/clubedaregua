@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 
 import '../../core/app_constants.dart';
 import '../../providers/app_state.dart';
 import '../../repositories/barber_repository.dart';
+import '../../screens/auth/login_screen.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/service_card.dart';
 import 'barber_details_screen.dart';
@@ -19,110 +22,121 @@ class BarbershopProfileScreen extends StatelessWidget {
       builder: (context, state, _) {
         final shop = state.selectedBarbershop;
         if (shop == null) {
-          return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(color: AppColors.orange),
+          return Scaffold(
+            backgroundColor: AppColors.background,
+            appBar: AppBar(
+              backgroundColor: AppColors.background,
+              leadingWidth: 68,
+              leading: const Padding(
+                padding: EdgeInsets.only(left: 16),
+                child: CDRBackButton(),
+              ),
             ),
+            body: const _MissingShop(),
           );
         }
 
-        final coverUrl = shop.identity.coverUrl.isEmpty
-            ? AppConstants.promoBarber
-            : shop.identity.coverUrl;
-
         return Scaffold(
           backgroundColor: AppColors.background,
+          bottomNavigationBar: _ScheduleBar(shop: shop),
           body: CustomScrollView(
             slivers: [
-              SliverAppBar(
-                expandedHeight: 260,
-                pinned: true,
-                backgroundColor: AppColors.background,
-                foregroundColor: AppColors.text,
-                flexibleSpace: FlexibleSpaceBar(
-                  background: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Image.network(coverUrl, fit: BoxFit.cover),
-                      const DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [Colors.black45, AppColors.background],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              _CoverAppBar(
+                shop: shop,
+                favorite: state.isFavorite(shop.identity.id),
+                updating: state.isFavoriteUpdating(shop.identity.id),
+                onFavorite: () async {
+                  if (!state.isSignedIn) {
+                    Navigator.pushNamed(
+                      context,
+                      LoginScreen.route,
+                      arguments: BarbershopProfileScreen.route,
+                    );
+                    return;
+                  }
+                  final success = await state.toggleFavorite(shop);
+                  if (!context.mounted || success) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Não foi possível atualizar o favorito.'),
+                    ),
+                  );
+                },
               ),
               SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(22, 0, 22, 28),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: CDRSizeTokens.contentMaxWidth,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 4, 18, 34),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                       _ProfileHeader(shop: shop),
-                      const SizedBox(height: 22),
-                      _PrimaryScheduleButton(shop: shop),
-                      const SizedBox(height: 26),
-                      _InfoGrid(shop: shop),
-                      const SizedBox(height: 26),
+                      const SizedBox(height: 20),
+                      _QuickFacts(shop: shop),
+                      const SizedBox(height: 28),
                       const _SectionTitle('Sobre'),
                       const SizedBox(height: 10),
-                      Text(
-                        'Barbearia parceira do Clube da Régua, com atendimento por horário marcado, profissionais verificados e experiência premium.',
-                        style: const TextStyle(
-                          color: AppColors.muted,
-                          height: 1.5,
-                          fontWeight: FontWeight.w600,
+                      _AboutShop(shop: shop),
+                      if (_hasContact(shop)) ...[
+                        const SizedBox(height: 28),
+                        const _SectionTitle('Contato e localização'),
+                        const SizedBox(height: 12),
+                        _ContactActions(shop: shop),
+                      ],
+                      if (shop.services.isNotEmpty) ...[
+                        const SizedBox(height: 28),
+                        _SectionHeader(
+                          title: 'Serviços',
+                          caption: '${shop.services.length} disponíveis',
                         ),
-                      ),
-                      const SizedBox(height: 26),
-                      const _SectionTitle('Serviços'),
-                      const SizedBox(height: 12),
-                      ...shop.services.map(
-                        (service) => Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: ServiceCard(
-                            service: service,
-                            isSelected: state.selectedService?.id == service.id,
-                            onTap: () => state.selectService(service),
+                        const SizedBox(height: 12),
+                        ...shop.services.map(
+                          (service) => Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: ServiceCard(
+                              service: service,
+                              isSelected:
+                                  state.selectedService?.id == service.id,
+                              onTap: () => state.selectService(service),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 14),
-                      const _SectionTitle('Profissionais'),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        height: 132,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: shop.barbers.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(width: 12),
-                          itemBuilder: (context, index) {
-                            final barber = shop.barbers[index];
-                            return _ProfessionalCard(
-                              name: barber.name,
-                              imageUrl: barber.imageUrl,
-                              rating: barber.rating,
-                              selected: state.selectedBarber?.id == barber.id,
-                              onTap: () => state.selectBarber(barber),
-                            );
-                          },
+                      ],
+                      if (shop.barbers.isNotEmpty) ...[
+                        const SizedBox(height: 22),
+                        _SectionHeader(
+                          title: 'Profissionais',
+                          caption: '${shop.barbers.length} na equipe',
                         ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          height: 142,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: shop.barbers.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(width: 10),
+                            itemBuilder: (context, index) {
+                              final barber = shop.barbers[index];
+                              return _ProfessionalCard(
+                                name: barber.name,
+                                imageUrl: barber.imageUrl,
+                                rating: barber.rating,
+                                selected:
+                                    state.selectedBarber?.id == barber.id,
+                                onTap: () => state.selectBarber(barber),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                        ],
                       ),
-                      const SizedBox(height: 26),
-                      const _SectionTitle('Fotos'),
-                      const SizedBox(height: 12),
-                      _PhotoStrip(shop: shop),
-                      const SizedBox(height: 26),
-                      const _SectionTitle('Redes sociais'),
-                      const SizedBox(height: 12),
-                      _SocialAndRoute(shop: shop),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -130,6 +144,123 @@ class BarbershopProfileScreen extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  bool _hasContact(PublicBarbershop shop) {
+    final identity = shop.identity;
+    return identity.phone.isNotEmpty ||
+        identity.whatsapp.isNotEmpty ||
+        identity.instagram.isNotEmpty ||
+        identity.address.isNotEmpty;
+  }
+}
+
+class _CoverAppBar extends StatelessWidget {
+  const _CoverAppBar({
+    required this.shop,
+    required this.favorite,
+    required this.updating,
+    required this.onFavorite,
+  });
+
+  final PublicBarbershop shop;
+  final bool favorite;
+  final bool updating;
+  final VoidCallback onFavorite;
+
+  @override
+  Widget build(BuildContext context) {
+    final coverUrl = shop.identity.coverUrl;
+    return SliverAppBar(
+      expandedHeight: 238,
+      pinned: true,
+      stretch: true,
+      backgroundColor: AppColors.background,
+      foregroundColor: AppColors.text,
+      leadingWidth: 60,
+      leading: Padding(
+        padding: const EdgeInsets.all(8),
+        child: const CDRBackButton(),
+      ),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.all(8),
+          child: _RoundAction(
+            tooltip: favorite ? 'Remover dos favoritos' : 'Favoritar',
+            icon: favorite
+                ? Icons.favorite_rounded
+                : Icons.favorite_border_rounded,
+            onTap: updating ? () {} : onFavorite,
+          ),
+        ),
+      ],
+      flexibleSpace: FlexibleSpaceBar(
+        stretchModes: const [StretchMode.zoomBackground],
+        background: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (coverUrl.isEmpty)
+              Image.asset(
+                AppConstants.splashBarberReference,
+                fit: BoxFit.cover,
+              )
+            else
+              Image.network(
+                coverUrl,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, progress) => progress == null
+                    ? child
+                    : const ColoredBox(color: AppColors.elevated),
+                errorBuilder: (_, __, ___) => Image.asset(
+                  AppConstants.splashBarberReference,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black38,
+                    Colors.transparent,
+                    AppColors.background,
+                  ],
+                  stops: [0, .55, 1],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RoundAction extends StatelessWidget {
+  const _RoundAction({
+    required this.tooltip,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.black.withOpacity(.62),
+      shape: const CircleBorder(),
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: onTap,
+        constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+        padding: EdgeInsets.zero,
+        icon: Icon(icon, color: Colors.white),
+      ),
     );
   }
 }
@@ -141,150 +272,327 @@ class _ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final logoUrl = shop.identity.logoUrl;
-    return Row(
+    final identity = shop.identity;
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(22),
-          child: Container(
-            width: 78,
-            height: 78,
-            color: AppColors.card,
-            child: logoUrl.isEmpty
-                ? Image.asset(AppConstants.brandIconCr, fit: BoxFit.cover)
-                : Image.network(logoUrl, fit: BoxFit.cover),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                shop.identity.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.text,
-                  fontSize: 27,
-                  fontWeight: FontWeight.w900,
-                  height: 1.05,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            _ShopLogo(shop: shop),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Text(
+                  identity.locationLabel,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 10,
-                runSpacing: 8,
-                children: [
-                  _MetaChip(
-                    icon: Icons.star_rounded,
-                    text: '${shop.rating} • ${shop.reviewCount} avaliações',
-                  ),
-                  _MetaChip(
-                    icon: Icons.place_outlined,
-                    text: shop.distanceLabel,
-                  ),
-                ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Text(
+          identity.name,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                fontSize: 32,
+                fontWeight: FontWeight.w800,
               ),
-            ],
-          ),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          children: [
+            if (shop.reviewCount > 0)
+              _InlineMeta(
+                icon: Icons.star_rounded,
+                value:
+                    '${shop.rating.toStringAsFixed(1)} (${shop.reviewCount})',
+              )
+            else
+              const _InlineMeta(
+                icon: Icons.verified_outlined,
+                value: 'Nova no Clube',
+              ),
+            _InlineMeta(
+              icon: Icons.schedule_rounded,
+              value: identity.isOpenNow
+                  ? 'Aberto agora · ${identity.currentHoursDetail}'
+                  : identity.currentHoursDetail,
+              positive: identity.isOpenNow,
+            ),
+            if (shop.distanceKm.isFinite)
+              _InlineMeta(
+                icon: Icons.near_me_outlined,
+                value: shop.distanceLabel,
+              ),
+          ],
         ),
       ],
     );
   }
 }
 
-class _PrimaryScheduleButton extends StatelessWidget {
-  const _PrimaryScheduleButton({required this.shop});
+class _ShopLogo extends StatelessWidget {
+  const _ShopLogo({required this.shop});
 
   final PublicBarbershop shop;
 
   @override
   Widget build(BuildContext context) {
-    return FilledButton.icon(
-      onPressed: shop.services.isEmpty || shop.barbers.isEmpty
-          ? null
-          : () {
-              final state = context.read<AppState>();
-              state.selectService(shop.services.first);
-              state.selectBarber(shop.barbers.first);
-              Navigator.pushNamed(context, BarberDetailsScreen.route);
-            },
-      icon: const Icon(Icons.calendar_month_rounded),
-      label: const Text('Ver horários disponíveis'),
-      style: FilledButton.styleFrom(
-        backgroundColor: AppColors.orange,
-        foregroundColor: AppColors.onGold,
-        minimumSize: const Size.fromHeight(56),
+    final logoUrl = shop.identity.logoUrl;
+    return Container(
+      width: 68,
+      height: 68,
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.stroke),
       ),
+      clipBehavior: Clip.antiAlias,
+      child: logoUrl.isEmpty
+          ? Image.asset(AppConstants.brandIconCr, fit: BoxFit.contain)
+          : Image.network(
+              logoUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Image.asset(
+                AppConstants.brandIconCr,
+                fit: BoxFit.contain,
+              ),
+            ),
     );
   }
 }
 
-class _InfoGrid extends StatelessWidget {
-  const _InfoGrid({required this.shop});
-
-  final PublicBarbershop shop;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _InfoCard(
-            icon: Icons.schedule_rounded,
-            title: shop.statusLabel,
-            subtitle: 'Hoje • ${shop.nextSlot}',
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _InfoCard(
-            icon: Icons.payments_outlined,
-            title: shop.priceRange,
-            subtitle: 'Faixa de preço',
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _InfoCard extends StatelessWidget {
-  const _InfoCard({
+class _InlineMeta extends StatelessWidget {
+  const _InlineMeta({
     required this.icon,
-    required this.title,
-    required this.subtitle,
+    required this.value,
+    this.positive = false,
   });
 
   final IconData icon;
-  final String title;
-  final String subtitle;
+  final String value;
+  final bool positive;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = positive ? AppColors.success : AppColors.muted;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 5),
+        Text(
+          value,
+          style: TextStyle(
+            color: color,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickFacts extends StatelessWidget {
+  const _QuickFacts({required this.shop});
+
+  final PublicBarbershop shop;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _FactCard(
+            label: 'Funcionamento',
+            value: shop.identity.openingHoursLabel,
+            icon: Icons.schedule_outlined,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _FactCard(
+            label: 'Serviços',
+            value: shop.priceRange,
+            icon: Icons.content_cut_rounded,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FactCard extends StatelessWidget {
+  const _FactCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      constraints: const BoxConstraints(minHeight: 92),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.stroke),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: AppColors.orange),
-          const SizedBox(height: 14),
+          Icon(icon, size: 19, color: AppColors.orange),
+          const SizedBox(height: 10),
           Text(
-            title,
+            value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontWeight: FontWeight.w900),
+            style: const TextStyle(
+              color: AppColors.text,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
           ),
-          const SizedBox(height: 4),
-          Text(subtitle, style: const TextStyle(color: AppColors.muted)),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.muted,
+              fontSize: 12,
+              height: 1.35,
+            ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _AboutShop extends StatelessWidget {
+  const _AboutShop({required this.shop});
+
+  final PublicBarbershop shop;
+
+  @override
+  Widget build(BuildContext context) {
+    final professionals = shop.barbers.length;
+    final services = shop.services.length;
+    return Text(
+      '${shop.identity.name} atende em ${shop.identity.locationLabel}. '
+      'Confira ${services == 1 ? '1 serviço disponível' : '$services serviços disponíveis'}'
+      '${professionals > 0 ? ' com ${professionals == 1 ? '1 profissional' : '$professionals profissionais'}' : ''} '
+      'e escolha a melhor opção para o seu próximo horário.',
+      style: const TextStyle(
+        color: AppColors.muted,
+        fontSize: 14,
+        height: 1.55,
+        fontWeight: FontWeight.w500,
+      ),
+    );
+  }
+}
+
+class _ContactActions extends StatelessWidget {
+  const _ContactActions({required this.shop});
+
+  final PublicBarbershop shop;
+
+  @override
+  Widget build(BuildContext context) {
+    final identity = shop.identity;
+    final actions = <_ContactItem>[
+      if (identity.phone.isNotEmpty)
+        _ContactItem(Icons.call_outlined, 'Telefone', identity.phone),
+      if (identity.whatsapp.isNotEmpty)
+        _ContactItem(Icons.chat_outlined, 'WhatsApp', identity.whatsapp),
+      if (identity.instagram.isNotEmpty)
+        _ContactItem(
+          Icons.alternate_email_rounded,
+          'Instagram',
+          identity.instagram,
+        ),
+      if (identity.address.isNotEmpty)
+        _ContactItem(
+          Icons.directions_outlined,
+          'Endereço',
+          identity.address,
+        ),
+    ];
+
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: actions
+          .map(
+            (action) => _ContactButton(
+              item: action,
+              onTap: () => _copy(context, action.value, action.label),
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  Future<void> _copy(
+    BuildContext context,
+    String value,
+    String label,
+  ) async {
+    await Clipboard.setData(ClipboardData(text: value));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$label copiado.')),
+    );
+  }
+}
+
+class _ContactItem {
+  const _ContactItem(this.icon, this.label, this.value);
+
+  final IconData icon;
+  final String label;
+  final String value;
+}
+
+class _ContactButton extends StatelessWidget {
+  const _ContactButton({required this.item, required this.onTap});
+
+  final _ContactItem item;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Copiar ${item.label}',
+      child: OutlinedButton.icon(
+        onPressed: onTap,
+        icon: Icon(item.icon, size: 18),
+        label: Text(item.label),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.text,
+          side: const BorderSide(color: AppColors.stroke),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        ),
       ),
     );
   }
@@ -308,14 +616,15 @@ class _ProfessionalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(16),
       onTap: onTap,
-      child: Container(
-        width: 138,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        width: 128,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: selected ? AppColors.orange : AppColors.card,
-          borderRadius: BorderRadius.circular(22),
+          color: selected ? AppColors.orange.withOpacity(.1) : AppColors.card,
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: selected ? AppColors.orange : AppColors.stroke,
           ),
@@ -323,9 +632,9 @@ class _ProfessionalCard extends StatelessWidget {
         child: Column(
           children: [
             CircleAvatar(
-              radius: 26,
+              radius: 29,
+              backgroundColor: AppColors.elevated,
               backgroundImage: imageUrl.isEmpty ? null : NetworkImage(imageUrl),
-              backgroundColor: AppColors.dark,
               child: imageUrl.isEmpty
                   ? const Icon(Icons.person_rounded, color: AppColors.orange)
                   : null,
@@ -335,161 +644,25 @@ class _ProfessionalCard extends StatelessWidget {
               name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: selected ? AppColors.onGold : AppColors.text,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '$rating ★',
-              style: TextStyle(
-                color: selected ? AppColors.onGold : AppColors.muted,
+              style: const TextStyle(
+                color: AppColors.text,
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
               ),
             ),
+            if (rating > 0) ...[
+              const SizedBox(height: 4),
+              Text(
+                '${rating.toStringAsFixed(1)} ★',
+                style: const TextStyle(
+                  color: AppColors.muted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _PhotoStrip extends StatelessWidget {
-  const _PhotoStrip({required this.shop});
-
-  final PublicBarbershop shop;
-
-  @override
-  Widget build(BuildContext context) {
-    final images = [
-      shop.identity.coverUrl.isEmpty
-          ? AppConstants.promoBarber
-          : shop.identity.coverUrl,
-      AppConstants.heroBarbershop,
-      AppConstants.promoBarber,
-    ];
-
-    return SizedBox(
-      height: 96,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: images.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
-        itemBuilder: (context, index) {
-          return ClipRRect(
-            borderRadius: BorderRadius.circular(18),
-            child: AspectRatio(
-              aspectRatio: 16 / 9,
-              child: Image.network(images[index], fit: BoxFit.cover),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _SocialAndRoute extends StatelessWidget {
-  const _SocialAndRoute({required this.shop});
-
-  final PublicBarbershop shop;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _ActionTile(
-          icon: Icons.alternate_email_rounded,
-          title: shop.identity.instagram.isEmpty
-              ? 'Instagram não informado'
-              : shop.identity.instagram,
-          subtitle: 'Rede social da barbearia',
-        ),
-        const SizedBox(height: 10),
-        _ActionTile(
-          icon: Icons.directions_rounded,
-          title: 'Como chegar',
-          subtitle: shop.identity.address.isEmpty
-              ? shop.identity.locationLabel
-              : shop.identity.address,
-        ),
-      ],
-    );
-  }
-}
-
-class _ActionTile extends StatelessWidget {
-  const _ActionTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.stroke),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: AppColors.orange),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: const TextStyle(fontWeight: FontWeight.w900)),
-                const SizedBox(height: 4),
-                Text(subtitle, style: const TextStyle(color: AppColors.muted)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MetaChip extends StatelessWidget {
-  const _MetaChip({required this.icon, required this.text});
-
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.stroke),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: AppColors.orange, size: 16),
-          const SizedBox(width: 5),
-          Text(
-            text,
-            style: const TextStyle(
-              color: AppColors.text,
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -504,10 +677,122 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       title,
-      style: const TextStyle(
-        color: AppColors.text,
-        fontSize: 22,
-        fontWeight: FontWeight.w900,
+      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+          ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title, required this.caption});
+
+  final String title;
+  final String caption;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(child: _SectionTitle(title)),
+        Text(
+          caption,
+          style: const TextStyle(
+            color: AppColors.muted,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ScheduleBar extends StatelessWidget {
+  const _ScheduleBar({required this.shop});
+
+  final PublicBarbershop shop;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = shop.services.isNotEmpty && shop.barbers.isNotEmpty;
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
+        decoration: const BoxDecoration(
+          color: AppColors.background,
+          border: Border(top: BorderSide(color: AppColors.stroke)),
+        ),
+        child: FilledButton(
+          onPressed: enabled
+              ? () {
+                  final state = context.read<AppState>();
+                  state.selectService(
+                    state.selectedService != null &&
+                            shop.services.any(
+                              (item) => item.id == state.selectedService!.id,
+                            )
+                        ? state.selectedService!
+                        : shop.services.first,
+                  );
+                  state.selectBarber(
+                    state.selectedBarber != null &&
+                            shop.barbers.any(
+                              (item) => item.id == state.selectedBarber!.id,
+                            )
+                        ? state.selectedBarber!
+                        : shop.barbers.first,
+                  );
+                  Navigator.pushNamed(context, BarberDetailsScreen.route);
+                }
+              : null,
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(54),
+            backgroundColor: AppColors.orange,
+            foregroundColor: AppColors.onGold,
+          ),
+          child: Text(
+            enabled ? 'VER HORÁRIOS DISPONÍVEIS' : 'AGENDA INDISPONÍVEL',
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MissingShop extends StatelessWidget {
+  const _MissingShop();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.storefront_outlined,
+              color: AppColors.muted,
+              size: 42,
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'Barbearia não encontrada.',
+              style: TextStyle(
+                color: AppColors.text,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 14),
+            OutlinedButton(
+              onPressed: () => Navigator.maybePop(context),
+              child: const Text('Voltar para descobrir'),
+            ),
+          ],
+        ),
       ),
     );
   }

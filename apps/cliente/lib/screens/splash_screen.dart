@@ -1,12 +1,23 @@
+import 'dart:async';
+import 'dart:js_interop';
 import 'dart:ui' show ImageFilter;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/app_constants.dart';
+import '../providers/app_state.dart';
+import '../services/app_mode_navigation.dart';
+import 'auth/login_screen.dart';
 import 'client/home_screen.dart';
+import 'mode_selection_screen.dart';
 import 'onboarding_screen.dart';
+
+@JS('hideBootStatus')
+external void _hideWebBootStatus();
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -96,23 +107,90 @@ class _SplashScreenState extends State<SplashScreen>
 
     final results = await Future.wait<Object?>([
       prefsFuture,
-      Future<void>.delayed(_displayDuration),
+      Future<void>.delayed(kIsWeb ? Duration.zero : _displayDuration),
     ]);
-
-    if (!mounted) return;
-
-    setState(() => _exiting = true);
-    await Future<void>.delayed(_exitDuration);
-
-    if (!mounted) return;
 
     final prefs = results.first as SharedPreferences;
     final hasSeenOnboarding =
         prefs.getBool(SplashScreen.onboardingSeenKey) ?? false;
-    Navigator.pushReplacementNamed(
-      context,
-      hasSeenOnboarding ? HomeScreen.route : OnboardingScreen.route,
-    );
+    final forceOnboardingPreview = kIsWeb &&
+        Uri.base.queryParameters['preview'] == 'onboarding';
+    final hasTeamInvitation = kIsWeb &&
+        Uri.base.queryParameters['team_invite']?.trim().isNotEmpty == true;
+    final requestedMode = Uri.base.queryParameters['mode'];
+    if (requestedMode == 'client') {
+      await prefs.setString(appLastModeKey, 'client');
+    }
+
+    String route;
+    if (hasTeamInvitation) {
+      final state = context.read<AppState>();
+      await _waitForInitialData(state);
+      if (!mounted) return;
+      route = state.isSignedIn
+          ? ModeSelectionScreen.route
+          : LoginScreen.route;
+    } else if (!hasSeenOnboarding || forceOnboardingPreview) {
+      route = OnboardingScreen.route;
+    } else {
+      final state = context.read<AppState>();
+      await _waitForInitialData(state);
+      if (!mounted) return;
+      final lastMode = prefs.getString(appLastModeKey);
+      if (kIsWeb &&
+          state.isSignedIn &&
+          lastMode == 'barber' &&
+          state.hasBarberAccess) {
+        openBarberMode();
+        return;
+      }
+      if (kIsWeb &&
+          state.isSignedIn &&
+          lastMode == 'owner' &&
+          state.hasOwnerAccess) {
+        openOwnerMode();
+        return;
+      }
+      route = state.isSignedIn &&
+              (state.hasProfessionalAccess ||
+                  state.teamInvitationMessage != null ||
+                  state.teamInvitationError != null) &&
+              lastMode != 'client'
+          ? ModeSelectionScreen.route
+          : HomeScreen.route;
+    }
+
+    if (!mounted) return;
+    if (kIsWeb) {
+      Navigator.pushReplacementNamed(context, route);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _hideWebBootStatus();
+      });
+      return;
+    }
+
+    setState(() => _exiting = true);
+    await Future<void>.delayed(_exitDuration);
+    if (!mounted) return;
+    Navigator.pushReplacementNamed(context, route);
+  }
+
+  Future<void> _waitForInitialData(AppState state) async {
+    if (!state.isLoading) return;
+
+    final ready = Completer<void>();
+    void listener() {
+      if (!state.isLoading && !ready.isCompleted) ready.complete();
+    }
+
+    state.addListener(listener);
+    try {
+      await ready.future.timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      // Abre o app mesmo se um serviço externo demorar além do esperado.
+    } finally {
+      state.removeListener(listener);
+    }
   }
 
   @override
@@ -123,6 +201,13 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF050505),
+        body: SizedBox.expand(),
+      );
+    }
+
     final reduceMotion = MediaQuery.of(context).disableAnimations;
 
     return Scaffold(
@@ -134,13 +219,15 @@ class _SplashScreenState extends State<SplashScreen>
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Image.asset(
-              AppConstants.splashV3UrbanBarbershop,
-              fit: BoxFit.cover,
-              alignment: Alignment.center,
-              filterQuality: FilterQuality.high,
-              gaplessPlayback: true,
-              excludeFromSemantics: true,
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage(AppConstants.splashV3UrbanBarbershop),
+                  fit: BoxFit.cover,
+                  alignment: Alignment.center,
+                  filterQuality: FilterQuality.high,
+                ),
+              ),
             ),
             const _CinematicOverlay(),
             SafeArea(

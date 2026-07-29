@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 
 import '../../providers/app_state.dart';
-import '../../screens/auth/login_screen.dart';
-import '../../screens/auth/register_screen.dart';
+import '../../repositories/guest_identity_repository.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/primary_button.dart';
-import '../../widgets/service_card.dart';
+import '../../utils/whatsapp_input_formatter.dart';
 import 'appointment_confirmation_screen.dart';
 
 class AppointmentScreen extends StatefulWidget {
@@ -21,10 +18,16 @@ class AppointmentScreen extends StatefulWidget {
 }
 
 class _AppointmentScreenState extends State<AppointmentScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _guestIdentityRepository = const GuestIdentityRepository();
   var _selectedPaymentMethod = PaymentMethod.pix;
-  bool _isSubmitting = false;
+  var _isSubmitting = false;
+  var _seededName = false;
+  var _seededPhone = false;
+  var _rememberData = true;
+  var _loadingRememberedData = false;
 
   @override
   void dispose() {
@@ -37,89 +40,366 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
   Widget build(BuildContext context) {
     return Consumer<AppState>(
       builder: (context, state, _) {
+        final shop = state.selectedBarbershop;
         final barber = state.selectedBarber;
         final service = state.selectedService;
-        final services = state.servicesForSelectedBarber;
+        final hasSelection = shop != null &&
+            barber != null &&
+            service != null &&
+            state.selectedTime.isNotEmpty;
+
+        if (!_seededName) {
+          _seededName = true;
+          _nameController.text = state.currentUserName?.trim() ?? '';
+          _loadRememberedData(state);
+        }
+        if (!_seededPhone) {
+          _seededPhone = true;
+          _phoneController.text = formatWhatsapp(state.currentUserPhone);
+        }
 
         return Scaffold(
-          appBar: AppBar(title: const Text('Agendamento')),
-          body: ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              if (!state.isSignedIn) ...[
-                _AuthRequiredCard(
-                  barberName: barber?.name ?? '-',
-                  serviceName: service?.name ?? '-',
-                  date: state.selectedDate,
-                  time: state.selectedTime,
-                ),
-                const SizedBox(height: 20),
-              ],
-              const Text(
-                'Selecione o servico',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 14),
-              ...services.map(
-                (item) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: ServiceCard(
-                    service: item,
-                    isSelected: service?.id == item.id,
-                    onTap: () => state.selectService(item),
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            backgroundColor: AppColors.background,
+            foregroundColor: AppColors.text,
+            elevation: 0,
+            leadingWidth: 68,
+            leading: const Padding(
+              padding: EdgeInsets.only(left: 16),
+              child: CDRBackButton(),
+            ),
+            title: Text(
+              'Revisar agendamento',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
                   ),
+            ),
+          ),
+          bottomNavigationBar: _SubmitBar(
+            enabled: hasSelection && !_isSubmitting,
+            submitting: _isSubmitting,
+            onPressed: () => _handlePrimaryAction(state),
+          ),
+          body: hasSelection
+              ? Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: CDRSizeTokens.contentMaxWidth,
+                    ),
+                    child: Form(
+                      key: _formKey,
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(18, 8, 18, 32),
+                        children: [
+                      const _Intro(),
+                      const SizedBox(height: 20),
+                      _AppointmentSummary(
+                        shopName: shop.identity.name,
+                        serviceName: service.name,
+                        barberName: barber.name,
+                        date: state.selectedDate,
+                        time: state.selectedTime,
+                        durationMinutes: service.durationMinutes,
+                        total: service.price,
+                      ),
+                      const SizedBox(height: 22),
+                        const _SectionTitle('Seus dados'),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'A barbearia usará estes dados para confirmar a solicitação.',
+                          style: TextStyle(
+                            color: AppColors.muted,
+                            fontSize: 14,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        TextFormField(
+                          controller: _nameController,
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [AutofillHints.name],
+                          decoration: const InputDecoration(
+                            labelText: 'Nome completo',
+                            prefixIcon: Icon(Icons.person_outline_rounded),
+                          ),
+                          validator: (value) =>
+                              (value?.trim().length ?? 0) < 3
+                                  ? 'Informe seu nome completo.'
+                                  : null,
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _phoneController,
+                          keyboardType: TextInputType.phone,
+                          textInputAction: TextInputAction.done,
+                          autofillHints: const [AutofillHints.telephoneNumber],
+                          inputFormatters: const [WhatsappInputFormatter()],
+                          decoration: const InputDecoration(
+                            labelText: 'WhatsApp',
+                            hintText: '(00)00000-0000',
+                            prefixIcon: Icon(Icons.phone_outlined),
+                          ),
+                          validator: (value) =>
+                              _digitsOnly(value ?? '').length != 11
+                                  ? 'Use o formato (00)00000-0000.'
+                                  : null,
+                        ),
+                        if (!state.isSignedIn) ...[
+                          const SizedBox(height: 8),
+                          CheckboxListTile(
+                            value: _rememberData,
+                            contentPadding: EdgeInsets.zero,
+                            controlAffinity: ListTileControlAffinity.leading,
+                            activeColor: AppColors.orange,
+                            title: const Text(
+                              'Lembrar meus dados neste dispositivo',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            subtitle: const Text(
+                              'Você poderá editar os dados no próximo agendamento.',
+                              style: TextStyle(
+                                color: AppColors.muted,
+                                fontSize: 12,
+                              ),
+                            ),
+                            onChanged: _loadingRememberedData
+                                ? null
+                                : (value) => setState(
+                                      () => _rememberData = value ?? true,
+                                    ),
+                          ),
+                        ],
+                        const SizedBox(height: 26),
+                        const _SectionTitle('Preferência de pagamento'),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'O pagamento será combinado diretamente com a barbearia.',
+                          style: TextStyle(
+                            color: AppColors.muted,
+                            fontSize: 14,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _PaymentMethodSelector(
+                          selected: _selectedPaymentMethod,
+                          onChanged: (method) {
+                            setState(() => _selectedPaymentMethod = method);
+                          },
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          _selectedPaymentMethod.description,
+                          style: const TextStyle(
+                            color: AppColors.muted,
+                            fontSize: 13,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+                        const _RequestNotice(),
+                      ],
+                      ),
+                    ),
+                  ),
+                )
+              : const _MissingAppointment(),
+        );
+      },
+    );
+  }
+
+  Future<void> _handlePrimaryAction(AppState state) async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (state.selectedTime.isEmpty) {
+      _showMessage('O horário selecionado não está mais disponível.');
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    final created = await state.createSelectedAppointment(
+      customerName: _nameController.text.trim(),
+      customerPhone: _phoneController.text.trim(),
+      paymentMethodLabel: _selectedPaymentMethod.label,
+    );
+
+    if (!mounted) return;
+    setState(() => _isSubmitting = false);
+    if (created) {
+      if (!state.isSignedIn) {
+        await _guestIdentityRepository.save(
+          name: _nameController.text,
+          phone: _phoneController.text,
+          remember: _rememberData,
+        );
+      }
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(
+        context,
+        AppointmentConfirmationScreen.route,
+      );
+    } else {
+      _showMessage(
+        'Não foi possível enviar. Confira o horário e tente novamente.',
+      );
+    }
+  }
+
+  Future<void> _loadRememberedData(AppState state) async {
+    if (state.isSignedIn || _loadingRememberedData) return;
+    _loadingRememberedData = true;
+    final identity = await _guestIdentityRepository.load();
+    if (!mounted) return;
+    setState(() {
+      if (_nameController.text.trim().isEmpty) {
+        _nameController.text = identity.name;
+      }
+      if (_phoneController.text.trim().isEmpty) {
+        _phoneController.text = formatWhatsapp(identity.phone);
+      }
+      _rememberData = identity.remember;
+      _loadingRememberedData = false;
+    });
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  static String _digitsOnly(String value) {
+    return value.replaceAll(RegExp(r'\D'), '');
+  }
+}
+
+class _Intro extends StatelessWidget {
+  const _Intro();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Está tudo certo?',
+          style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                fontSize: 30,
+                fontWeight: FontWeight.w800,
+              ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Revise os detalhes antes de enviar sua solicitação.',
+          style: TextStyle(
+            color: AppColors.muted,
+            fontSize: 14,
+            height: 1.45,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AppointmentSummary extends StatelessWidget {
+  const _AppointmentSummary({
+    required this.shopName,
+    required this.serviceName,
+    required this.barberName,
+    required this.date,
+    required this.time,
+    required this.durationMinutes,
+    required this.total,
+  });
+
+  final String shopName;
+  final String serviceName;
+  final String barberName;
+  final DateTime date;
+  final String time;
+  final int durationMinutes;
+  final double total;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.stroke),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            shopName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.orange,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 58,
+                height: 62,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.orange,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      date.day.toString().padLeft(2, '0'),
+                      style: const TextStyle(
+                        color: AppColors.onGold,
+                        fontSize: 22,
+                        height: 1,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      _monthShort(date.month).toUpperCase(),
+                      style: const TextStyle(
+                        color: AppColors.onGold,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 18),
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: AppColors.card,
-                  borderRadius: BorderRadius.circular(28),
-                ),
+              const SizedBox(width: 14),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Resumo',
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
-                    ),
-                    const SizedBox(height: 16),
-                    _SummaryRow(label: 'Barbeiro', value: barber?.name ?? '-'),
-                    _SummaryRow(label: 'Servico', value: service?.name ?? '-'),
-                    _SummaryRow(
-                      label: 'Data',
-                      value: DateFormat('dd/MM').format(state.selectedDate),
-                    ),
-                    _SummaryRow(
-                      label: 'Horario',
-                      value:
-                          state.selectedTime.isEmpty ? '-' : state.selectedTime,
-                    ),
-                    const Divider(height: 28),
-                    _SummaryRow(
-                      label: 'Total',
-                      value: service == null
-                          ? 'R\$ 0'
-                          : 'R\$ ${service.price.toStringAsFixed(0)}',
-                      strong: true,
-                    ),
-                    const SizedBox(height: 18),
-                    const Text(
-                      'Forma de pagamento',
-                      style: TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                    const SizedBox(height: 10),
-                    _PaymentMethodSelector(
-                      selected: _selectedPaymentMethod,
-                      onChanged: (method) {
-                        setState(() => _selectedPaymentMethod = method);
-                      },
-                    ),
-                    const SizedBox(height: 10),
                     Text(
-                      _selectedPaymentMethod.description,
+                      '$time · $durationMinutes min',
+                      style: const TextStyle(
+                        color: AppColors.text,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      _fullDate(date),
                       style: const TextStyle(
                         color: AppColors.muted,
                         fontSize: 13,
@@ -128,174 +408,35 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
-              TextField(
-                controller: _nameController,
-                enabled: state.isSignedIn,
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: 'Seu nome',
-                  prefixIcon: Icon(Icons.person_outline_rounded),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _phoneController,
-                enabled: state.isSignedIn,
-                keyboardType: TextInputType.phone,
-                inputFormatters: const [_WhatsappInputFormatter()],
-                decoration: const InputDecoration(
-                  labelText: 'WhatsApp',
-                  hintText: '(00)00000-0000',
-                  prefixIcon: Icon(Icons.phone_outlined),
-                ),
-              ),
-              const SizedBox(height: 20),
-              PrimaryButton(
-                label: !state.isSignedIn
-                    ? 'Entrar para confirmar'
-                    : _isSubmitting
-                        ? 'Enviando...'
-                        : 'Agendar agora',
-                onPressed: _isSubmitting
-                    ? null
-                    : () async {
-                        if (!state.isSignedIn) {
-                          Navigator.pushNamed(
-                            context,
-                            LoginScreen.route,
-                            arguments: AppointmentScreen.route,
-                          );
-                          return;
-                        }
-                        final name = _nameController.text.trim();
-                        final phone = _phoneController.text.trim();
-                        final phoneDigits = _digitsOnly(phone);
-
-                        if (name.length < 3 || phoneDigits.length != 11) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Informe seu nome e WhatsApp no formato (00)00000-0000.',
-                              ),
-                            ),
-                          );
-                          return;
-                        }
-                        if (state.selectedTime.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Selecione um horario disponivel para continuar.',
-                              ),
-                            ),
-                          );
-                          return;
-                        }
-
-                        setState(() => _isSubmitting = true);
-                        final created = await state.createSelectedAppointment(
-                          customerName: name,
-                          customerPhone: phone,
-                          paymentMethodLabel: _selectedPaymentMethod.label,
-                        );
-
-                        if (!context.mounted) return;
-                        setState(() => _isSubmitting = false);
-
-                        if (created) {
-                          Navigator.pushReplacementNamed(
-                            context,
-                            AppointmentConfirmationScreen.route,
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Nao foi possivel enviar agora. Tente novamente.',
-                              ),
-                            ),
-                          );
-                        }
-                      },
-              ),
             ],
           ),
-        );
-      },
-    );
-  }
-
-  String _digitsOnly(String value) {
-    return value.replaceAll(RegExp(r'\D'), '');
-  }
-}
-
-class _AuthRequiredCard extends StatelessWidget {
-  const _AuthRequiredCard({
-    required this.barberName,
-    required this.serviceName,
-    required this.date,
-    required this.time,
-  });
-
-  final String barberName;
-  final String serviceName;
-  final DateTime date;
-  final String time;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.stroke),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.lock_outline_rounded, color: AppColors.orange),
-          const SizedBox(height: 12),
-          const Text(
-            'Entre para confirmar seu horário',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+          const Divider(height: 30, color: AppColors.stroke),
+          _SummaryLine(
+            icon: Icons.content_cut_rounded,
+            label: 'Serviço',
+            value: serviceName,
           ),
-          const SizedBox(height: 8),
-          Text(
-            '$serviceName com $barberName • ${DateFormat('dd/MM').format(date)} às ${time.isEmpty ? '-' : time}',
-            style: const TextStyle(
-              color: AppColors.muted,
-              fontWeight: FontWeight.w700,
-            ),
+          const SizedBox(height: 11),
+          _SummaryLine(
+            icon: Icons.person_outline_rounded,
+            label: 'Profissional',
+            value: barberName,
           ),
-          const SizedBox(height: 16),
+          const Divider(height: 30, color: AppColors.stroke),
           Row(
             children: [
-              Expanded(
-                child: FilledButton(
-                  onPressed: () => Navigator.pushNamed(
-                    context,
-                    LoginScreen.route,
-                    arguments: AppointmentScreen.route,
-                  ),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.orange,
-                    foregroundColor: AppColors.onGold,
-                  ),
-                  child: const Text('Entrar'),
+              const Expanded(
+                child: Text(
+                  'Valor do serviço',
+                  style: TextStyle(color: AppColors.muted, fontSize: 12),
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pushNamed(
-                    context,
-                    RegisterScreen.route,
-                    arguments: AppointmentScreen.route,
-                  ),
-                  child: const Text('Criar conta'),
+              Text(
+                'R\$ ${total.toStringAsFixed(2).replaceAll('.', ',')}',
+                style: const TextStyle(
+                  color: AppColors.text,
+                  fontSize: 19,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
             ],
@@ -306,15 +447,127 @@ class _AuthRequiredCard extends StatelessWidget {
   }
 }
 
-enum PaymentMethod {
-  pix('PIX', 'Pague por PIX na confirmação enviada pela barbearia.'),
-  cash('Dinheiro', 'Pague em dinheiro no atendimento.'),
-  card('Cartão', 'Pague no débito ou crédito no atendimento.');
+class _SummaryLine extends StatelessWidget {
+  const _SummaryLine({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
-  const PaymentMethod(this.label, this.description);
-
+  final IconData icon;
   final String label;
-  final String description;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: AppColors.orange, size: 18),
+        const SizedBox(width: 9),
+        Text(
+          label,
+          style: const TextStyle(color: AppColors.muted, fontSize: 13),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.end,
+            style: const TextStyle(
+              color: AppColors.text,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AuthRequired extends StatelessWidget {
+  const _AuthRequired({required this.onLogin, required this.onRegister});
+
+  final VoidCallback onLogin;
+  final VoidCallback onRegister;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.stroke),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppColors.orange.withOpacity(.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.lock_outline_rounded,
+              color: AppColors.orange,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Entre para enviar a solicitação',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Suas escolhas serão mantidas após o acesso.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppColors.muted,
+              fontSize: 14,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: onRegister,
+              child: const Text('Criar uma conta'),
+            ),
+          ),
+          TextButton(
+            onPressed: onLogin,
+            child: const Text('Já tenho uma conta'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(this.title);
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+          ),
+    );
+  }
 }
 
 class _PaymentMethodSelector extends StatelessWidget {
@@ -334,12 +587,19 @@ class _PaymentMethodSelector extends StatelessWidget {
       children: [
         for (final method in PaymentMethod.values)
           ChoiceChip(
+            avatar: Icon(
+              method.icon,
+              size: 16,
+              color: selected == method ? AppColors.onGold : AppColors.muted,
+            ),
             label: Text(method.label),
             selected: selected == method,
             onSelected: (_) => onChanged(method),
             selectedColor: AppColors.orange,
-            backgroundColor: AppColors.background,
-            side: BorderSide.none,
+            backgroundColor: AppColors.card,
+            side: BorderSide(
+              color: selected == method ? AppColors.orange : AppColors.stroke,
+            ),
             labelStyle: TextStyle(
               color: selected == method ? AppColors.onGold : AppColors.text,
               fontWeight: FontWeight.w800,
@@ -350,62 +610,177 @@ class _PaymentMethodSelector extends StatelessWidget {
   }
 }
 
-class _WhatsappInputFormatter extends TextInputFormatter {
-  const _WhatsappInputFormatter();
+enum PaymentMethod {
+  pix(
+    'PIX',
+    'A barbearia enviará as orientações para o pagamento.',
+    Icons.pix_rounded,
+  ),
+  cash(
+    'Dinheiro',
+    'Pagamento em dinheiro no atendimento.',
+    Icons.payments_outlined,
+  ),
+  card(
+    'Cartão',
+    'Pagamento no cartão diretamente na barbearia.',
+    Icons.credit_card_rounded,
+  );
+
+  const PaymentMethod(this.label, this.description, this.icon);
+
+  final String label;
+  final String description;
+  final IconData icon;
+}
+
+class _RequestNotice extends StatelessWidget {
+  const _RequestNotice();
 
   @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
-    final limited = digits.length > 11 ? digits.substring(0, 11) : digits;
-    final buffer = StringBuffer();
-
-    for (var index = 0; index < limited.length; index++) {
-      if (index == 0) buffer.write('(');
-      if (index == 2) buffer.write(')');
-      if (index == 7) buffer.write('-');
-      buffer.write(limited[index]);
-    }
-
-    final text = buffer.toString();
-    return TextEditingValue(
-      text: text,
-      selection: TextSelection.collapsed(offset: text.length),
+  Widget build(BuildContext context) {
+    return const Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(Icons.info_outline_rounded, color: AppColors.muted, size: 17),
+        SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            'O envio não confirma automaticamente o horário. A barbearia retornará pelo WhatsApp.',
+            style: TextStyle(
+              color: AppColors.muted,
+              fontSize: 13,
+              height: 1.45,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
 
-class _SummaryRow extends StatelessWidget {
-  const _SummaryRow({
-    required this.label,
-    required this.value,
-    this.strong = false,
+class _SubmitBar extends StatelessWidget {
+  const _SubmitBar({
+    required this.enabled,
+    required this.submitting,
+    required this.onPressed,
   });
 
-  final String label;
-  final String value;
-  final bool strong;
+  final bool enabled;
+  final bool submitting;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(label, style: const TextStyle(color: AppColors.muted)),
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
+        decoration: const BoxDecoration(
+          color: AppColors.background,
+          border: Border(top: BorderSide(color: AppColors.stroke)),
+        ),
+        child: FilledButton(
+          onPressed: enabled ? onPressed : null,
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(54),
+            backgroundColor: AppColors.orange,
+            foregroundColor: AppColors.onGold,
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: strong ? 20 : 15,
-              fontWeight: strong ? FontWeight.w900 : FontWeight.w700,
-            ),
-          ),
-        ],
+          child: submitting
+              ? const CDRLoading.compact(size: 24)
+              : Text(
+                  'ENVIAR SOLICITAÇÃO',
+                ),
+        ),
       ),
     );
   }
+}
+
+class _MissingAppointment extends StatelessWidget {
+  const _MissingAppointment();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.event_busy_outlined,
+              color: AppColors.muted,
+              size: 42,
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'Seleção incompleta.',
+              style: TextStyle(
+                color: AppColors.text,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Volte e escolha serviço, profissional, data e horário.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.muted, fontSize: 12),
+            ),
+            const SizedBox(height: 14),
+            OutlinedButton(
+              onPressed: () => Navigator.maybePop(context),
+              child: const Text('Voltar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _monthShort(int month) {
+  const months = [
+    'jan',
+    'fev',
+    'mar',
+    'abr',
+    'mai',
+    'jun',
+    'jul',
+    'ago',
+    'set',
+    'out',
+    'nov',
+    'dez',
+  ];
+  return months[month - 1];
+}
+
+String _fullDate(DateTime date) {
+  const weekdays = [
+    'segunda-feira',
+    'terça-feira',
+    'quarta-feira',
+    'quinta-feira',
+    'sexta-feira',
+    'sábado',
+    'domingo',
+  ];
+  const months = [
+    'janeiro',
+    'fevereiro',
+    'março',
+    'abril',
+    'maio',
+    'junho',
+    'julho',
+    'agosto',
+    'setembro',
+    'outubro',
+    'novembro',
+    'dezembro',
+  ];
+  return '${weekdays[date.weekday - 1]}, ${date.day} de ${months[date.month - 1]}';
 }

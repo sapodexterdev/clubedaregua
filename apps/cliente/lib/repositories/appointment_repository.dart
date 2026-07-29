@@ -1,4 +1,7 @@
+import 'package:flutter/foundation.dart';
+
 import '../models/appointment.dart';
+import '../services/auth_service.dart';
 import '../services/mock_data.dart';
 import '../services/supabase_rest_service.dart';
 
@@ -9,7 +12,19 @@ class AppointmentRepository {
   final SupabaseRestService _rest;
 
   Future<List<Appointment>> fetchAppointments() async {
-    return MockData.appointments;
+    if (!_rest.isConfigured) return const [];
+    final session = await _authenticatedSession();
+    if (session == null) return const [];
+
+    final rows = await _rest.getRows(
+      'booking_requests',
+      select:
+          'id,requested_date,requested_time,status,total_price,barbers(name),services(name),barber_shops(name)',
+      filters: {'client_id': 'eq.${session.user.id}'},
+      order: 'requested_date.desc,requested_time.desc',
+      accessToken: session.accessToken,
+    );
+    return rows.map(Appointment.fromMap).toList();
   }
 
   Future<bool> createAppointment({
@@ -26,6 +41,7 @@ class AppointmentRepository {
     if (!_rest.isConfigured || barberShopId.isEmpty) return false;
 
     try {
+      final session = await _authenticatedSession();
       final hasConflict = await hasBookingConflict(
         barberId: barberId,
         date: date,
@@ -35,6 +51,7 @@ class AppointmentRepository {
 
       return await _rest.insertRow('booking_requests', {
         'barber_shop_id': barberShopId,
+        if (session != null) 'client_id': session.user.id,
         'barber_id': barberId,
         'service_id': serviceId,
         'requested_date': _dateOnly(date),
@@ -44,8 +61,10 @@ class AppointmentRepository {
         'total_price': total,
         'notes':
             'Solicitacao criada pelo PWA Cliente. Pagamento: $paymentMethodLabel',
-      });
-    } catch (_) {
+      }, accessToken: session?.accessToken);
+    } catch (error, stackTrace) {
+      debugPrint('Falha ao criar solicitação: $error');
+      debugPrintStack(stackTrace: stackTrace);
       return false;
     }
   }
@@ -108,13 +127,26 @@ class AppointmentRepository {
         final end = _timeOfDay(schedule['end_time']?.toString());
         final slotMinutes =
             (schedule['slot_minutes'] as num?)?.toInt() ?? 30;
-        if (start == null || end == null || slotMinutes <= 0) continue;
+        if (start == null ||
+            end == null ||
+            slotMinutes <= 0 ||
+            durationMinutes <= 0) {
+          continue;
+        }
 
-        var slotStart = _dateTimeFor(date, start);
-        final scheduleEnd = _dateTimeFor(date, end);
+        final startMinutes = start.hour * 60 + start.minute;
+        final endMinutes = end.hour * 60 + end.minute;
 
-        while (slotStart.add(Duration(minutes: durationMinutes)).isAtSameMomentAs(scheduleEnd) ||
-            slotStart.add(Duration(minutes: durationMinutes)).isBefore(scheduleEnd)) {
+        for (var minute = startMinutes;
+            minute + durationMinutes <= endMinutes;
+            minute += slotMinutes) {
+          final slotStart = DateTime(
+            date.year,
+            date.month,
+            date.day,
+            minute ~/ 60,
+            minute % 60,
+          );
           final slotEnd = slotStart.add(Duration(minutes: durationMinutes));
           final isPast = selectedDay.isAtSameMomentAs(today) &&
               !slotStart.isAfter(now);
@@ -128,13 +160,12 @@ class AppointmentRepository {
           );
 
           if (!isPast && !conflicts) times.add(_formatTime(slotStart));
-          slotStart = slotStart.add(Duration(minutes: slotMinutes));
         }
       }
 
       return times.toSet().toList()..sort();
     } catch (_) {
-      return const [];
+      rethrow;
     }
   }
 
@@ -160,14 +191,31 @@ class AppointmentRepository {
     }
   }
 
-  Future<void> cancelAppointment(String appointmentId) async {
-    return;
+  Future<bool> cancelAppointment(String appointmentId) async {
+    if (!_rest.isConfigured || appointmentId.isEmpty) return false;
+    final session = await _authenticatedSession();
+    if (session == null) return false;
+    return _rest.updateRows(
+      'booking_requests',
+      data: const {'status': 'cancelled'},
+      filters: {
+        'id': 'eq.$appointmentId',
+        'client_id': 'eq.${session.user.id}',
+        'status': 'in.(new,contacted)',
+      },
+      accessToken: session.accessToken,
+    );
   }
 
   String _dateOnly(DateTime value) {
     final month = value.month.toString().padLeft(2, '0');
     final day = value.day.toString().padLeft(2, '0');
     return '${value.year}-$month-$day';
+  }
+
+  Future<AuthSession?> _authenticatedSession() async {
+    final auth = AuthService();
+    return auth.getValidSession();
   }
 
   Future<List<_Interval>> _blockedIntervals({

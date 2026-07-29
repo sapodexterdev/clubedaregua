@@ -17,6 +17,7 @@ class SupabaseRestService {
     Map<String, String> filters = const {},
     String? order,
     int? limit,
+    String? accessToken,
   }) async {
     if (!isConfigured) return const [];
 
@@ -36,7 +37,8 @@ class SupabaseRestService {
           uri,
           headers: {
             'apikey': SupabaseConfig.anonKey,
-            'authorization': 'Bearer ${SupabaseConfig.anonKey}',
+            'authorization':
+                'Bearer ${accessToken ?? SupabaseConfig.anonKey}',
           },
         )
         .timeout(_requestTimeout);
@@ -56,8 +58,9 @@ class SupabaseRestService {
 
   Future<bool> insertRow(
     String table,
-    Map<String, dynamic> data,
-  ) async {
+    Map<String, dynamic> data, {
+    String? accessToken,
+  }) async {
     if (!isConfigured) return false;
 
     final uri = Uri.parse('${SupabaseConfig.url}/rest/v1/$table');
@@ -67,7 +70,8 @@ class SupabaseRestService {
           uri,
           headers: {
             'apikey': SupabaseConfig.anonKey,
-            'authorization': 'Bearer ${SupabaseConfig.anonKey}',
+            'authorization':
+                'Bearer ${accessToken ?? SupabaseConfig.anonKey}',
             'content-type': 'application/json',
             'prefer': 'return=minimal',
           },
@@ -80,6 +84,96 @@ class SupabaseRestService {
     }
 
     return true;
+  }
+
+  Future<bool> updateRows(
+    String table, {
+    required Map<String, dynamic> data,
+    required Map<String, String> filters,
+    String? accessToken,
+  }) async {
+    if (!isConfigured) return false;
+
+    final uri = Uri.parse('${SupabaseConfig.url}/rest/v1/$table').replace(
+      queryParameters: filters,
+    );
+    final response = await http
+        .patch(
+          uri,
+          headers: {
+            'apikey': SupabaseConfig.anonKey,
+            'authorization':
+                'Bearer ${accessToken ?? SupabaseConfig.anonKey}',
+            'content-type': 'application/json',
+            'prefer': 'return=representation',
+          },
+          body: jsonEncode(data),
+        )
+        .timeout(_requestTimeout);
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw StateError('Supabase REST ${response.statusCode}: ${response.body}');
+    }
+    final decoded = jsonDecode(response.body);
+    return decoded is List && decoded.isNotEmpty;
+  }
+
+  Future<bool> deleteRows(
+    String table, {
+    required Map<String, String> filters,
+    String? accessToken,
+  }) async {
+    if (!isConfigured) return false;
+
+    final uri = Uri.parse('${SupabaseConfig.url}/rest/v1/$table').replace(
+      queryParameters: filters,
+    );
+    final response = await http
+        .delete(
+          uri,
+          headers: {
+            'apikey': SupabaseConfig.anonKey,
+            'authorization':
+                'Bearer ${accessToken ?? SupabaseConfig.anonKey}',
+            'prefer': 'return=representation',
+          },
+        )
+        .timeout(_requestTimeout);
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw StateError('Supabase REST ${response.statusCode}: ${response.body}');
+    }
+    final decoded = jsonDecode(response.body);
+    return decoded is List && decoded.isNotEmpty;
+  }
+
+  Future<dynamic> postRpc(
+    String functionName, {
+    required Map<String, dynamic> data,
+    required String accessToken,
+  }) async {
+    if (!isConfigured) return null;
+
+    final uri = Uri.parse(
+      '${SupabaseConfig.url}/rest/v1/rpc/$functionName',
+    );
+    final response = await http
+        .post(
+          uri,
+          headers: {
+            'apikey': SupabaseConfig.anonKey,
+            'authorization': 'Bearer $accessToken',
+            'content-type': 'application/json',
+          },
+          body: jsonEncode(data),
+        )
+        .timeout(_requestTimeout);
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw StateError('Supabase RPC ${response.statusCode}: ${response.body}');
+    }
+    if (response.body.trim().isEmpty) return null;
+    return jsonDecode(response.body);
   }
 
   Future<bool> exists(

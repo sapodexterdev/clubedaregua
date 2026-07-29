@@ -19,6 +19,8 @@ insert into public.barber_shops (
   address,
   city,
   state,
+  latitude,
+  longitude,
   cover_url,
   opening_time,
   closing_time
@@ -30,9 +32,11 @@ values (
   'Barbearia premium para cortes, barba e combos.',
   '(11) 99999-0000',
   '5511999990000',
-  'Rua Demo, 123',
+  'Avenida Paulista, 1578',
   'Sao Paulo',
   'SP',
+  -23.561414,
+  -46.655881,
   'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&w=1200&q=80',
   '09:00',
   '20:00'
@@ -43,6 +47,11 @@ on conflict (id) do update set
   description = excluded.description,
   phone = excluded.phone,
   whatsapp = excluded.whatsapp,
+  address = excluded.address,
+  city = excluded.city,
+  state = excluded.state,
+  latitude = excluded.latitude,
+  longitude = excluded.longitude,
   cover_url = excluded.cover_url,
   opening_time = excluded.opening_time,
   closing_time = excluded.closing_time;

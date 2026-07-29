@@ -3,6 +3,7 @@
 
 create table if not exists public.booking_requests (
   id uuid primary key default gen_random_uuid(),
+  client_id uuid references public.users(id) on delete set null default auth.uid(),
   barber_shop_id uuid not null references public.barber_shops(id) on delete cascade,
   barber_id uuid not null references public.barbers(id) on delete restrict,
   service_id uuid not null references public.services(id) on delete restrict,
@@ -29,6 +30,9 @@ for each row execute function public.set_updated_at();
 
 create index if not exists idx_booking_requests_shop_created
 on public.booking_requests(barber_shop_id, created_at desc);
+
+create index if not exists idx_booking_requests_client_date
+on public.booking_requests(client_id, requested_date desc, requested_time desc);
 
 create unique index if not exists idx_booking_requests_no_time_conflict
 on public.booking_requests(barber_id, requested_date, requested_time)
@@ -68,6 +72,7 @@ create policy booking_requests_insert_public on public.booking_requests
 for insert
 with check (
   status = 'new'
+  and (client_id is null or client_id = auth.uid())
   and exists (
     select 1
     from public.barber_shops shop
@@ -89,6 +94,17 @@ with check (
       and service.is_active = true
   )
 );
+
+drop policy if exists booking_requests_read_client on public.booking_requests;
+create policy booking_requests_read_client on public.booking_requests
+for select to authenticated
+using (auth.uid() = client_id);
+
+drop policy if exists booking_requests_cancel_client on public.booking_requests;
+create policy booking_requests_cancel_client on public.booking_requests
+for update to authenticated
+using (auth.uid() = client_id and status in ('new', 'contacted'))
+with check (auth.uid() = client_id and status = 'cancelled');
 
 drop policy if exists booking_requests_read_staff on public.booking_requests;
 create policy booking_requests_read_staff on public.booking_requests
