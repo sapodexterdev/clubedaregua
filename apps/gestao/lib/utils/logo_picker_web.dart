@@ -12,29 +12,47 @@ Future<LogoFile?> pickLogoFile() async {
     ..multiple = false;
 
   final completer = Completer<LogoFile?>();
+  StreamSubscription<html.Event>? focusSubscription;
+  var selectionChanged = false;
+
+  void complete(LogoFile? file) {
+    if (completer.isCompleted) return;
+    focusSubscription?.cancel();
+    completer.complete(file);
+  }
+
   input.onChange.first.then((_) {
+    selectionChanged = true;
     final file = input.files?.isEmpty == false ? input.files!.first : null;
     if (file == null) {
-      completer.complete(null);
+      complete(null);
       return;
     }
 
     final reader = html.FileReader();
     reader.onError.first.then((_) {
-      if (!completer.isCompleted) completer.complete(null);
+      complete(null);
     });
     reader.onLoad.first.then((_) {
       final result = reader.result;
       if (result is Uint8List) {
-        completer.complete(
+        complete(
           LogoFile(
             name: file.name,
             bytes: result,
             contentType: file.type.isEmpty ? 'image/png' : file.type,
           ),
         );
+      } else if (result is ByteBuffer) {
+        complete(
+          LogoFile(
+            name: file.name,
+            bytes: result.asUint8List(),
+            contentType: file.type.isEmpty ? 'image/png' : file.type,
+          ),
+        );
       } else if (result is List<int>) {
-        completer.complete(
+        complete(
           LogoFile(
             name: file.name,
             bytes: Uint8List.fromList(result),
@@ -42,10 +60,19 @@ Future<LogoFile?> pickLogoFile() async {
           ),
         );
       } else {
-        completer.complete(null);
+        complete(null);
       }
     });
     reader.readAsArrayBuffer(file);
+  });
+
+  // O navegador não dispara `change` quando o usuário fecha o seletor sem
+  // escolher um arquivo. Quando a janela recupera o foco, damos tempo para o
+  // `change` chegar e concluímos com null caso a seleção tenha sido cancelada.
+  focusSubscription = html.window.onFocus.listen((_) {
+    Future<void>.delayed(const Duration(milliseconds: 350), () {
+      if (!selectionChanged) complete(null);
+    });
   });
 
   input.click();
