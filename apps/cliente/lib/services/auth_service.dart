@@ -10,10 +10,38 @@ class AuthService {
   static const _sessionKey = 'clubedaregua.client.session';
   static AuthSession? _currentSession;
   static Future<AuthSession?>? _restoreInProgress;
+  static Future<AuthSession?>? _validationInProgress;
 
   AuthSession? get currentSession => _currentSession;
   AuthUser? get currentUser => _currentSession?.user;
   bool get isSignedIn => _currentSession?.accessToken.isNotEmpty == true;
+
+  Future<AuthSession?> getValidSession() async {
+    final session = _currentSession;
+    if (session == null) return restoreSession();
+    if (!session.isExpired) return session;
+
+    final currentValidation = _validationInProgress;
+    if (currentValidation != null) return currentValidation;
+
+    final validation = _refreshSessionSafely();
+    _validationInProgress = validation;
+    try {
+      return await validation;
+    } finally {
+      if (identical(_validationInProgress, validation)) {
+        _validationInProgress = null;
+      }
+    }
+  }
+
+  Future<AuthSession?> _refreshSessionSafely() async {
+    try {
+      return await refreshSession();
+    } catch (_) {
+      return null;
+    }
+  }
 
   Future<AuthSession?> restoreSession() async {
     final currentRestore = _restoreInProgress;
@@ -132,11 +160,13 @@ class AuthService {
       '${SupabaseConfig.url}/auth/v1/token',
     ).replace(queryParameters: {'grant_type': 'refresh_token'});
 
-    final response = await http.post(
-      uri,
-      headers: _authHeaders,
-      body: jsonEncode({'refresh_token': refreshToken}),
-    );
+    final response = await http
+        .post(
+          uri,
+          headers: _authHeaders,
+          body: jsonEncode({'refresh_token': refreshToken}),
+        )
+        .timeout(const Duration(seconds: 12));
 
     if (!_isSuccess(response)) {
       if (response.statusCode == 400 || response.statusCode == 401) {
