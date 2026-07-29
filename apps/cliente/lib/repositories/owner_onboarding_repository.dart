@@ -48,11 +48,10 @@ class OwnerOnboardingRepository {
     }
 
     final auth = AuthService();
-    var session = auth.currentSession ?? await auth.restoreSession();
+    final session = await auth.getValidSession();
     if (session == null) {
       throw StateError('Faça login novamente para continuar.');
     }
-    if (session.isExpired) session = await auth.refreshSession();
 
     final response = await http
         .post(
