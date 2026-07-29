@@ -33,9 +33,8 @@ class UserAccessRepository {
   Future<UserAccess> fetchAccess() async {
     if (!_rest.isConfigured) return const UserAccess.client();
     final auth = AuthService();
-    var session = auth.currentSession ?? await auth.restoreSession();
+    final session = await auth.getValidSession();
     if (session == null) return const UserAccess.client();
-    if (session.isExpired) session = await auth.refreshSession();
 
     List<Map<String, dynamic>> memberships = const [];
     List<Map<String, dynamic>> ownedShops = const [];
