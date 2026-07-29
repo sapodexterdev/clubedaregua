@@ -47,9 +47,8 @@ class TeamInvitationRepository {
     if (token == null || !_rest.isConfigured) return null;
 
     final auth = AuthService();
-    var session = auth.currentSession ?? await auth.restoreSession();
+    final session = await auth.getValidSession();
     if (session == null) return null;
-    if (session.isExpired) session = await auth.refreshSession();
 
     final result = await _rest.postRpc(
       'accept_shop_invitation',
