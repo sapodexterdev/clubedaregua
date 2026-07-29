@@ -7052,7 +7052,13 @@ class _SettingsFormState extends State<_SettingsForm> {
     final session = context.read<ManagementSession>();
     setState(() => _isUploadingLogo = true);
     try {
-      final file = await pickLogoFile();
+      final file = await pickLogoFile(
+        maxWidth: 1024,
+        maxHeight: 1024,
+        compressionThresholdBytes: 500 * 1024,
+        quality: 0.88,
+        preserveTransparency: true,
+      );
       if (file == null) return;
       final url = await session.uploadShopMedia(file, folder: 'logos');
       await session.saveShopMediaUrl(logoUrl: url);
@@ -7075,7 +7081,12 @@ class _SettingsFormState extends State<_SettingsForm> {
     final session = context.read<ManagementSession>();
     setState(() => _isUploadingCover = true);
     try {
-      final file = await pickLogoFile();
+      final file = await pickLogoFile(
+        maxWidth: 1920,
+        maxHeight: 1080,
+        compressionThresholdBytes: 900 * 1024,
+        quality: 0.86,
+      );
       if (file == null) return;
       final url = await session.uploadShopMedia(file, folder: 'banners');
       await session.saveShopMediaUrl(coverUrl: url);
