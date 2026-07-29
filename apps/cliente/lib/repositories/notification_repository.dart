@@ -62,8 +62,6 @@ class NotificationRepository {
 
   Future<AuthSession?> _authenticatedSession() async {
     final auth = AuthService();
-    var session = auth.currentSession ?? await auth.restoreSession();
-    if (session?.isExpired == true) session = await auth.refreshSession();
-    return session;
+    return auth.getValidSession();
   }
 }
