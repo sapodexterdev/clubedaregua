@@ -20,32 +20,54 @@ class NotificationsScreen extends StatefulWidget {
 class _NotificationsScreenState extends State<NotificationsScreen>
     with WidgetsBindingObserver {
   Timer? _refreshTimer;
+  Timer? _resumeRefreshTimer;
+  bool _isForeground = true;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
-    _refreshTimer = Timer.periodic(
-      const Duration(seconds: 8),
-      (_) => _refresh(),
-    );
+    _startRefreshTimer();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _refreshTimer?.cancel();
+    _resumeRefreshTimer?.cancel();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _refresh();
+    if (state == AppLifecycleState.resumed) {
+      _isForeground = true;
+      _startRefreshTimer();
+      _resumeRefreshTimer?.cancel();
+      _resumeRefreshTimer = Timer(
+        const Duration(milliseconds: 700),
+        _refresh,
+      );
+      return;
+    }
+
+    _isForeground = false;
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+    _resumeRefreshTimer?.cancel();
+  }
+
+  void _startRefreshTimer() {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _refresh(),
+    );
   }
 
   void _refresh() {
-    if (!mounted) return;
+    if (!mounted || !_isForeground) return;
     context.read<AppState>().refreshNotifications();
   }
 
