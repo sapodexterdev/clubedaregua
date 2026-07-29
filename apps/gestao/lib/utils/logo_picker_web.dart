@@ -1,12 +1,19 @@
 // ignore_for_file: avoid_web_libraries_in_flutter
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:html' as html;
 import 'dart:typed_data';
 
 import 'logo_file.dart';
 
-Future<LogoFile?> pickLogoFile() async {
+Future<LogoFile?> pickLogoFile({
+  required int maxWidth,
+  required int maxHeight,
+  required int compressionThresholdBytes,
+  double quality = 0.86,
+  bool preserveTransparency = false,
+}) async {
   final input = html.FileUploadInputElement()
     ..accept = 'image/jpeg,image/png,image/webp'
     ..multiple = false;
@@ -34,7 +41,18 @@ Future<LogoFile?> pickLogoFile() async {
     input.remove();
   }
 
-  void complete(LogoFile? file) {
+  Future<void> complete(LogoFile? file) async {
+    if (completer.isCompleted) return;
+    if (file != null) {
+      file = await _optimizeImage(
+        file,
+        maxWidth: maxWidth,
+        maxHeight: maxHeight,
+        compressionThresholdBytes: compressionThresholdBytes,
+        quality: quality,
+        preserveTransparency: preserveTransparency,
+      );
+    }
     if (completer.isCompleted) return;
     cleanup();
     completer.complete(file);
@@ -104,4 +122,88 @@ Future<LogoFile?> pickLogoFile() async {
 
   input.click();
   return completer.future;
+}
+
+Future<LogoFile> _optimizeImage(
+  LogoFile original, {
+  required int maxWidth,
+  required int maxHeight,
+  required int compressionThresholdBytes,
+  required double quality,
+  required bool preserveTransparency,
+}) async {
+  String? objectUrl;
+  try {
+    final sourceBlob = html.Blob(
+      [original.bytes],
+      original.contentType,
+    );
+    objectUrl = html.Url.createObjectUrlFromBlob(sourceBlob);
+    final image = html.ImageElement(src: objectUrl);
+    await image.onLoad.first.timeout(const Duration(seconds: 20));
+
+    final sourceWidth = image.naturalWidth;
+    final sourceHeight = image.naturalHeight;
+    if (sourceWidth <= 0 || sourceHeight <= 0) return original;
+
+    final scale = [
+      1.0,
+      maxWidth / sourceWidth,
+      maxHeight / sourceHeight,
+    ].reduce((current, value) => value < current ? value : current);
+    final targetWidth =
+        (sourceWidth * scale).round().clamp(1, maxWidth).toInt();
+    final targetHeight =
+        (sourceHeight * scale).round().clamp(1, maxHeight).toInt();
+    final needsResize =
+        targetWidth != sourceWidth || targetHeight != sourceHeight;
+    final needsCompression =
+        original.bytes.length > compressionThresholdBytes;
+
+    if (!needsResize && !needsCompression) return original;
+
+    final canvas = html.CanvasElement(
+      width: targetWidth,
+      height: targetHeight,
+    );
+    canvas.context2D.drawImageScaled(
+      image,
+      0,
+      0,
+      targetWidth,
+      targetHeight,
+    );
+
+    final sourceType = original.contentType.toLowerCase();
+    final outputType = preserveTransparency &&
+            (sourceType == 'image/png' || sourceType == 'image/webp')
+        ? 'image/png'
+        : 'image/jpeg';
+    final dataUrl = canvas.toDataUrl(outputType, quality);
+    final separator = dataUrl.indexOf(',');
+    if (separator < 0) return original;
+    final optimizedBytes = base64Decode(dataUrl.substring(separator + 1));
+
+    if (!needsResize && optimizedBytes.length >= original.bytes.length) {
+      return original;
+    }
+
+    return LogoFile(
+      name: _optimizedFileName(original.name, outputType),
+      bytes: optimizedBytes,
+      contentType: outputType,
+    );
+  } catch (_) {
+    // A otimização nunca deve impedir o upload da imagem original.
+    return original;
+  } finally {
+    if (objectUrl != null) html.Url.revokeObjectUrl(objectUrl);
+  }
+}
+
+String _optimizedFileName(String originalName, String contentType) {
+  final dot = originalName.lastIndexOf('.');
+  final baseName = dot > 0 ? originalName.substring(0, dot) : originalName;
+  final extension = contentType == 'image/png' ? 'png' : 'jpg';
+  return '$baseName-otimizada.$extension';
 }
