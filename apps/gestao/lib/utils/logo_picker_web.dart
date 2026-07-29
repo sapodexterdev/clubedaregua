@@ -8,26 +8,43 @@ import 'logo_file.dart';
 
 Future<LogoFile?> pickLogoFile() async {
   final input = html.FileUploadInputElement()
-    ..accept = 'image/*'
+    ..accept = 'image/jpeg,image/png,image/webp'
     ..multiple = false;
+  input.style
+    ..position = 'fixed'
+    ..left = '-10000px'
+    ..top = '0'
+    ..width = '1px'
+    ..height = '1px'
+    ..opacity = '0';
+  html.document.body?.append(input);
 
   final completer = Completer<LogoFile?>();
+  StreamSubscription<html.Event>? changeSubscription;
+  StreamSubscription<html.Event>? inputSubscription;
   StreamSubscription<html.Event>? focusSubscription;
-  var selectionChanged = false;
+  Timer? safetyTimer;
+  var selectionHandled = false;
+
+  void cleanup() {
+    changeSubscription?.cancel();
+    inputSubscription?.cancel();
+    focusSubscription?.cancel();
+    safetyTimer?.cancel();
+    input.remove();
+  }
 
   void complete(LogoFile? file) {
     if (completer.isCompleted) return;
-    focusSubscription?.cancel();
+    cleanup();
     completer.complete(file);
   }
 
-  input.onChange.first.then((_) {
-    selectionChanged = true;
+  void readSelection() {
+    if (selectionHandled || completer.isCompleted) return;
     final file = input.files?.isEmpty == false ? input.files!.first : null;
-    if (file == null) {
-      complete(null);
-      return;
-    }
+    if (file == null) return;
+    selectionHandled = true;
 
     final reader = html.FileReader();
     reader.onError.first.then((_) {
@@ -64,16 +81,26 @@ Future<LogoFile?> pickLogoFile() async {
       }
     });
     reader.readAsArrayBuffer(file);
-  });
+  }
+
+  // Safari/WebKit no iPhone pode disparar `input`, `change` ou ambos,
+  // dependendo de o usuário escolher Câmera, Fotos ou Arquivos.
+  changeSubscription = input.onChange.listen((_) => readSelection());
+  inputSubscription = input.onInput.listen((_) => readSelection());
 
   // O navegador não dispara `change` quando o usuário fecha o seletor sem
   // escolher um arquivo. Quando a janela recupera o foco, damos tempo para o
-  // `change` chegar e concluímos com null caso a seleção tenha sido cancelada.
+  // evento chegar e então conferimos diretamente a lista de arquivos.
   focusSubscription = html.window.onFocus.listen((_) {
-    Future<void>.delayed(const Duration(milliseconds: 350), () {
-      if (!selectionChanged) complete(null);
+    Future<void>.delayed(const Duration(milliseconds: 1200), () {
+      if (completer.isCompleted) return;
+      readSelection();
+      if (!selectionHandled) complete(null);
     });
   });
+
+  // Proteção adicional para nenhum navegador manter o loading indefinidamente.
+  safetyTimer = Timer(const Duration(minutes: 5), () => complete(null));
 
   input.click();
   return completer.future;
