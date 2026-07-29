@@ -7,8 +7,12 @@ import 'app.dart';
 import 'providers/app_state.dart';
 
 Future<void> main() async {
+  var appStarted = false;
   await runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
+    PaintingBinding.instance.imageCache
+      ..maximumSize = 40
+      ..maximumSizeBytes = 32 << 20;
 
     FlutterError.onError = (details) {
       FlutterError.presentError(details);
@@ -20,7 +24,19 @@ Future<void> main() async {
         child: const ClubeDaReguaApp(),
       ),
     );
+    appStarted = true;
   }, (error, stackTrace) {
+    if (appStarted) {
+      FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: error,
+          stack: stackTrace,
+          library: 'Clube da Régua',
+          context: ErrorDescription('durante uma tarefa assíncrona'),
+        ),
+      );
+      return;
+    }
     runApp(StartupErrorApp(error: error));
   });
 }
