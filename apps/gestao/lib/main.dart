@@ -8,9 +8,10 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'utils/app_mode_navigation.dart';
 import 'utils/logo_file.dart';
 import 'utils/logo_picker.dart';
+
+void _ignoreClientModeNavigation() {}
 
 String _managementTime(dynamic value, String fallback) {
   final text = value?.toString() ?? '';
@@ -20,8 +21,7 @@ String _managementTime(dynamic value, String fallback) {
 int _minutesFromTime(String value) {
   final parts = value.split(':');
   if (parts.length != 2) return 0;
-  return (int.tryParse(parts[0]) ?? 0) * 60 +
-      (int.tryParse(parts[1]) ?? 0);
+  return (int.tryParse(parts[0]) ?? 0) * 60 + (int.tryParse(parts[1]) ?? 0);
 }
 
 // A identidade oficial da plataforma e carregada pelos assets da Gestao.
@@ -67,6 +67,82 @@ class ClubeDaReguaGestaoApp extends StatelessWidget {
           }
           return const ManagementHomeScreen();
         },
+      ),
+    );
+  }
+}
+
+class EmbeddedManagementArea extends StatefulWidget {
+  const EmbeddedManagementArea({
+    required this.initialRole,
+    required this.onOpenClientMode,
+    required this.onSignedOut,
+    this.onOpenProfile,
+    this.onRoleChanged,
+    super.key,
+  });
+
+  final ManagementRole initialRole;
+  final VoidCallback onOpenClientMode;
+  final VoidCallback onSignedOut;
+  final VoidCallback? onOpenProfile;
+  final ValueChanged<ManagementRole>? onRoleChanged;
+
+  @override
+  State<EmbeddedManagementArea> createState() =>
+      _EmbeddedManagementAreaState();
+}
+
+class _EmbeddedManagementAreaState extends State<EmbeddedManagementArea> {
+  late final ManagementSession _session;
+
+  @override
+  void initState() {
+    super.initState();
+    _session = ManagementSession();
+    _session.restoreUnifiedSession();
+  }
+
+  @override
+  void dispose() {
+    _session.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider.value(
+      value: _session,
+      child: Theme(
+        data: _buildManagementTheme(),
+        child: Consumer<ManagementSession>(
+          builder: (context, session, _) {
+            if (session.isRestoringSession ||
+                (session.isSignedIn &&
+                    !session.professionalAccessResolved)) {
+              return const Scaffold(
+                body: CDRLoading.fullScreen(
+                  message: 'Preparando sua área profissional...',
+                ),
+              );
+            }
+            if (!session.isSignedIn || !session.hasProfessionalAccess) {
+              return _ProfessionalAccessDeniedScreen(
+                onOpenClientMode: widget.onOpenClientMode,
+              );
+            }
+            return ManagementHomeScreen(
+              initialRole: widget.initialRole,
+              onOpenClientMode: widget.onOpenClientMode,
+              onOpenProfile: widget.onOpenProfile,
+              onRoleChanged: widget.onRoleChanged,
+              onSignedOut: () async {
+                await session.signOut();
+                widget.onSignedOut();
+              },
+            );
+          },
+        ),
       ),
     );
   }
@@ -141,16 +217,6 @@ ThemeData _buildManagementTheme() {
       behavior: SnackBarBehavior.floating,
     ),
   );
-}
-
-class GestaoSupabaseConfig {
-  const GestaoSupabaseConfig._();
-
-  static const url = String.fromEnvironment('SUPABASE_URL');
-  static const anonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
-
-  static bool get isConfigured =>
-      url.startsWith('https://') && anonKey.trim().isNotEmpty;
 }
 
 class PasswordRecoveryLink {
@@ -410,8 +476,7 @@ class ScheduleEntry {
   }
 
   bool get canComplete =>
-      appointmentId != null &&
-      (status == 'Pendente' || status == 'Confirmado');
+      appointmentId != null && (status == 'Pendente' || status == 'Confirmado');
 
   static String _timeOnly(String value) {
     if (value.length >= 5) return value.substring(0, 5);
@@ -1037,10 +1102,11 @@ class ShopConfiguration {
 }
 
 class ManagementSession extends ChangeNotifier {
-  static const _unifiedSessionKey = 'clubedaregua.client.session';
+  ManagementSession({AuthService? authService})
+      : _authService = authService ?? AuthService();
 
+  final AuthService _authService;
   String? _accessToken;
-  String? _refreshToken;
   String? _userId;
   String? _barberShopId;
   bool _isPlatformAdmin = false;
@@ -1088,8 +1154,7 @@ class ManagementSession extends ChangeNotifier {
   bool get isSignedIn => _accessToken != null;
   bool get professionalAccessResolved =>
       !isSignedIn || _professionalAccessResolved;
-  bool get canWorkAsBarber =>
-      _isLinkedBarber || _membershipRole == 'barber';
+  bool get canWorkAsBarber => _isLinkedBarber || _membershipRole == 'barber';
   bool get canManageShop =>
       _isPlatformAdmin ||
       _isShopOwner ||
@@ -1101,21 +1166,12 @@ class ManagementSession extends ChangeNotifier {
 
   Future<void> restoreUnifiedSession() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_unifiedSessionKey);
-      if (raw == null || raw.isEmpty) return;
-      final data = jsonDecode(raw) as Map<String, dynamic>;
-      _accessToken = data['access_token']?.toString();
-      _refreshToken = data['refresh_token']?.toString();
-      final user = data['user'];
-      if (user is Map) {
-        _userId = user['id']?.toString();
-        email = user['email']?.toString();
-      }
-      if (_accessToken == null || _accessToken!.isEmpty) {
+      final session = await _authService.getValidSession();
+      if (session == null) {
         _clearSessionInMemory();
         return;
       }
+      _applyAuthSession(session);
       _professionalAccessResolved = false;
       await _loadRestoredManagementData();
     } catch (error) {
@@ -1214,7 +1270,7 @@ class ManagementSession extends ChangeNotifier {
   }
 
   Future<void> signIn(String emailValue, String password) async {
-    if (!GestaoSupabaseConfig.isConfigured) {
+    if (!SupabaseConfig.isConfigured) {
       errorMessage = 'Configure SUPABASE_URL e SUPABASE_ANON_KEY.';
       notifyListeners();
       return;
@@ -1225,32 +1281,8 @@ class ManagementSession extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final uri = Uri.parse(
-        '${GestaoSupabaseConfig.url}/auth/v1/token',
-      ).replace(queryParameters: {'grant_type': 'password'});
-
-      final response = await http.post(
-        uri,
-        headers: {
-          'apikey': GestaoSupabaseConfig.anonKey,
-          'content-type': 'application/json',
-        },
-        body: jsonEncode({
-          'email': emailValue.trim(),
-          'password': password,
-        }),
-      );
-
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw StateError('Login inválido ou usuário sem acesso.');
-      }
-
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      _accessToken = data['access_token']?.toString();
-      _refreshToken = data['refresh_token']?.toString();
-      final user = data['user'];
-      if (user is Map) _userId = user['id']?.toString();
-      email = emailValue.trim();
+      final session = await _authService.signIn(emailValue, password);
+      _applyAuthSession(session);
       await _resolvePlatformAdmin(_accessToken!);
       await _ensureBarberShopId(_accessToken!);
       await _resolveShopCapabilities(_accessToken!);
@@ -1258,11 +1290,9 @@ class ManagementSession extends ChangeNotifier {
         throw StateError('Sua conta não possui acesso profissional ativo.');
       }
       _professionalAccessResolved = true;
-      await _saveUnifiedSession(data);
       await refreshManagementData();
     } catch (error) {
       _accessToken = null;
-      _refreshToken = null;
       errorMessage = _cleanErrorMessage(error);
     } finally {
       isLoading = false;
@@ -1301,9 +1331,7 @@ class ManagementSession extends ChangeNotifier {
           'limit': '200',
         },
       );
-      bookingRequests = rows
-          .map((row) => BookingRequest.fromMap(row))
-          .toList();
+      bookingRequests = rows.map((row) => BookingRequest.fromMap(row)).toList();
       bookingRequestsError = null;
     } catch (error) {
       bookingRequestsError = _cleanErrorMessage(error);
@@ -1379,8 +1407,8 @@ class ManagementSession extends ChangeNotifier {
               isActive: row['is_active'] != false,
               startTime: _managementTime(row['start_time'], fallback.startTime),
               endTime: _managementTime(row['end_time'], fallback.endTime),
-              slotMinutes:
-                  (row['slot_minutes'] as num?)?.toInt() ?? fallback.slotMinutes,
+              slotMinutes: (row['slot_minutes'] as num?)?.toInt() ??
+                  fallback.slotMinutes,
             )
           else
             fallback.copyWith(isActive: false),
@@ -1911,14 +1939,14 @@ class ManagementSession extends ChangeNotifier {
     final objectPath =
         '$shopId/$safeFolder/${DateTime.now().millisecondsSinceEpoch}-$safeName';
     final uri = Uri.parse(
-      '${GestaoSupabaseConfig.url}/storage/v1/object/shop-media/$objectPath',
+      '${SupabaseConfig.url}/storage/v1/object/shop-media/$objectPath',
     );
 
     final response = await http
         .post(
           uri,
           headers: {
-            'apikey': GestaoSupabaseConfig.anonKey,
+            'apikey': SupabaseConfig.anonKey,
             'authorization': 'Bearer $token',
             'content-type': file.contentType,
             'x-upsert': 'true',
@@ -1937,7 +1965,7 @@ class ManagementSession extends ChangeNotifier {
           'Supabase Storage ${response.statusCode}: ${response.body}');
     }
 
-    return '${GestaoSupabaseConfig.url}/storage/v1/object/public/shop-media/$objectPath';
+    return '${SupabaseConfig.url}/storage/v1/object/public/shop-media/$objectPath';
   }
 
   Future<void> saveShopMediaUrl({
@@ -2491,17 +2519,14 @@ class ManagementSession extends ChangeNotifier {
     }
   }
 
-  void signOut() {
-    SharedPreferences.getInstance().then(
-      (prefs) => prefs.remove(_unifiedSessionKey),
-    );
+  Future<void> signOut() async {
+    await _authService.signOut();
     _clearSessionInMemory();
     notifyListeners();
   }
 
   void _clearSessionInMemory() {
     _accessToken = null;
-    _refreshToken = null;
     _userId = null;
     _barberShopId = null;
     _isPlatformAdmin = false;
@@ -2543,9 +2568,10 @@ class ManagementSession extends ChangeNotifier {
     errorMessage = null;
   }
 
-  Future<void> _saveUnifiedSession(Map<String, dynamic> data) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_unifiedSessionKey, jsonEncode(data));
+  void _applyAuthSession(AuthSession session) {
+    _accessToken = session.accessToken;
+    _userId = session.user.id;
+    email = session.user.email;
   }
 
   BookingRequest? _bookingRequestById(String id) {
@@ -2633,10 +2659,7 @@ class ManagementSession extends ChangeNotifier {
   Future<void> _resolveShopCapabilities(String token) async {
     final userId = _userId;
     final shopId = _barberShopId;
-    if (userId == null ||
-        userId.isEmpty ||
-        shopId == null ||
-        shopId.isEmpty) {
+    if (userId == null || userId.isEmpty || shopId == null || shopId.isEmpty) {
       return;
     }
 
@@ -2701,7 +2724,7 @@ class ManagementSession extends ChangeNotifier {
     String table, {
     required Map<String, String> query,
   }) async {
-    final uri = Uri.parse('${GestaoSupabaseConfig.url}/rest/v1/$table')
+    final uri = Uri.parse('${SupabaseConfig.url}/rest/v1/$table')
         .replace(queryParameters: query);
 
     final response = await _requestWithRefresh(
@@ -2728,7 +2751,7 @@ class ManagementSession extends ChangeNotifier {
     String table, {
     required Map<String, dynamic> data,
   }) async {
-    final uri = Uri.parse('${GestaoSupabaseConfig.url}/rest/v1/$table');
+    final uri = Uri.parse('${SupabaseConfig.url}/rest/v1/$table');
 
     final response = await _requestWithRefresh(
       token,
@@ -2759,7 +2782,7 @@ class ManagementSession extends ChangeNotifier {
     required Map<String, String> query,
     required Map<String, dynamic> data,
   }) async {
-    final uri = Uri.parse('${GestaoSupabaseConfig.url}/rest/v1/$table')
+    final uri = Uri.parse('${SupabaseConfig.url}/rest/v1/$table')
         .replace(queryParameters: query);
 
     final response = await _requestWithRefresh(
@@ -2791,7 +2814,7 @@ class ManagementSession extends ChangeNotifier {
     required Map<String, dynamic> data,
   }) async {
     final uri = Uri.parse(
-      '${GestaoSupabaseConfig.url}/rest/v1/rpc/$functionName',
+      '${SupabaseConfig.url}/rest/v1/rpc/$functionName',
     );
     final response = await _requestWithRefresh(
       token,
@@ -2815,7 +2838,7 @@ class ManagementSession extends ChangeNotifier {
     String table, {
     required Map<String, String> query,
   }) async {
-    final uri = Uri.parse('${GestaoSupabaseConfig.url}/rest/v1/$table')
+    final uri = Uri.parse('${SupabaseConfig.url}/rest/v1/$table')
         .replace(queryParameters: query);
 
     final response = await _requestWithRefresh(
@@ -2842,25 +2865,13 @@ class ManagementSession extends ChangeNotifier {
   }
 
   Future<String?> _refreshAccessToken() async {
-    final refreshToken = _refreshToken;
-    if (refreshToken == null || refreshToken.isEmpty) return null;
-    final uri = Uri.parse(
-      '${GestaoSupabaseConfig.url}/auth/v1/token',
-    ).replace(queryParameters: {'grant_type': 'refresh_token'});
-    final response = await http.post(
-      uri,
-      headers: {
-        'apikey': GestaoSupabaseConfig.anonKey,
-        'content-type': 'application/json',
-      },
-      body: jsonEncode({'refresh_token': refreshToken}),
-    );
-    if (response.statusCode < 200 || response.statusCode >= 300) return null;
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    _accessToken = data['access_token']?.toString();
-    _refreshToken = data['refresh_token']?.toString() ?? refreshToken;
-    await _saveUnifiedSession(data);
-    return _accessToken;
+    try {
+      final session = await _authService.refreshSession();
+      _applyAuthSession(session);
+      return session.accessToken;
+    } catch (_) {
+      return null;
+    }
   }
 
   Map<String, String> _restHeaders(
@@ -2868,7 +2879,7 @@ class ManagementSession extends ChangeNotifier {
     bool preferRepresentation = false,
   }) {
     return {
-      'apikey': GestaoSupabaseConfig.anonKey,
+      'apikey': SupabaseConfig.anonKey,
       'authorization': 'Bearer $token',
       'content-type': 'application/json',
       if (preferRepresentation) 'prefer': 'return=representation',
@@ -2940,7 +2951,11 @@ class ManagementSession extends ChangeNotifier {
 }
 
 class _ProfessionalAccessDeniedScreen extends StatelessWidget {
-  const _ProfessionalAccessDeniedScreen();
+  const _ProfessionalAccessDeniedScreen({
+    this.onOpenClientMode = _ignoreClientModeNavigation,
+  });
+
+  final VoidCallback onOpenClientMode;
 
   @override
   Widget build(BuildContext context) {
@@ -2972,14 +2987,13 @@ class _ProfessionalAccessDeniedScreen extends StatelessWidget {
                   const SizedBox(height: 24),
                   CDRButton.primary(
                     label: 'VOLTAR AO MODO CLIENTE',
-                    onPressed: openClientMode,
+                    onPressed: onOpenClientMode,
                     leading: const Icon(Icons.search_rounded),
                   ),
                   const SizedBox(height: 10),
                   CDRButton.ghost(
                     label: 'SAIR DA CONTA',
-                    onPressed:
-                        context.read<ManagementSession>().signOut,
+                    onPressed: context.read<ManagementSession>().signOut,
                     leading: const Icon(Icons.logout_rounded),
                   ),
                 ],
@@ -3205,7 +3219,6 @@ class _ManagementLoginScreenState extends State<ManagementLoginScreen> {
       ),
     );
   }
-
 }
 
 class PasswordRecoveryScreen extends StatefulWidget {
@@ -3246,7 +3259,7 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
       return;
     }
 
-    if (!GestaoSupabaseConfig.isConfigured) {
+    if (!SupabaseConfig.isConfigured) {
       setState(() => _message = 'Configure SUPABASE_URL e SUPABASE_ANON_KEY.');
       return;
     }
@@ -3303,9 +3316,9 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
     required String password,
   }) {
     return http.put(
-      Uri.parse('${GestaoSupabaseConfig.url}/auth/v1/user'),
+      Uri.parse('${SupabaseConfig.url}/auth/v1/user'),
       headers: {
-        'apikey': GestaoSupabaseConfig.anonKey,
+        'apikey': SupabaseConfig.anonKey,
         'authorization': 'Bearer $accessToken',
         'content-type': 'application/json',
       },
@@ -3318,11 +3331,11 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
     if (refreshToken == null || refreshToken.isEmpty) return null;
 
     final response = await http.post(
-      Uri.parse('${GestaoSupabaseConfig.url}/auth/v1/token').replace(
+      Uri.parse('${SupabaseConfig.url}/auth/v1/token').replace(
         queryParameters: {'grant_type': 'refresh_token'},
       ),
       headers: {
-        'apikey': GestaoSupabaseConfig.anonKey,
+        'apikey': SupabaseConfig.anonKey,
         'content-type': 'application/json',
       },
       body: jsonEncode({'refresh_token': refreshToken}),
@@ -3440,7 +3453,20 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
 enum ManagementRole { barber, admin }
 
 class ManagementHomeScreen extends StatefulWidget {
-  const ManagementHomeScreen({super.key});
+  const ManagementHomeScreen({
+    this.initialRole,
+    this.onOpenClientMode = _ignoreClientModeNavigation,
+    this.onOpenProfile,
+    this.onRoleChanged,
+    this.onSignedOut,
+    super.key,
+  });
+
+  final ManagementRole? initialRole;
+  final VoidCallback onOpenClientMode;
+  final VoidCallback? onOpenProfile;
+  final ValueChanged<ManagementRole>? onRoleChanged;
+  final VoidCallback? onSignedOut;
 
   @override
   State<ManagementHomeScreen> createState() => _ManagementHomeScreenState();
@@ -3453,9 +3479,10 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
   @override
   void initState() {
     super.initState();
-    selectedRole = Uri.base.queryParameters['mode'] == 'owner'
-        ? ManagementRole.admin
-        : ManagementRole.barber;
+    selectedRole = widget.initialRole ??
+        (Uri.base.queryParameters['mode'] == 'owner'
+            ? ManagementRole.admin
+            : ManagementRole.barber);
   }
 
   @override
@@ -3479,7 +3506,12 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
         final extendedNavigation = constraints.maxWidth >= 1280;
         return Scaffold(
           backgroundColor: SharedAppColors.background,
-          appBar: _ManagementTopBar(title: page.title),
+          appBar: _ManagementTopBar(
+            title: page.title,
+            onOpenClientMode: widget.onOpenClientMode,
+            onOpenProfile: widget.onOpenProfile,
+            onSignedOut: widget.onSignedOut,
+          ),
           bottomNavigationBar: useSideNavigation
               ? null
               : _ManagementBottomNavigation(
@@ -3503,31 +3535,29 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
                   children: [
                     Align(
                       alignment: Alignment.centerLeft,
-                      child:
-                          session.canWorkAsBarber && session.canManageShop
-                              ? _RoleSwitch(
-                                  selectedRole: effectiveRole,
-                                  onChanged: (role) async {
-                                    setState(() {
-                                      selectedRole = role;
-                                      selectedTab = 0;
-                                    });
-                                    final prefs =
-                                        await SharedPreferences.getInstance();
+                      child: session.canWorkAsBarber && session.canManageShop
+                          ? _RoleSwitch(
+                              selectedRole: effectiveRole,
+                              onChanged: (role) async {
+                                setState(() {
+                                  selectedRole = role;
+                                  selectedTab = 0;
+                                });
+                                final prefs =
+                                    await SharedPreferences.getInstance();
                                     await prefs.setString(
                                       'clubedaregua.last_mode',
                                       role == ManagementRole.admin
                                           ? 'owner'
                                           : 'barber',
                                     );
+                                    widget.onRoleChanged?.call(role);
                                   },
-                                )
-                              : _AvailabilityStatus(
-                                  label: isAdmin
-                                      ? 'MODO DONO'
-                                      : 'MODO BARBEIRO',
-                                  color: SharedAppColors.orange,
-                                ),
+                            )
+                          : _AvailabilityStatus(
+                              label: isAdmin ? 'MODO DONO' : 'MODO BARBEIRO',
+                              color: SharedAppColors.orange,
+                            ),
                     ),
                     const SizedBox(height: 16),
                     _Header(
@@ -3552,9 +3582,17 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
 }
 
 class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
-  const _ManagementTopBar({required this.title});
+  const _ManagementTopBar({
+    required this.title,
+    required this.onOpenClientMode,
+    this.onOpenProfile,
+    this.onSignedOut,
+  });
 
   final String title;
+  final VoidCallback onOpenClientMode;
+  final VoidCallback? onOpenProfile;
+  final VoidCallback? onSignedOut;
 
   @override
   Size get preferredSize => const Size.fromHeight(68);
@@ -3623,28 +3661,49 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
             onSelected: (value) {
               switch (value) {
                 case 'client':
-                  openClientMode();
+                  onOpenClientMode();
+                  return;
+                case 'profile':
+                  onOpenProfile?.call();
                   return;
                 case 'refresh':
                   context.read<ManagementSession>().refreshManagementData();
                   return;
                 case 'logout':
-                  context.read<ManagementSession>().signOut();
+                  (onSignedOut ??
+                      context.read<ManagementSession>().signOut)();
                   return;
               }
             },
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 'client', child: Text('Modo cliente')),
-              PopupMenuItem(value: 'refresh', child: Text('Atualizar dados')),
-              PopupMenuItem(value: 'logout', child: Text('Sair')),
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'client',
+                child: Text('Modo cliente'),
+              ),
+              if (onOpenProfile != null)
+                const PopupMenuItem(
+                  value: 'profile',
+                  child: Text('Perfil e modos'),
+                ),
+              const PopupMenuItem(
+                value: 'refresh',
+                child: Text('Atualizar dados'),
+              ),
+              const PopupMenuItem(value: 'logout', child: Text('Sair')),
             ],
           )
         else ...[
           _TopBarAction(
             tooltip: 'Modo cliente',
-            onPressed: openClientMode,
+            onPressed: onOpenClientMode,
             icon: Icons.swap_horiz_rounded,
           ),
+          if (onOpenProfile != null)
+            _TopBarAction(
+              tooltip: 'Perfil e modos',
+              onPressed: onOpenProfile!,
+              icon: Icons.person_outline_rounded,
+            ),
           _TopBarAction(
             tooltip: 'Atualizar',
             onPressed: () =>
@@ -3653,7 +3712,8 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
           ),
           _TopBarAction(
             tooltip: 'Sair',
-            onPressed: () => context.read<ManagementSession>().signOut(),
+            onPressed:
+                onSignedOut ?? context.read<ManagementSession>().signOut,
             icon: Icons.logout_rounded,
           ),
         ],
@@ -3757,8 +3817,7 @@ class _ManagementSideNavigation extends StatelessWidget {
           groupAlignment: -.72,
           backgroundColor: SharedAppColors.card,
           indicatorColor: SharedAppColors.orange.withOpacity(.14),
-          selectedIconTheme:
-              const IconThemeData(color: SharedAppColors.orange),
+          selectedIconTheme: const IconThemeData(color: SharedAppColors.orange),
           unselectedIconTheme:
               const IconThemeData(color: SharedAppColors.muted),
           selectedLabelTextStyle: const TextStyle(
@@ -4031,9 +4090,9 @@ class _Header extends StatelessWidget {
                 clipBehavior: Clip.antiAlias,
                 child: logoUrl.isEmpty
                     ? const Icon(
-                      Icons.storefront_rounded,
-                      color: SharedAppColors.orange,
-                    )
+                        Icons.storefront_rounded,
+                        color: SharedAppColors.orange,
+                      )
                     : Image.network(
                         logoUrl,
                         fit: BoxFit.cover,
@@ -4417,9 +4476,7 @@ class _BookingRequestsPage extends StatelessWidget {
             _SectionTitle(
               newCount > 0 ? 'Novas solicitações' : 'Solicitações',
               eyebrow: 'PEDIDOS',
-              trailing: requests.isEmpty
-                  ? null
-                  : '${requests.length} no total',
+              trailing: requests.isEmpty ? null : '${requests.length} no total',
             ),
             const SizedBox(height: 12),
             if (session.isBookingRequestsLoading) ...[
@@ -4741,8 +4798,8 @@ class _AvailabilityDayTile extends StatelessWidget {
               ),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 8),
-                child: Text('até',
-                    style: TextStyle(color: SharedAppColors.muted)),
+                child:
+                    Text('até', style: TextStyle(color: SharedAppColors.muted)),
               ),
               _TimeButton(
                 label: day.endTime,
@@ -4973,8 +5030,8 @@ class _CustomerFilters extends StatelessWidget {
                   label: 'Todos',
                   selected:
                       session.customerStatusFilter == CustomerStatusFilter.all,
-                  onSelected: () => session
-                      .setCustomerStatusFilter(CustomerStatusFilter.all),
+                  onSelected: () =>
+                      session.setCustomerStatusFilter(CustomerStatusFilter.all),
                 ),
                 _FilterChipButton(
                   label: 'Ativos',
@@ -5061,8 +5118,7 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
             _SheetHeader(
               eyebrow: 'PERFIL DO CLIENTE',
               title: customer.name,
-              onClose:
-                  _isSaving ? null : () => Navigator.pop(context),
+              onClose: _isSaving ? null : () => Navigator.pop(context),
             ),
             const SizedBox(height: 12),
             Center(child: _CustomerAvatar(customer: customer, radius: 34)),
@@ -5330,9 +5386,7 @@ class _FinancialLine extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              color: emphasized
-                  ? SharedAppColors.text
-                  : SharedAppColors.muted,
+              color: emphasized ? SharedAppColors.text : SharedAppColors.muted,
               fontWeight: emphasized ? FontWeight.w800 : FontWeight.w600,
             ),
           ),
@@ -5341,9 +5395,7 @@ class _FinancialLine extends StatelessWidget {
         Text(
           value,
           style: TextStyle(
-            color: emphasized
-                ? SharedAppColors.orange
-                : SharedAppColors.text,
+            color: emphasized ? SharedAppColors.orange : SharedAppColors.text,
             fontSize: emphasized ? 18 : 15,
             fontWeight: FontWeight.w900,
           ),
@@ -5444,8 +5496,7 @@ class _DashboardInsightsGrid extends StatelessWidget {
             : constraints.maxWidth >= 540
                 ? 2
                 : 1;
-        final width =
-            (constraints.maxWidth - ((columns - 1) * 12)) / columns;
+        final width = (constraints.maxWidth - ((columns - 1) * 12)) / columns;
         return Wrap(
           spacing: 12,
           runSpacing: 12,
@@ -5824,10 +5875,8 @@ class _ServiceFormState extends State<_ServiceForm> {
           children: [
             _SheetHeader(
               eyebrow: _isEditing ? 'EDITAR SERVIÇO' : 'NOVO SERVIÇO',
-              title:
-                  _isEditing ? 'Atualize o serviço' : 'Cadastre um serviço',
-              onClose:
-                  _isSaving ? null : () => Navigator.pop(context),
+              title: _isEditing ? 'Atualize o serviço' : 'Cadastre um serviço',
+              onClose: _isSaving ? null : () => Navigator.pop(context),
             ),
             const SizedBox(height: 16),
             const Divider(color: SharedAppColors.stroke),
@@ -5885,24 +5934,24 @@ class _ServiceFormState extends State<_ServiceForm> {
             _ResponsiveFieldRow(
               children: [
                 TextFormField(
-                    controller: _priceController,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                      labelText: 'Preço',
-                      prefixIcon: Icon(Icons.attach_money),
-                    ),
-                    validator: _validatePrice,
+                  controller: _priceController,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Preço',
+                    prefixIcon: Icon(Icons.attach_money),
                   ),
+                  validator: _validatePrice,
+                ),
                 TextFormField(
-                    controller: _durationController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Duração (min)',
-                      prefixIcon: Icon(Icons.schedule_rounded),
-                    ),
-                    validator: _validateDuration,
+                  controller: _durationController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Duração (min)',
+                    prefixIcon: Icon(Icons.schedule_rounded),
                   ),
+                  validator: _validateDuration,
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -6102,9 +6151,8 @@ class _TeamPage extends StatelessWidget {
       builder: (context, session, _) {
         final activeCount =
             session.teamBarbers.where((barber) => barber.isActive).length;
-        final pendingCount = session.teamBarbers
-            .where((barber) => barber.userId.isEmpty)
-            .length;
+        final pendingCount =
+            session.teamBarbers.where((barber) => barber.userId.isEmpty).length;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -6286,8 +6334,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
             _SheetHeader(
               eyebrow: _isEditing ? 'EDITAR PROFISSIONAL' : 'NOVA CONTRATAÇÃO',
               title: _isEditing ? 'Dados do barbeiro' : 'Convide um barbeiro',
-              onClose:
-                  _isSaving ? null : () => Navigator.pop(context),
+              onClose: _isSaving ? null : () => Navigator.pop(context),
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -6314,13 +6361,11 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
                 decoration: const InputDecoration(
                   labelText: 'E-mail de acesso',
                   prefixIcon: Icon(Icons.mail_outline_rounded),
-                  helperText:
-                      'O convite será válido somente para este e-mail.',
+                  helperText: 'O convite será válido somente para este e-mail.',
                 ),
                 validator: (value) {
                   final email = value?.trim() ?? '';
-                  if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
-                      .hasMatch(email)) {
+                  if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
                     return 'Informe um e-mail válido.';
                   }
                   return null;
@@ -6350,25 +6395,25 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
             _ResponsiveFieldRow(
               children: [
                 TextFormField(
-                    controller: _startingPriceController,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                      labelText: 'Preço inicial',
-                      prefixIcon: Icon(Icons.attach_money),
-                    ),
-                    validator: _validateMoney,
+                  controller: _startingPriceController,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Preço inicial',
+                    prefixIcon: Icon(Icons.attach_money),
                   ),
+                  validator: _validateMoney,
+                ),
                 TextFormField(
-                    controller: _commissionController,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                      labelText: 'Comissão %',
-                      prefixIcon: Icon(Icons.percent),
-                    ),
-                    validator: _validateCommission,
+                  controller: _commissionController,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Comissão %',
+                    prefixIcon: Icon(Icons.percent),
                   ),
+                  validator: _validateCommission,
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -6815,19 +6860,19 @@ class _SettingsFormState extends State<_SettingsForm> {
               _ResponsiveFieldRow(
                 children: [
                   TextFormField(
-                      controller: _phoneController,
-                      decoration: const InputDecoration(
-                        labelText: 'Telefone',
-                        prefixIcon: Icon(Icons.phone_outlined),
-                      ),
+                    controller: _phoneController,
+                    decoration: const InputDecoration(
+                      labelText: 'Telefone',
+                      prefixIcon: Icon(Icons.phone_outlined),
                     ),
+                  ),
                   TextFormField(
-                      controller: _whatsappController,
-                      decoration: const InputDecoration(
-                        labelText: 'WhatsApp',
-                        prefixIcon: Icon(Icons.chat_outlined),
-                      ),
+                    controller: _whatsappController,
+                    decoration: const InputDecoration(
+                      labelText: 'WhatsApp',
+                      prefixIcon: Icon(Icons.chat_outlined),
                     ),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -6859,17 +6904,17 @@ class _SettingsFormState extends State<_SettingsForm> {
               _ResponsiveFieldRow(
                 children: [
                   TextFormField(
-                      controller: _zipController,
-                      decoration: const InputDecoration(labelText: 'CEP'),
-                    ),
+                    controller: _zipController,
+                    decoration: const InputDecoration(labelText: 'CEP'),
+                  ),
                   TextFormField(
-                      controller: _cityController,
-                      decoration: const InputDecoration(labelText: 'Cidade'),
-                    ),
+                    controller: _cityController,
+                    decoration: const InputDecoration(labelText: 'Cidade'),
+                  ),
                   TextFormField(
-                      controller: _stateController,
-                      decoration: const InputDecoration(labelText: 'UF'),
-                    ),
+                    controller: _stateController,
+                    decoration: const InputDecoration(labelText: 'UF'),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -6904,8 +6949,7 @@ class _SettingsFormState extends State<_SettingsForm> {
                 title: 'Aplicar à agenda dos profissionais',
                 subtitle:
                     'Substitui a disponibilidade semanal dos barbeiros ativos pelos horários acima.',
-                onChanged: (value) =>
-                    setState(() => _applyHoursToTeam = value),
+                onChanged: (value) => setState(() => _applyHoursToTeam = value),
               ),
             ],
           ),
@@ -6926,17 +6970,17 @@ class _SettingsFormState extends State<_SettingsForm> {
               _ResponsiveFieldRow(
                 children: [
                   TextFormField(
-                      enabled: _lunchEnabled,
-                      controller: _lunchStartController,
-                      decoration: const InputDecoration(labelText: 'Início'),
-                      validator: _validateTime,
-                    ),
+                    enabled: _lunchEnabled,
+                    controller: _lunchStartController,
+                    decoration: const InputDecoration(labelText: 'Início'),
+                    validator: _validateTime,
+                  ),
                   TextFormField(
-                      enabled: _lunchEnabled,
-                      controller: _lunchEndController,
-                      decoration: const InputDecoration(labelText: 'Fim'),
-                      validator: _validateTime,
-                    ),
+                    enabled: _lunchEnabled,
+                    controller: _lunchEndController,
+                    decoration: const InputDecoration(labelText: 'Fim'),
+                    validator: _validateTime,
+                  ),
                 ],
               ),
             ],
@@ -7288,14 +7332,11 @@ class _CDRSwitch extends StatelessWidget {
                 height: 30,
                 padding: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
-                  color: value
-                      ? SharedAppColors.orange
-                      : SharedAppColors.dark,
+                  color: value ? SharedAppColors.orange : SharedAppColors.dark,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: value
-                        ? SharedAppColors.orange
-                        : SharedAppColors.stroke,
+                    color:
+                        value ? SharedAppColors.orange : SharedAppColors.stroke,
                   ),
                   boxShadow: value
                       ? [
@@ -7584,8 +7625,7 @@ class _MetricsGrid extends StatelessWidget {
               : cards.length == 1
                   ? 1
                   : 2;
-          final width =
-              (constraints.maxWidth - ((columns - 1) * 10)) / columns;
+          final width = (constraints.maxWidth - ((columns - 1) * 10)) / columns;
           return Wrap(
             spacing: 10,
             runSpacing: 10,
@@ -7982,7 +8022,8 @@ class _BookingRequestTile extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text(total, style: Theme.of(context).textTheme.titleMedium),
+                        Text(total,
+                            style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(height: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -8542,8 +8583,7 @@ class _CashMovementTile extends StatelessWidget {
       trailing: Text(
         value,
         style: TextStyle(
-          color:
-              isPositive ? CDRColorTokens.success : CDRColorTokens.error,
+          color: isPositive ? CDRColorTokens.success : CDRColorTokens.error,
           fontWeight: FontWeight.w900,
         ),
       ),

@@ -4,10 +4,10 @@ import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../core/app_constants.dart';
+import '../../providers/app_mode_controller.dart';
 import '../../providers/app_state.dart';
-import '../../screens/client/home_screen.dart';
 import '../../screens/mode_selection_screen.dart';
-import '../../services/auth_service.dart';
+import '../../screens/professional_mode_screen.dart';
 import '../../theme/app_colors.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -75,15 +75,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
         await appState.loadInitialData();
         if (!mounted) return;
         appState.requireSignedIn();
+        final modeController = context.read<AppModeController>();
+        await modeController.synchronizeAccess(
+          isSignedIn: appState.isSignedIn,
+          userId: authService.currentUser?.id,
+          professionalRoles: appState.professionalRoles,
+        );
+        if (!mounted) return;
         final returnRoute = ModalRoute.of(context)?.settings.arguments;
         navigator.pushReplacementNamed(
           returnRoute is String
               ? returnRoute
-              : appState.hasProfessionalAccess ||
-                      appState.teamInvitationMessage != null ||
+              : appState.teamInvitationMessage != null ||
                       appState.teamInvitationError != null
                   ? ModeSelectionScreen.route
-                  : HomeScreen.route,
+                  : ProfessionalModeScreen.routeFor(
+                      modeController.currentMode,
+                    ),
         );
       }
     } catch (error) {

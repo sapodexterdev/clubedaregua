@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../core/app_constants.dart';
+import '../core/app_mode.dart';
+import '../providers/app_mode_controller.dart';
 import '../providers/app_state.dart';
-import '../services/app_mode_navigation.dart';
 import '../theme/app_colors.dart';
-import 'client/home_screen.dart';
+import 'professional_mode_screen.dart';
 
 class ModeSelectionScreen extends StatelessWidget {
   const ModeSelectionScreen({super.key});
@@ -68,7 +67,7 @@ class ModeSelectionScreen extends StatelessWidget {
                 icon: Icons.search_rounded,
                 title: 'Entrar como cliente',
                 description: 'Descobrir barbearias, agendar e acompanhar seus horários.',
-                onTap: () => _openClientMode(context),
+                onTap: () => _openMode(context, AppMode.client),
               ),
               if (state.hasBarberAccess) ...[
                 const SizedBox(height: 14),
@@ -78,10 +77,7 @@ class ModeSelectionScreen extends StatelessWidget {
                   description:
                       'Acessar sua agenda, solicitações, clientes e comissão.',
                   highlighted: true,
-                  onTap: () => _openProfessionalMode(
-                    'barber',
-                    openBarberMode,
-                  ),
+                  onTap: () => _openMode(context, AppMode.barber),
                 ),
               ],
               if (state.hasOwnerAccess) ...[
@@ -92,10 +88,7 @@ class ModeSelectionScreen extends StatelessWidget {
                   description:
                       'Gerenciar equipe, serviços e operação da barbearia.',
                   highlighted: true,
-                  onTap: () => _openProfessionalMode(
-                    'owner',
-                    openOwnerMode,
-                  ),
+                  onTap: () => _openMode(context, AppMode.owner),
                 ),
               ],
               const SizedBox(height: 28),
@@ -116,24 +109,14 @@ class ModeSelectionScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _openClientMode(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(appLastModeKey, 'client');
-    if (!context.mounted) return;
+  Future<void> _openMode(BuildContext context, AppMode mode) async {
+    final selected = await context.read<AppModeController>().selectMode(mode);
+    if (!selected || !context.mounted) return;
     Navigator.pushNamedAndRemoveUntil(
       context,
-      HomeScreen.route,
+      ProfessionalModeScreen.routeFor(mode),
       (_) => false,
     );
-  }
-
-  Future<void> _openProfessionalMode(
-    String mode,
-    VoidCallback navigate,
-  ) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(appLastModeKey, mode);
-    navigate();
   }
 }
 

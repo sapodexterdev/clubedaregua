@@ -6,10 +6,10 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/app_constants.dart';
-import '../providers/app_state.dart';
+import '../core/app_mode.dart';
+import '../providers/app_mode_controller.dart';
 import '../theme/app_colors.dart';
 import 'client/home_screen.dart';
-import 'mode_selection_screen.dart';
 import 'splash_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -74,11 +74,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(SplashScreen.onboardingSeenKey, true);
     if (!mounted) return;
-    final state = context.read<AppState>();
-    final route = state.isSignedIn && state.hasProfessionalAccess
-        ? ModeSelectionScreen.route
-        : HomeScreen.route;
-    Navigator.pushReplacementNamed(context, route);
+    await context.read<AppModeController>().selectMode(AppMode.client);
+    if (!mounted) return;
+    Navigator.pushReplacementNamed(context, HomeScreen.route);
   }
 
   void _skipToExplore() {

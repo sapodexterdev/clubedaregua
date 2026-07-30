@@ -9,12 +9,16 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/app_constants.dart';
+import '../core/app_mode.dart';
+import '../providers/app_mode_controller.dart';
 import '../providers/app_state.dart';
-import '../services/app_mode_navigation.dart';
+import '../services/auth_service.dart';
 import 'auth/login_screen.dart';
+import 'auth/password_recovery_screen.dart';
 import 'client/home_screen.dart';
 import 'mode_selection_screen.dart';
 import 'onboarding_screen.dart';
+import 'professional_mode_screen.dart';
 
 @JS('hideBootStatus')
 external void _hideWebBootStatus();
@@ -103,6 +107,7 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _start() async {
+    final openedForPasswordRecovery = _isPasswordRecoveryCallback();
     final prefsFuture = SharedPreferences.getInstance();
 
     final results = await Future.wait<Object?>([
@@ -110,54 +115,44 @@ class _SplashScreenState extends State<SplashScreen>
       Future<void>.delayed(kIsWeb ? Duration.zero : _displayDuration),
     ]);
 
+    if (!mounted) return;
     final prefs = results.first as SharedPreferences;
+    final state = context.read<AppState>();
+    final modes = context.read<AppModeController>();
+    if (openedForPasswordRecovery) {
+      await _waitForInitialData(state);
+      if (!mounted) return;
+    }
     final hasSeenOnboarding =
         prefs.getBool(SplashScreen.onboardingSeenKey) ?? false;
-    final forceOnboardingPreview = kIsWeb &&
-        Uri.base.queryParameters['preview'] == 'onboarding';
+    final forceOnboardingPreview =
+        kIsWeb && Uri.base.queryParameters['preview'] == 'onboarding';
     final hasTeamInvitation = kIsWeb &&
         Uri.base.queryParameters['team_invite']?.trim().isNotEmpty == true;
     final requestedMode = Uri.base.queryParameters['mode'];
     if (requestedMode == 'client') {
-      await prefs.setString(appLastModeKey, 'client');
+      await prefs.setString(AppModeController.legacyPreferenceKey, 'client');
     }
 
     String route;
-    if (hasTeamInvitation) {
-      final state = context.read<AppState>();
+    if (await AuthService().hasPendingPasswordRecovery()) {
+      route = PasswordRecoveryScreen.route;
+    } else if (hasTeamInvitation) {
       await _waitForInitialData(state);
       if (!mounted) return;
-      route = state.isSignedIn
-          ? ModeSelectionScreen.route
-          : LoginScreen.route;
+      await _synchronizeMode(state, modes);
+      route = state.isSignedIn ? ModeSelectionScreen.route : LoginScreen.route;
     } else if (!hasSeenOnboarding || forceOnboardingPreview) {
       route = OnboardingScreen.route;
     } else {
-      final state = context.read<AppState>();
       await _waitForInitialData(state);
       if (!mounted) return;
-      final lastMode = prefs.getString(appLastModeKey);
-      if (kIsWeb &&
-          state.isSignedIn &&
-          lastMode == 'barber' &&
-          state.hasBarberAccess) {
-        openBarberMode();
-        return;
-      }
-      if (kIsWeb &&
-          state.isSignedIn &&
-          lastMode == 'owner' &&
-          state.hasOwnerAccess) {
-        openOwnerMode();
-        return;
-      }
-      route = state.isSignedIn &&
-              (state.hasProfessionalAccess ||
-                  state.teamInvitationMessage != null ||
-                  state.teamInvitationError != null) &&
-              lastMode != 'client'
-          ? ModeSelectionScreen.route
-          : HomeScreen.route;
+      await _synchronizeMode(state, modes);
+      if (!mounted) return;
+      final mode = modes.currentMode;
+      route = mode == AppMode.client
+          ? HomeScreen.route
+          : ProfessionalModeScreen.routeFor(mode);
     }
 
     if (!mounted) return;
@@ -190,6 +185,26 @@ class _SplashScreenState extends State<SplashScreen>
       // Abre o app mesmo se um serviço externo demorar além do esperado.
     } finally {
       state.removeListener(listener);
+    }
+  }
+
+  Future<void> _synchronizeMode(
+    AppState state,
+    AppModeController modes,
+  ) {
+    return modes.synchronizeAccess(
+      isSignedIn: state.isSignedIn,
+      userId: AuthService().currentUser?.id,
+      professionalRoles: state.professionalRoles,
+    );
+  }
+
+  bool _isPasswordRecoveryCallback() {
+    if (!kIsWeb || Uri.base.fragment.isEmpty) return false;
+    try {
+      return Uri.splitQueryString(Uri.base.fragment)['type'] == 'recovery';
+    } on FormatException {
+      return false;
     }
   }
 

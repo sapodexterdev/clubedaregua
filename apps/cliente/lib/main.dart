@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'app.dart';
+import 'providers/app_mode_controller.dart';
 import 'providers/app_state.dart';
 
 Future<void> main() async {
@@ -15,8 +16,13 @@ Future<void> main() async {
     };
 
     runApp(
-      ChangeNotifierProvider(
-        create: (_) => AppState()..loadInitialData(),
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => AppModeController()),
+          ChangeNotifierProvider(
+            create: (_) => AppState()..loadInitialData(),
+          ),
+        ],
         child: const ClubeDaReguaApp(),
       ),
     );

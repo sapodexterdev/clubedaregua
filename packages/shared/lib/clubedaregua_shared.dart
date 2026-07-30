@@ -7,4 +7,6 @@ export 'design_system/theme/cdr_theme.dart';
 export 'design_system/components/feedback/cdr_loading.dart';
 export 'design_system/tokens/cdr_design_tokens.dart';
 export 'src/shared_app_colors.dart';
+export 'src/auth_service.dart';
+export 'src/supabase_config.dart';
 export 'src/tenant_context.dart';

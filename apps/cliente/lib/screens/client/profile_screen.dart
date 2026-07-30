@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:clubedaregua_shared/clubedaregua_shared.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/app_mode.dart';
+import '../../providers/app_mode_controller.dart';
 import '../../providers/app_state.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/owner_onboarding_screen.dart';
-import '../../services/auth_service.dart';
-import '../../services/app_mode_navigation.dart';
+import '../../screens/professional_mode_screen.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/whatsapp_input_formatter.dart';
 import '../../widgets/premium_bottom_nav.dart';
@@ -83,14 +83,20 @@ class ProfileScreen extends StatelessWidget {
                   const SizedBox(height: 10),
                   _ActionGroup(
                     children: [
+                      _ProfileAction(
+                        icon: Icons.search_rounded,
+                        title: 'Modo cliente',
+                        subtitle: 'Descobrir barbearias e agendar horários',
+                        onTap: () => _openMode(context, AppMode.client),
+                      ),
                       if (state.hasBarberAccess)
                         _ProfileAction(
                           icon: Icons.content_cut_rounded,
                           title: 'Modo barbeiro',
                           subtitle: 'Sua agenda, clientes e comissão',
-                          onTap: () => _openProfessionalMode(
-                            'barber',
-                            openBarberMode,
+                          onTap: () => _openMode(
+                            context,
+                            AppMode.barber,
                           ),
                         ),
                       if (state.hasOwnerAccess)
@@ -98,9 +104,9 @@ class ProfileScreen extends StatelessWidget {
                           icon: Icons.storefront_rounded,
                           title: 'Modo dono',
                           subtitle: 'Gestão completa da barbearia',
-                          onTap: () => _openProfessionalMode(
-                            'owner',
-                            openOwnerMode,
+                          onTap: () => _openMode(
+                            context,
+                            AppMode.owner,
                           ),
                         ),
                     ],
@@ -176,7 +182,7 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  static void _navigate(BuildContext context, int index) {
+  static Future<void> _navigate(BuildContext context, int index) async {
     final route = switch (index) {
       0 => HomeScreen.route,
       1 => FavoritesScreen.route,
@@ -185,17 +191,20 @@ class ProfileScreen extends StatelessWidget {
       _ => HomeScreen.route,
     };
     if (route != ProfileScreen.route) {
+      await context.read<AppModeController>().selectMode(AppMode.client);
+      if (!context.mounted) return;
       Navigator.pushReplacementNamed(context, route);
     }
   }
 
-  static Future<void> _openProfessionalMode(
-    String mode,
-    VoidCallback navigate,
-  ) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(appLastModeKey, mode);
-    navigate();
+  static Future<void> _openMode(BuildContext context, AppMode mode) async {
+    final selected = await context.read<AppModeController>().selectMode(mode);
+    if (!selected || !context.mounted) return;
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      ProfessionalModeScreen.routeFor(mode),
+      (_) => false,
+    );
   }
 
   static Future<void> _showEditProfile(
@@ -361,7 +370,10 @@ class ProfileScreen extends StatelessWidget {
       ),
     );
     if (confirmed != true) return;
+    if (!context.mounted) return;
+    final modeController = context.read<AppModeController>();
     await state.signOut();
+    await modeController.resetToClient();
     if (context.mounted) {
       Navigator.pushNamedAndRemoveUntil(
         context,
