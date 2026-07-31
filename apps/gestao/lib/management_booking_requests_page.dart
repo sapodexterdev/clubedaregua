@@ -1,4 +1,4 @@
-part of 'main.dart';
+part of 'management.dart';
 
 class _BookingRequestsPage extends StatelessWidget {
   const _BookingRequestsPage({this.adminView = false});

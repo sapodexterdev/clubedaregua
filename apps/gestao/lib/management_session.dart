@@ -1,4 +1,4 @@
-part of 'main.dart';
+part of 'management.dart';
 
 class ManagementSession extends ChangeNotifier {
   ManagementSession({AuthService? authService})

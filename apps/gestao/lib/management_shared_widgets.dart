@@ -1,4 +1,4 @@
-part of 'main.dart';
+part of 'management.dart';
 
 class _SheetHeader extends StatelessWidget {
   const _SheetHeader({
