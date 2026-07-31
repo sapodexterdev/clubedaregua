@@ -17,7 +17,7 @@ flutter pub get
 
 flutter build web \
   --release \
-  --web-renderer html \
+  --web-renderer canvaskit \
   --no-tree-shake-icons \
   --pwa-strategy=none \
   --dart-define=SUPABASE_URL="${SUPABASE_URL:-}" \
