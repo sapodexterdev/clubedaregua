@@ -32,7 +32,7 @@ void main() {
 
       for (var index = 0; index < 6; index++) {
         final target = index.isEven ? 'Dono' : 'Barbeiro';
-        await tester.tap(find.text(target));
+        await tester.tap(_roleOption(target));
         await tester.pump();
 
         expect(
@@ -41,7 +41,7 @@ void main() {
         );
       }
 
-      await tester.tap(find.text('Dono'));
+      await tester.tap(_roleOption('Dono'));
       await tester.pump();
 
       expect(find.text('Sapao Barber'), findsOneWidget);
@@ -84,11 +84,11 @@ void main() {
 
       for (var index = 0; index < 6; index++) {
         final target = index.isEven ? 'Dono' : 'Barbeiro';
-        await tester.tap(find.text(target));
+        await tester.tap(_roleOption(target));
         await tester.pump();
       }
 
-      await tester.tap(find.text('Dono'));
+      await tester.tap(_roleOption('Dono'));
       await tester.pump();
 
       expect(find.text('Cliente 19'), findsOneWidget);
@@ -101,6 +101,13 @@ void main() {
     },
   );
 }
+
+Finder _roleOption(String label) => find.descendant(
+      of: find.byWidgetPredicate(
+        (widget) => widget is SegmentedButton<ManagementRole>,
+      ),
+      matching: find.text(label),
+    );
 
 class _ProfessionalSession extends ManagementSession {
   _ProfessionalSession.withRequests(int count) {
