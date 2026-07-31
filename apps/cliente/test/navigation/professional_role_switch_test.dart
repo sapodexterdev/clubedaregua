@@ -50,8 +50,13 @@ void main() {
       expect(find.text('Cliente 20'), findsNothing);
       expect(find.text('CARREGAR MAIS (180)'), findsOneWidget);
 
-      await tester.ensureVisible(find.text('CARREGAR MAIS (180)'));
-      await tester.tap(find.text('CARREGAR MAIS (180)'));
+      final loadMore = find.text('CARREGAR MAIS (180)');
+      await tester.scrollUntilVisible(
+        loadMore,
+        500,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(loadMore);
       await tester.pump();
 
       expect(find.text('Cliente 39'), findsOneWidget);
