@@ -88,7 +88,7 @@ class EmbeddedManagementArea extends StatefulWidget {
   final VoidCallback onOpenClientMode;
   final VoidCallback onSignedOut;
   final VoidCallback? onOpenProfile;
-  final ValueChanged<ManagementRole>? onRoleChanged;
+  final Future<void> Function(ManagementRole role)? onRoleChanged;
 
   @override
   State<EmbeddedManagementArea> createState() => _EmbeddedManagementAreaState();

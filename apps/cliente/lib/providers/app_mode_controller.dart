@@ -42,11 +42,14 @@ class AppModeController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> selectMode(AppMode mode) async {
+  Future<bool> selectMode(
+    AppMode mode, {
+    bool notify = true,
+  }) async {
     if (!availableModes.contains(mode)) return false;
     if (currentMode != mode) {
       currentMode = mode;
-      notifyListeners();
+      if (notify) notifyListeners();
     }
     await _persistCurrentMode();
     return true;

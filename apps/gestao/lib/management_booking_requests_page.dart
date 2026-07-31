@@ -1,17 +1,36 @@
 part of 'management.dart';
 
-class _BookingRequestsPage extends StatelessWidget {
+class _BookingRequestsPage extends StatefulWidget {
   const _BookingRequestsPage({this.adminView = false});
 
   final bool adminView;
 
   @override
+  State<_BookingRequestsPage> createState() => _BookingRequestsPageState();
+}
+
+class _BookingRequestsPageState extends State<_BookingRequestsPage> {
+  static const _pageSize = 20;
+
+  var _visibleRequestCount = _pageSize;
+
+  @override
+  void didUpdateWidget(covariant _BookingRequestsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.adminView != widget.adminView) {
+      _visibleRequestCount = _pageSize;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Consumer<ManagementSession>(
       builder: (context, session, _) {
-        final requests = adminView
+        final requests = widget.adminView
             ? session.bookingRequests
             : session.currentBarberBookingRequests;
+        final visibleRequests = requests.take(_visibleRequestCount).toList();
+        final remainingCount = requests.length - visibleRequests.length;
         final newCount =
             requests.where((request) => request.status == 'new').length;
 
@@ -63,7 +82,7 @@ class _BookingRequestsPage extends StatelessWidget {
                 subtitle: 'As solicitações do app cliente aparecerão aqui.',
               )
             else if (requests.isNotEmpty)
-              for (final request in requests)
+              for (final request in visibleRequests)
                 _BookingRequestTile(
                   request: request,
                   total: _formatCurrency(request.total),
@@ -83,6 +102,23 @@ class _BookingRequestsPage extends StatelessWidget {
                     ),
                   ),
                 ),
+            if (remainingCount > 0) ...[
+              const SizedBox(height: 4),
+              Center(
+                child: CDRButton.outlined(
+                  label: 'CARREGAR MAIS ($remainingCount)',
+                  onPressed: () {
+                    setState(() {
+                      final nextCount = _visibleRequestCount + _pageSize;
+                      _visibleRequestCount = nextCount > requests.length
+                          ? requests.length
+                          : nextCount;
+                    });
+                  },
+                  leading: const Icon(Icons.expand_more_rounded),
+                ),
+              ),
+            ],
           ],
         );
       },

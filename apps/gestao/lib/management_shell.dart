@@ -15,7 +15,7 @@ class ManagementHomeScreen extends StatefulWidget {
   final ManagementRole? initialRole;
   final VoidCallback onOpenClientMode;
   final VoidCallback? onOpenProfile;
-  final ValueChanged<ManagementRole>? onRoleChanged;
+  final Future<void> Function(ManagementRole role)? onRoleChanged;
   final VoidCallback? onSignedOut;
 
   @override
@@ -88,21 +88,7 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
                       child: session.canWorkAsBarber && session.canManageShop
                           ? _RoleSwitch(
                               selectedRole: effectiveRole,
-                              onChanged: (role) async {
-                                setState(() {
-                                  selectedRole = role;
-                                  selectedTab = 0;
-                                });
-                                final prefs =
-                                    await SharedPreferences.getInstance();
-                                    await prefs.setString(
-                                      'clubedaregua.last_mode',
-                                      role == ManagementRole.admin
-                                          ? 'owner'
-                                          : 'barber',
-                                    );
-                                    widget.onRoleChanged?.call(role);
-                                  },
+                              onChanged: _changeRole,
                             )
                           : _AvailabilityStatus(
                               label: isAdmin ? 'MODO DONO' : 'MODO BARBEIRO',
@@ -129,6 +115,27 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
   }
 
   void _selectTab(int index) => setState(() => selectedTab = index);
+
+  Future<void> _changeRole(ManagementRole role) async {
+    if (role == selectedRole) return;
+
+    setState(() {
+      selectedRole = role;
+      selectedTab = 0;
+    });
+
+    final onRoleChanged = widget.onRoleChanged;
+    if (onRoleChanged != null) {
+      await onRoleChanged(role);
+      return;
+    }
+
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString(
+      'clubedaregua.last_mode',
+      role == ManagementRole.admin ? 'owner' : 'barber',
+    );
+  }
 }
 
 class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
@@ -220,8 +227,7 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
                   context.read<ManagementSession>().refreshManagementData();
                   return;
                 case 'logout':
-                  (onSignedOut ??
-                      context.read<ManagementSession>().signOut)();
+                  (onSignedOut ?? context.read<ManagementSession>().signOut)();
                   return;
               }
             },
@@ -262,8 +268,7 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
           ),
           _TopBarAction(
             tooltip: 'Sair',
-            onPressed:
-                onSignedOut ?? context.read<ManagementSession>().signOut,
+            onPressed: onSignedOut ?? context.read<ManagementSession>().signOut,
             icon: Icons.logout_rounded,
           ),
         ],

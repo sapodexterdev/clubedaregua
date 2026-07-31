@@ -33,9 +33,12 @@ class ProfessionalModeScreen extends StatelessWidget {
       onOpenClientMode: () => _openMode(context, AppMode.client),
       onSignedOut: () => _finishSignOut(context),
       onOpenProfile: () => Navigator.pushNamed(context, ProfileScreen.route),
-      onRoleChanged: (role) => context.read<AppModeController>().selectMode(
-            role == ManagementRole.admin ? AppMode.owner : AppMode.barber,
-          ),
+      onRoleChanged: (role) async {
+        await context.read<AppModeController>().selectMode(
+              role == ManagementRole.admin ? AppMode.owner : AppMode.barber,
+              notify: false,
+            );
+      },
     );
   }
 
