@@ -7,7 +7,11 @@ import 'management.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final session = ManagementSession();
-  await session.restoreUnifiedSession();
+  await session.restoreUnifiedSession(
+    initialRole: Uri.base.queryParameters['mode'] == 'owner'
+        ? ManagementRole.admin
+        : ManagementRole.barber,
+  );
 
   runApp(
     ChangeNotifierProvider.value(

@@ -60,6 +60,7 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
             title: page.title,
             onOpenClientMode: widget.onOpenClientMode,
             onOpenProfile: widget.onOpenProfile,
+            onRefresh: _refreshCurrentTab,
             onSignedOut: widget.onSignedOut,
           ),
           bottomNavigationBar: useSideNavigation
@@ -114,7 +115,22 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
     );
   }
 
-  void _selectTab(int index) => setState(() => selectedTab = index);
+  void _selectTab(int index) {
+    setState(() => selectedTab = index);
+    unawaited(
+      context.read<ManagementSession>().ensureDataForTab(
+            selectedRole,
+            index,
+          ),
+    );
+  }
+
+  Future<void> _refreshCurrentTab() =>
+      context.read<ManagementSession>().ensureDataForTab(
+            selectedRole,
+            selectedTab,
+            force: true,
+          );
 
   Future<void> _changeRole(ManagementRole role) async {
     if (role == selectedRole) return;
@@ -123,6 +139,9 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
       selectedRole = role;
       selectedTab = 0;
     });
+
+    await context.read<ManagementSession>().activateRole(role);
+    if (!mounted) return;
 
     final onRoleChanged = widget.onRoleChanged;
     if (onRoleChanged != null) {
@@ -142,12 +161,14 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
   const _ManagementTopBar({
     required this.title,
     required this.onOpenClientMode,
+    required this.onRefresh,
     this.onOpenProfile,
     this.onSignedOut,
   });
 
   final String title;
   final VoidCallback onOpenClientMode;
+  final VoidCallback onRefresh;
   final VoidCallback? onOpenProfile;
   final VoidCallback? onSignedOut;
 
@@ -224,7 +245,7 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
                   onOpenProfile?.call();
                   return;
                 case 'refresh':
-                  context.read<ManagementSession>().refreshManagementData();
+                  onRefresh();
                   return;
                 case 'logout':
                   (onSignedOut ?? context.read<ManagementSession>().signOut)();
@@ -262,8 +283,7 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
             ),
           _TopBarAction(
             tooltip: 'Atualizar',
-            onPressed: () =>
-                context.read<ManagementSession>().refreshManagementData(),
+            onPressed: onRefresh,
             icon: Icons.refresh_rounded,
           ),
           _TopBarAction(

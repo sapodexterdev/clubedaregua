@@ -10,6 +10,7 @@ import 'providers/app_state.dart';
 Future<void> main() async {
   await runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
+    PaintingBinding.instance.imageCache.maximumSizeBytes = 32 * 1024 * 1024;
 
     FlutterError.onError = (details) {
       FlutterError.presentError(details);

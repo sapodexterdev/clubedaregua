@@ -207,6 +207,9 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
+    unawaited(
+      const AssetImage(AppConstants.splashV3UrbanBarbershop).evict(),
+    );
     _pulseController.dispose();
     super.dispose();
   }

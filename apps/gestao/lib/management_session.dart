@@ -1,10 +1,25 @@
 part of 'management.dart';
 
 class ManagementSession extends ChangeNotifier {
-  ManagementSession({AuthService? authService})
-      : _authService = authService ?? AuthService();
+  ManagementSession({AuthService? authService, http.Client? httpClient})
+      : _authService = authService ?? AuthService(),
+        _httpClient = httpClient ?? http.Client(),
+        _ownsHttpClient = httpClient == null;
 
   final AuthService _authService;
+  final http.Client _httpClient;
+  final bool _ownsHttpClient;
+  var _disposed = false;
+  var _refreshGeneration = 0;
+  var _activeRole = ManagementRole.barber;
+  var _barberRequestsLoaded = false;
+  var _ownerRequestsLoaded = false;
+  var _teamLoaded = false;
+  var _availabilityLoaded = false;
+  var _scheduleLoaded = false;
+  var _servicesLoaded = false;
+  var _customersLoaded = false;
+  var _settingsLoaded = false;
   String? _accessToken;
   String? _userId;
   String? _barberShopId;
@@ -63,7 +78,10 @@ class ManagementSession extends ChangeNotifier {
 
   bool _professionalAccessResolved = false;
 
-  Future<void> restoreUnifiedSession() async {
+  Future<void> restoreUnifiedSession({
+    ManagementRole initialRole = ManagementRole.barber,
+  }) async {
+    _activeRole = initialRole;
     try {
       final session = await _authService.getValidSession();
       if (session == null) {
@@ -88,8 +106,12 @@ class ManagementSession extends ChangeNotifier {
 
     try {
       await _resolvePlatformAdmin(token).timeout(const Duration(seconds: 8));
+      if (_disposed) return;
       await _ensureBarberShopId(token).timeout(const Duration(seconds: 8));
+      if (_disposed) return;
       await _resolveShopCapabilities(token).timeout(const Duration(seconds: 8));
+      if (_disposed) return;
+      _activeRole = _effectiveRole(_activeRole);
       await refreshManagementData();
     } catch (error) {
       errorMessage = _cleanErrorMessage(error);
@@ -189,6 +211,7 @@ class ManagementSession extends ChangeNotifier {
         throw StateError('Sua conta não possui acesso profissional ativo.');
       }
       _professionalAccessResolved = true;
+      _activeRole = _effectiveRole(_activeRole);
       await refreshManagementData();
     } catch (error) {
       _accessToken = null;
@@ -200,18 +223,82 @@ class ManagementSession extends ChangeNotifier {
   }
 
   Future<void> refreshManagementData() async {
-    await fetchBookingRequests();
+    final generation = ++_refreshGeneration;
     await fetchTeamBarbers();
-    await fetchWeeklyAvailability();
-    await fetchServiceCatalog();
-    await fetchCustomers();
-    await fetchShopConfiguration();
-    await fetchScheduleEntries();
+    if (!_isRefreshActive(generation)) return;
+    await fetchBookingRequests(
+      adminView: _activeRole == ManagementRole.admin,
+    );
   }
 
-  Future<void> fetchBookingRequests() async {
+  Future<void> activateRole(ManagementRole role) async {
+    _activeRole = _effectiveRole(role);
+    await ensureDataForTab(_activeRole, 0);
+  }
+
+  Future<void> ensureDataForTab(
+    ManagementRole role,
+    int tabIndex, {
+    bool force = false,
+  }) async {
+    _activeRole = _effectiveRole(role);
+    if (_disposed) return;
+
+    if (_activeRole == ManagementRole.barber) {
+      switch (tabIndex) {
+        case 0:
+          if (force || !_barberRequestsLoaded) {
+            await fetchBookingRequests(adminView: false);
+          }
+        case 1:
+          if (force || !_scheduleLoaded) await fetchScheduleEntries();
+        case 2:
+          if (force || !_availabilityLoaded) {
+            await fetchWeeklyAvailability();
+          }
+        case 3:
+          if (force || !_customersLoaded) await fetchCustomers();
+        default:
+          return;
+      }
+      return;
+    }
+
+    switch (tabIndex) {
+      case 0:
+        if (force || !_ownerRequestsLoaded) {
+          await fetchBookingRequests(adminView: true);
+        }
+      case 2:
+        if (force || !_scheduleLoaded) await fetchScheduleEntries();
+      case 3:
+        if (force || !_servicesLoaded) await fetchServiceCatalog();
+      case 4:
+        if (force || !_teamLoaded) await fetchTeamBarbers();
+      case 6:
+        if (force || !_settingsLoaded) await fetchShopConfiguration();
+      default:
+        return;
+    }
+  }
+
+  ManagementRole _effectiveRole(ManagementRole requested) {
+    if (requested == ManagementRole.admin && canManageShop) {
+      return ManagementRole.admin;
+    }
+    if (requested == ManagementRole.barber && canWorkAsBarber) {
+      return ManagementRole.barber;
+    }
+    return canManageShop ? ManagementRole.admin : ManagementRole.barber;
+  }
+
+  bool _isRefreshActive(int generation) =>
+      !_disposed && generation == _refreshGeneration;
+
+  Future<void> fetchBookingRequests({bool? adminView}) async {
     final token = _accessToken;
     if (token == null) return;
+    final loadAdminView = adminView ?? _activeRole == ManagementRole.admin;
 
     isBookingRequestsLoading = true;
     bookingRequestsError = null;
@@ -219,18 +306,37 @@ class ManagementSession extends ChangeNotifier {
 
     try {
       final shopId = await _ensureBarberShopId(token);
+      final query = <String, String>{
+        'select':
+            'id,barber_id,customer_name,customer_phone,requested_date,requested_time,status,total_price,notes,updated_at,barbers(name),services(name)',
+        'barber_shop_id': 'eq.$shopId',
+        'order': 'created_at.desc',
+        'limit': loadAdminView ? '200' : '50',
+      };
+      if (!loadAdminView) {
+        final barberId = currentBarber?.id;
+        if (barberId == null || barberId.isEmpty) {
+          bookingRequests = [];
+          _barberRequestsLoaded = true;
+          _ownerRequestsLoaded = false;
+          return;
+        }
+        query['barber_id'] = 'eq.$barberId';
+      }
       final rows = await _getRestRows(
         token,
         'booking_requests',
-        query: {
-          'select':
-              'id,barber_id,customer_name,customer_phone,requested_date,requested_time,status,total_price,notes,updated_at,barbers(name),services(name)',
-          'barber_shop_id': 'eq.$shopId',
-          'order': 'created_at.desc',
-          'limit': '200',
-        },
+        query: query,
       );
+      if (_disposed) return;
       bookingRequests = rows.map((row) => BookingRequest.fromMap(row)).toList();
+      if (loadAdminView) {
+        _ownerRequestsLoaded = true;
+        _barberRequestsLoaded = true;
+      } else {
+        _barberRequestsLoaded = true;
+        _ownerRequestsLoaded = false;
+      }
       bookingRequestsError = null;
     } catch (error) {
       bookingRequestsError = _cleanErrorMessage(error);
@@ -261,6 +367,7 @@ class ManagementSession extends ChangeNotifier {
       );
 
       teamBarbers = rows.map(TeamBarber.fromMap).toList();
+      _teamLoaded = true;
       errorMessage = null;
     } catch (error) {
       errorMessage = _cleanErrorMessage(error);
@@ -312,6 +419,7 @@ class ManagementSession extends ChangeNotifier {
           else
             fallback.copyWith(isActive: false),
       ];
+      _availabilityLoaded = true;
     } catch (error) {
       availabilityError = _cleanErrorMessage(error);
     } finally {
@@ -454,6 +562,7 @@ class ManagementSession extends ChangeNotifier {
         ...requests.map(ScheduleEntry.fromBookingRequest),
         ...appointments.map(ScheduleEntry.fromAppointment),
       ]..sort((a, b) => a.time.compareTo(b.time));
+      _scheduleLoaded = true;
       scheduleError = null;
     } catch (error) {
       scheduleError = _cleanErrorMessage(error);
@@ -517,6 +626,7 @@ class ManagementSession extends ChangeNotifier {
               'relationship_id,barber_shop_id,client_id,first_seen_at,last_appointment_at,notes,is_blocked,email,user_is_active,full_name,phone,avatar_url,profile_created_at',
           'barber_shop_id': 'eq.$shopId',
           'order': 'full_name.asc',
+          'limit': '500',
         },
       );
       final appointmentRows = await _getRestRows(
@@ -527,6 +637,7 @@ class ManagementSession extends ChangeNotifier {
               'id,client_id,starts_at,status,notes,service_name,barber_name',
           'barber_shop_id': 'eq.$shopId',
           'order': 'starts_at.desc',
+          'limit': '500',
         },
       );
       final bookingRows = await _getRestRows(
@@ -537,8 +648,10 @@ class ManagementSession extends ChangeNotifier {
               'id,customer_name,customer_phone,requested_date,requested_time,status,notes,created_at,barbers(name),services(name)',
           'barber_shop_id': 'eq.$shopId',
           'order': 'created_at.desc',
+          'limit': '500',
         },
       );
+      if (_disposed) return;
       customerAppointments = [
         ...appointmentRows.map(CustomerAppointment.fromMap),
         ...bookingRows.map(CustomerAppointment.fromBookingRequest),
@@ -607,6 +720,7 @@ class ManagementSession extends ChangeNotifier {
         ...relationshipCustomers,
         ...bookingCustomersByPhone.values,
       ];
+      _customersLoaded = true;
       customersError = null;
     } catch (error) {
       customersError = _cleanErrorMessage(error);
@@ -718,6 +832,7 @@ class ManagementSession extends ChangeNotifier {
         settings: settingsRows.isEmpty ? null : settingsRows.first,
       );
       barberShopName = shopConfiguration?.name;
+      _settingsLoaded = true;
       settingsError = null;
     } catch (error) {
       settingsError = _cleanErrorMessage(error);
@@ -949,6 +1064,7 @@ class ManagementSession extends ChangeNotifier {
         query: {
           'select': 'service_id',
           'barber_shop_id': 'eq.$shopId',
+          'limit': '500',
         },
       );
       final bookingRequestRows = await _getRestRows(
@@ -957,8 +1073,10 @@ class ManagementSession extends ChangeNotifier {
         query: {
           'select': 'service_id',
           'barber_shop_id': 'eq.$shopId',
+          'limit': '500',
         },
       );
+      if (_disposed) return;
       final serviceUsageCounts = <String, int>{};
       for (final row in [...appointmentRows, ...bookingRequestRows]) {
         final id = row['service_id']?.toString();
@@ -985,6 +1103,7 @@ class ManagementSession extends ChangeNotifier {
           )
           .where((service) => service.id.isNotEmpty)
           .toList();
+      _servicesLoaded = true;
       servicesError = null;
     } catch (error) {
       servicesError = _cleanErrorMessage(error);
@@ -1424,6 +1543,20 @@ class ManagementSession extends ChangeNotifier {
     notifyListeners();
   }
 
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    _refreshGeneration++;
+    if (_ownsHttpClient) _httpClient.close();
+    super.dispose();
+  }
+
   void _clearSessionInMemory() {
     _accessToken = null;
     _userId = null;
@@ -1464,6 +1597,14 @@ class ManagementSession extends ChangeNotifier {
     settingsError = null;
     isSettingsLoading = false;
     teamBarbers = [];
+    _barberRequestsLoaded = false;
+    _ownerRequestsLoaded = false;
+    _teamLoaded = false;
+    _availabilityLoaded = false;
+    _scheduleLoaded = false;
+    _servicesLoaded = false;
+    _customersLoaded = false;
+    _settingsLoaded = false;
     errorMessage = null;
   }
 
@@ -1628,7 +1769,7 @@ class ManagementSession extends ChangeNotifier {
 
     final response = await _requestWithRefresh(
       token,
-      (accessToken) => http.get(uri, headers: _restHeaders(accessToken)),
+      (accessToken) => _httpClient.get(uri, headers: _restHeaders(accessToken)),
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -1654,7 +1795,7 @@ class ManagementSession extends ChangeNotifier {
 
     final response = await _requestWithRefresh(
       token,
-      (accessToken) => http.post(
+      (accessToken) => _httpClient.post(
         uri,
         headers: _restHeaders(accessToken, preferRepresentation: true),
         body: jsonEncode(data),
@@ -1686,7 +1827,7 @@ class ManagementSession extends ChangeNotifier {
 
     final response = await _requestWithRefresh(
       token,
-      (accessToken) => http.patch(
+      (accessToken) => _httpClient.patch(
         uri,
         headers: _restHeaders(accessToken, preferRepresentation: true),
         body: jsonEncode(data),
@@ -1717,7 +1858,7 @@ class ManagementSession extends ChangeNotifier {
     );
     final response = await _requestWithRefresh(
       token,
-      (accessToken) => http.post(
+      (accessToken) => _httpClient.post(
         uri,
         headers: _restHeaders(accessToken),
         body: jsonEncode(data),
@@ -1742,7 +1883,8 @@ class ManagementSession extends ChangeNotifier {
 
     final response = await _requestWithRefresh(
       token,
-      (accessToken) => http.delete(uri, headers: _restHeaders(accessToken)),
+      (accessToken) =>
+          _httpClient.delete(uri, headers: _restHeaders(accessToken)),
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {

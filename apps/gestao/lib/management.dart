@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:clubedaregua_shared/clubedaregua_shared.dart';
@@ -100,8 +101,11 @@ class _EmbeddedManagementAreaState extends State<EmbeddedManagementArea> {
   @override
   void initState() {
     super.initState();
+    PaintingBinding.instance.imageCache
+      ..clear()
+      ..clearLiveImages();
     _session = ManagementSession();
-    _session.restoreUnifiedSession();
+    _session.restoreUnifiedSession(initialRole: widget.initialRole);
   }
 
   @override
