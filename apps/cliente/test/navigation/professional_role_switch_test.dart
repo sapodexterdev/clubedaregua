@@ -51,10 +51,10 @@ void main() {
       expect(find.text('CARREGAR MAIS (180)'), findsOneWidget);
 
       final loadMore = find.text('CARREGAR MAIS (180)');
-      await tester.scrollUntilVisible(
+      await tester.dragUntilVisible(
         loadMore,
-        500,
-        scrollable: find.byType(Scrollable).first,
+        find.byType(ListView),
+        const Offset(0, -500),
       );
       await tester.tap(loadMore);
       await tester.pump();
