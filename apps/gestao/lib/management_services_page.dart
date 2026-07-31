@@ -86,43 +86,6 @@ class _ServicesPage extends StatelessWidget {
   }
 }
 
-// ignore: unused_element
-class _UnusedServicesPageSnapshot extends StatelessWidget {
-  const _UnusedServicesPageSnapshot();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox.shrink();
-  }
-}
-
-// ignore: unused_element
-class _UnusedLegacyServicesPageSnapshot extends StatelessWidget {
-  const _UnusedLegacyServicesPageSnapshot();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox.shrink();
-    /*
-    return const Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _ActionPanel(
-          title: 'Catálogo de serviços',
-          subtitle: 'Cadastre preços, duração e comissão por serviço.',
-          buttonLabel: 'Novo serviço',
-          icon: Icons.add_circle_rounded,
-        ),
-        SizedBox(height: 18),
-      ],
-    );
-  }
-}
-
-    */
-  }
-}
-
 class _ServiceFilters extends StatelessWidget {
   const _ServiceFilters({required this.session});
 

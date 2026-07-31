@@ -92,41 +92,6 @@ class _TeamPage extends StatelessWidget {
   }
 }
 
-class LegacyTeamPage extends StatelessWidget {
-  const LegacyTeamPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _ActionPanel(
-          title: 'Equipe da unidade',
-          subtitle: 'Gerencie barbeiros, permissões e percentuais.',
-          buttonLabel: 'Novo barbeiro',
-          icon: Icons.person_add_alt_1_rounded,
-        ),
-        SizedBox(height: 18),
-        _TeamTile(
-          name: 'Barbeiro demo',
-          role: 'Barbeiro principal',
-          detail: '40% comissão - agenda ativa',
-        ),
-        _TeamTile(
-          name: 'Ricardo Anderson',
-          role: 'Barbeiro',
-          detail: '35% comissão - agenda ativa',
-        ),
-        _TeamTile(
-          name: 'Camila Rocha',
-          role: 'Recepção',
-          detail: 'Acesso a agenda e caixa',
-        ),
-      ],
-    );
-  }
-}
-
 class _TeamBarberForm extends StatefulWidget {
   const _TeamBarberForm({this.barber});
 

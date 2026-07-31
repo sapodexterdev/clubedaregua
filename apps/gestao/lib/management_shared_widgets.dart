@@ -481,29 +481,6 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-// ignore: unused_element
-class _SearchBox extends StatelessWidget {
-  const _SearchBox({required this.hint});
-
-  final String hint;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      decoration: InputDecoration(
-        hintText: hint,
-        prefixIcon: const Icon(Icons.search_rounded),
-        filled: true,
-        fillColor: SharedAppColors.card,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide.none,
-        ),
-      ),
-    );
-  }
-}
-
 class _InlineNotice extends StatelessWidget {
   const _InlineNotice({
     required this.icon,
@@ -1248,32 +1225,6 @@ class _ServiceTile extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _TeamTile extends StatelessWidget {
-  const _TeamTile({
-    required this.name,
-    required this.role,
-    required this.detail,
-  });
-
-  final String name;
-  final String role;
-  final String detail;
-
-  @override
-  Widget build(BuildContext context) {
-    return _SurfaceTile(
-      leading: const CircleAvatar(
-        radius: 25,
-        backgroundColor: SharedAppColors.dark,
-        child: Icon(Icons.person_rounded, color: Colors.white),
-      ),
-      title: name,
-      subtitle: '$role · $detail',
-      trailing: const Icon(Icons.chevron_right_rounded),
     );
   }
 }

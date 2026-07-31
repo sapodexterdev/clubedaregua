@@ -91,16 +91,6 @@ class _ClientsPage extends StatelessWidget {
   }
 }
 
-// ignore: unused_element
-class _UnusedLegacyClientsPage extends StatelessWidget {
-  const _UnusedLegacyClientsPage();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox.shrink();
-  }
-}
-
 class _CustomerFilters extends StatelessWidget {
   const _CustomerFilters({required this.session});
 
