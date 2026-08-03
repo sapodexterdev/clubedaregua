@@ -93,7 +93,7 @@ class ManagementSession extends ChangeNotifier {
       await _loadRestoredManagementData();
     } catch (error) {
       _clearSessionInMemory();
-      errorMessage = 'Sua conta não possui acesso profissional ativo.';
+      errorMessage = 'Sua conta nÃ£o possui acesso profissional ativo.';
     } finally {
       isRestoringSession = false;
       notifyListeners();
@@ -208,7 +208,7 @@ class ManagementSession extends ChangeNotifier {
       await _ensureBarberShopId(_accessToken!);
       await _resolveShopCapabilities(_accessToken!);
       if (!hasProfessionalAccess) {
-        throw StateError('Sua conta não possui acesso profissional ativo.');
+        throw StateError('Sua conta nÃ£o possui acesso profissional ativo.');
       }
       _professionalAccessResolved = true;
       _activeRole = _effectiveRole(_activeRole);
@@ -441,12 +441,12 @@ class ManagementSession extends ChangeNotifier {
     final token = _accessToken;
     final barber = currentBarber;
     if (token == null || barber == null) {
-      throw StateError('Não foi possível identificar o barbeiro.');
+      throw StateError('NÃ£o foi possÃ­vel identificar o barbeiro.');
     }
     for (final day in weeklyAvailability.where((day) => day.isActive)) {
       if (_minutesFromTime(day.endTime) <= _minutesFromTime(day.startTime)) {
         throw StateError(
-          'Em ${day.label}, o horário final deve ser depois do inicial.',
+          'Em ${day.label}, o horÃ¡rio final deve ser depois do inicial.',
         );
       }
     }
@@ -631,685 +631,7 @@ class ManagementSession extends ChangeNotifier {
       );
       final appointmentRows = await _getRestRows(
         token,
-        'management_client_appointments',
-        query: {
-          'select':
-              'id,client_id,starts_at,status,notes,service_name,barber_name',
-          'barber_shop_id': 'eq.$shopId',
-          'order': 'starts_at.desc',
-          'limit': '500',
-        },
-      );
-      final bookingRows = await _getRestRows(
-        token,
-        'booking_requests',
-        query: {
-          'select':
-              'id,customer_name,customer_phone,requested_date,requested_time,status,notes,created_at,barbers(name),services(name)',
-          'barber_shop_id': 'eq.$shopId',
-          'order': 'created_at.desc',
-          'limit': '500',
-        },
-      );
-      if (_disposed) return;
-      customerAppointments = [
-        ...appointmentRows.map(CustomerAppointment.fromMap),
-        ...bookingRows.map(CustomerAppointment.fromBookingRequest),
-      ];
-
-      final appointmentCounts = <String, int>{};
-      final barberCounts = <String, Map<String, int>>{};
-      final lastAppointments = <String, DateTime>{};
-      for (final appointment in customerAppointments) {
-        appointmentCounts[appointment.clientId] =
-            (appointmentCounts[appointment.clientId] ?? 0) + 1;
-        final byBarber =
-            barberCounts.putIfAbsent(appointment.clientId, () => {});
-        byBarber[appointment.barber] = (byBarber[appointment.barber] ?? 0) + 1;
-        final date = appointment.date;
-        if (date != null) {
-          final current = lastAppointments[appointment.clientId];
-          if (current == null || date.isAfter(current)) {
-            lastAppointments[appointment.clientId] = date;
-          }
-        }
-      }
-
-      final relationshipCustomers = rows
-          .map((row) {
-            final clientId = row['client_id']?.toString() ?? '';
-            final favoriteBarber = _favoriteBarber(barberCounts[clientId]);
-            return ManagedCustomer.fromMap(
-              row,
-              appointmentCount: appointmentCounts[clientId] ?? 0,
-              favoriteBarber: favoriteBarber,
-              computedLastAppointmentAt: lastAppointments[clientId],
-            );
-          })
-          .where((customer) => customer.clientId.isNotEmpty)
-          .toList();
-
-      final relationshipPhones = relationshipCustomers
-          .map((customer) => ManagedCustomer._digitsOnly(customer.phone))
-          .where((phone) => phone.isNotEmpty)
-          .toSet();
-      final bookingCustomersByPhone = <String, ManagedCustomer>{};
-      for (final row in bookingRows) {
-        final phone = ManagedCustomer._digitsOnly(
-          row['customer_phone']?.toString() ?? '',
-        );
-        if (phone.isEmpty || relationshipPhones.contains(phone)) continue;
-        final clientId = 'booking:$phone';
-        final existing = bookingCustomersByPhone[phone];
-        final favoriteBarber = _favoriteBarber(barberCounts[clientId]);
-        final next = ManagedCustomer.fromBookingRequest(
-          row,
-          appointmentCount: appointmentCounts[clientId] ?? 0,
-          favoriteBarber: favoriteBarber,
-          computedLastAppointmentAt: lastAppointments[clientId],
-        );
-        if (existing == null ||
-            (next.lastAppointmentAt ?? DateTime.fromMillisecondsSinceEpoch(0))
-                .isAfter(existing.lastAppointmentAt ??
-                    DateTime.fromMillisecondsSinceEpoch(0))) {
-          bookingCustomersByPhone[phone] = next;
-        }
-      }
-
-      customers = [
-        ...relationshipCustomers,
-        ...bookingCustomersByPhone.values,
-      ];
-      _customersLoaded = true;
-      customersError = null;
-    } catch (error) {
-      customersError = _cleanErrorMessage(error);
-    } finally {
-      isCustomersLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> updateCustomer(
-    ManagedCustomer customer, {
-    required String name,
-    required String phone,
-    required String notes,
-    required bool isActive,
-  }) async {
-    final token = _accessToken;
-    if (token == null) return;
-
-    isCustomersLoading = true;
-    customersError = null;
-    notifyListeners();
-
-    try {
-      await _patchRestRows(
-        token,
-        'profiles',
-        query: {'user_id': 'eq.${customer.clientId}'},
-        data: {
-          'full_name': name.trim(),
-          'phone': phone.trim().isEmpty ? null : phone.trim(),
-        },
-      );
-      await _patchRestRows(
-        token,
-        'client_shop_relationships',
-        query: {'id': 'eq.${customer.relationshipId}'},
-        data: {
-          'notes': notes.trim().isEmpty ? null : notes.trim(),
-          'is_blocked': !isActive,
-        },
-      );
-
-      customers = [
-        for (final item in customers)
-          if (item.clientId == customer.clientId)
-            item.copyWith(
-              name: name.trim(),
-              phone: phone.trim(),
-              notes: notes.trim(),
-              isBlocked: !isActive,
-            )
-          else
-            item,
-      ];
-      customersError = null;
-    } catch (error) {
-      customersError = _cleanErrorMessage(error);
-      rethrow;
-    } finally {
-      isCustomersLoading = false;
-      notifyListeners();
-    }
-  }
-
-  String _favoriteBarber(Map<String, int>? counts) {
-    if (counts == null || counts.isEmpty) return 'Não definido';
-    final entries = counts.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    return entries.first.key;
-  }
-
-  Future<void> fetchShopConfiguration() async {
-    final token = _accessToken;
-    if (token == null) return;
-
-    isSettingsLoading = true;
-    settingsError = null;
-    notifyListeners();
-
-    try {
-      final shopId = await _ensureBarberShopId(token);
-      final shops = await _getRestRows(
-        token,
-        'barber_shops',
-        query: {
-          'select':
-              'id,name,document,phone,whatsapp,address,city,state,logo_url,cover_url,opening_time,closing_time',
-          'id': 'eq.$shopId',
-          'limit': '1',
-        },
-      );
-      if (shops.isEmpty) {
-        throw StateError('Barbearia não encontrada.');
-      }
-
-      final settingsRows = await _getRestRows(
-        token,
-        'shop_settings',
-        query: {
-          'select': 'id,booking_interval_minutes,min_cancel_hours,settings',
-          'barber_shop_id': 'eq.$shopId',
-          'limit': '1',
-        },
-      );
-
-      shopConfiguration = ShopConfiguration.fromRows(
-        shop: shops.first,
-        settings: settingsRows.isEmpty ? null : settingsRows.first,
-      );
-      barberShopName = shopConfiguration?.name;
-      _settingsLoaded = true;
-      settingsError = null;
-    } catch (error) {
-      settingsError = _cleanErrorMessage(error);
-    } finally {
-      isSettingsLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> saveShopConfiguration(
-    ShopConfiguration config, {
-    bool applyHoursToTeam = false,
-  }) async {
-    final token = _accessToken;
-    if (token == null) return;
-
-    isSettingsLoading = true;
-    settingsError = null;
-    notifyListeners();
-
-    try {
-      await _patchRestRows(
-        token,
-        'barber_shops',
-        query: {'id': 'eq.${config.shopId}'},
-        data: {
-          'name': config.name.trim(),
-          'document':
-              config.document.trim().isEmpty ? null : config.document.trim(),
-          'phone': config.phone.trim().isEmpty ? null : config.phone.trim(),
-          'whatsapp':
-              config.whatsapp.trim().isEmpty ? null : config.whatsapp.trim(),
-          'address':
-              config.address.trim().isEmpty ? null : config.address.trim(),
-          'city': config.city.trim().isEmpty ? null : config.city.trim(),
-          'state': config.state.trim().isEmpty ? null : config.state.trim(),
-          'logo_url':
-              config.logoUrl.trim().isEmpty ? null : config.logoUrl.trim(),
-          'cover_url':
-              config.coverUrl.trim().isEmpty ? null : config.coverUrl.trim(),
-          'opening_time': _firstOpenTime(config.days),
-          'closing_time': _lastCloseTime(config.days),
-        },
-      );
-
-      final settingsData = {
-        'barber_shop_id': config.shopId,
-        'booking_interval_minutes': config.bookingIntervalMinutes,
-        'min_cancel_hours': config.minCancelHours,
-        'settings': config.settingsJson(),
-      };
-      if (config.settingsId.isEmpty) {
-        await _postRestRows(token, 'shop_settings', data: settingsData);
-      } else {
-        await _patchRestRows(
-          token,
-          'shop_settings',
-          query: {'id': 'eq.${config.settingsId}'},
-          data: settingsData,
-        );
-      }
-
-      if (applyHoursToTeam) {
-        final activeBarbers =
-            teamBarbers.where((barber) => barber.isActive).toList();
-        for (final barber in activeBarbers) {
-          await _postRpc(
-            token,
-            'replace_barber_weekly_schedule',
-            data: {
-              'p_barber_id': barber.id,
-              'p_days': [
-                for (final day in config.days)
-                  {
-                    'weekday': _weekdayForBusinessDay(day.key),
-                    'is_active': day.isOpen,
-                    'start_time': day.openTime,
-                    'end_time': day.closeTime,
-                    'slot_minutes': config.bookingIntervalMinutes,
-                  },
-              ],
-            },
-          );
-        }
-        await fetchWeeklyAvailability();
-      }
-
-      shopConfiguration = config;
-      barberShopName = config.name;
-      settingsError = null;
-    } catch (error) {
-      settingsError = _cleanErrorMessage(error);
-      rethrow;
-    } finally {
-      isSettingsLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<String> uploadShopMedia(LogoFile file,
-      {required String folder}) async {
-    final token = _accessToken;
-    if (token == null) {
-      throw StateError(
-        'Sua sessão expirou. Entre novamente para enviar a imagem.',
-      );
-    }
-
-    final shopId = await _ensureBarberShopId(token);
-    final safeFolder = folder
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9_-]+'), '-')
-        .replaceAll(RegExp(r'-+'), '-');
-    final safeName = file.name
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9._-]+'), '-')
-        .replaceAll(RegExp(r'-+'), '-');
-    final objectPath =
-        '$shopId/$safeFolder/${DateTime.now().millisecondsSinceEpoch}-$safeName';
-    final uri = Uri.parse(
-      '${SupabaseConfig.url}/storage/v1/object/shop-media/$objectPath',
-    );
-
-    final response = await http
-        .post(
-          uri,
-          headers: {
-            'apikey': SupabaseConfig.anonKey,
-            'authorization': 'Bearer $token',
-            'content-type': file.contentType,
-            'x-upsert': 'true',
-          },
-          body: file.bytes,
-        )
-        .timeout(
-          const Duration(seconds: 90),
-          onTimeout: () => throw StateError(
-            'O envio demorou mais que o esperado. Verifique sua conexão e tente novamente.',
-          ),
-        );
-
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw StateError(
-          'Supabase Storage ${response.statusCode}: ${response.body}');
-    }
-
-    return '${SupabaseConfig.url}/storage/v1/object/public/shop-media/$objectPath';
-  }
-
-  Future<void> saveShopMediaUrl({
-    String? logoUrl,
-    String? coverUrl,
-  }) async {
-    final token = _accessToken;
-    if (token == null) {
-      throw StateError(
-        'Sua sessão expirou. Entre novamente para salvar a imagem.',
-      );
-    }
-
-    final shopId = await _ensureBarberShopId(token);
-    final data = <String, dynamic>{};
-    if (logoUrl != null) data['logo_url'] = logoUrl.trim();
-    if (coverUrl != null) data['cover_url'] = coverUrl.trim();
-    if (data.isEmpty) return;
-
-    await _patchRestRows(
-      token,
-      'barber_shops',
-      query: {'id': 'eq.$shopId'},
-      data: data,
-    );
-  }
-
-  String? _firstOpenTime(List<ShopBusinessDay> days) {
-    for (final day in days) {
-      if (day.isOpen) return day.openTime;
-    }
-    return null;
-  }
-
-  String? _lastCloseTime(List<ShopBusinessDay> days) {
-    for (final day in days.reversed) {
-      if (day.isOpen) return day.closeTime;
-    }
-    return null;
-  }
-
-  int _weekdayForBusinessDay(String key) {
-    return switch (key) {
-      'monday' => 1,
-      'tuesday' => 2,
-      'wednesday' => 3,
-      'thursday' => 4,
-      'friday' => 5,
-      'saturday' => 6,
-      'sunday' => 0,
-      _ => throw StateError('Dia de funcionamento inválido: $key'),
-    };
-  }
-
-  Future<void> fetchServiceCatalog() async {
-    final token = _accessToken;
-    if (token == null) return;
-
-    isServicesLoading = true;
-    servicesError = null;
-    notifyListeners();
-
-    try {
-      final shopId = await _ensureBarberShopId(token);
-      final categories = await _getRestRows(
-        token,
-        'service_categories',
-        query: {
-          'select': 'id,name,is_active,sort_order',
-          'barber_shop_id': 'eq.$shopId',
-          'order': 'sort_order.asc,name.asc',
-        },
-      );
-      serviceCategories = categories
-          .map(ServiceCategory.fromMap)
-          .where((category) => category.id.isNotEmpty)
-          .toList();
-
-      final appointmentRows = await _getRestRows(
-        token,
-        'appointments',
-        query: {
-          'select': 'service_id',
-          'barber_shop_id': 'eq.$shopId',
-          'limit': '500',
-        },
-      );
-      final bookingRequestRows = await _getRestRows(
-        token,
-        'booking_requests',
-        query: {
-          'select': 'service_id',
-          'barber_shop_id': 'eq.$shopId',
-          'limit': '500',
-        },
-      );
-      if (_disposed) return;
-      final serviceUsageCounts = <String, int>{};
-      for (final row in [...appointmentRows, ...bookingRequestRows]) {
-        final id = row['service_id']?.toString();
-        if (id == null || id.isEmpty) continue;
-        serviceUsageCounts[id] = (serviceUsageCounts[id] ?? 0) + 1;
-      }
-
-      final rows = await _getRestRows(
-        token,
-        'services',
-        query: {
-          'select':
-              'id,category_id,name,description,duration_minutes,price,image_url,is_active,service_categories(name)',
-          'barber_shop_id': 'eq.$shopId',
-          'order': 'name.asc',
-        },
-      );
-      services = rows
-          .map(
-            (row) => ManagedService.fromMap(
-              row,
-              appointmentCount: serviceUsageCounts[row['id']?.toString()] ?? 0,
-            ),
-          )
-          .where((service) => service.id.isNotEmpty)
-          .toList();
-      _servicesLoaded = true;
-      servicesError = null;
-    } catch (error) {
-      servicesError = _cleanErrorMessage(error);
-    } finally {
-      isServicesLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> createService({
-    required String name,
-    required String description,
-    required String? categoryId,
-    required double price,
-    required int durationMinutes,
-    required String imageUrl,
-    required bool isActive,
-  }) async {
-    final token = _accessToken;
-    if (token == null) return;
-
-    isServicesLoading = true;
-    servicesError = null;
-    notifyListeners();
-
-    try {
-      final shopId = await _ensureBarberShopId(token);
-      final createdRows = await _postRestRows(
-        token,
-        'services',
-        data: {
-          'barber_shop_id': shopId,
-          'category_id':
-              categoryId == null || categoryId.isEmpty ? null : categoryId,
-          'name': name.trim(),
-          'description': description.trim().isEmpty ? null : description.trim(),
-          'duration_minutes': durationMinutes,
-          'price': price,
-          'image_url': imageUrl.trim().isEmpty ? null : imageUrl.trim(),
-          'is_active': isActive,
-        },
-      );
-      final serviceId =
-          createdRows.isEmpty ? null : createdRows.first['id']?.toString();
-      if (serviceId != null && serviceId.isNotEmpty) {
-        for (final barber in teamBarbers.where((item) => item.isActive)) {
-          await _postRestRows(
-            token,
-            'barber_services',
-            data: {
-              'barber_shop_id': shopId,
-              'barber_id': barber.id,
-              'service_id': serviceId,
-              'is_active': isActive,
-            },
-          );
-        }
-      }
-
-      await fetchServiceCatalog();
-    } catch (error) {
-      servicesError = _cleanErrorMessage(error);
-      rethrow;
-    } finally {
-      isServicesLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> updateService(
-    ManagedService service, {
-    required String name,
-    required String description,
-    required String? categoryId,
-    required double price,
-    required int durationMinutes,
-    required String imageUrl,
-    required bool isActive,
-  }) async {
-    final token = _accessToken;
-    if (token == null) return;
-
-    isServicesLoading = true;
-    servicesError = null;
-    notifyListeners();
-
-    try {
-      await _patchRestRows(
-        token,
-        'services',
-        query: {'id': 'eq.${service.id}'},
-        data: {
-          'category_id':
-              categoryId == null || categoryId.isEmpty ? null : categoryId,
-          'name': name.trim(),
-          'description': description.trim().isEmpty ? null : description.trim(),
-          'duration_minutes': durationMinutes,
-          'price': price,
-          'image_url': imageUrl.trim().isEmpty ? null : imageUrl.trim(),
-          'is_active': isActive,
-        },
-      );
-
-      await fetchServiceCatalog();
-    } catch (error) {
-      servicesError = _cleanErrorMessage(error);
-      rethrow;
-    } finally {
-      isServicesLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> deactivateService(ManagedService service) async {
-    await updateService(
-      service,
-      name: service.name,
-      description: service.description,
-      categoryId: service.categoryId,
-      price: service.price,
-      durationMinutes: service.durationMinutes,
-      imageUrl: service.imageUrl,
-      isActive: false,
-    );
-  }
-
-  Future<void> deleteOrDeactivateService(ManagedService service) async {
-    if (service.appointmentCount > 0) {
-      await deactivateService(service);
-      return;
-    }
-
-    final token = _accessToken;
-    if (token == null) return;
-
-    isServicesLoading = true;
-    servicesError = null;
-    notifyListeners();
-
-    try {
-      await _deleteRestRows(
-        token,
-        'services',
-        query: {'id': 'eq.${service.id}'},
-      );
-      services = [
-        for (final item in services)
-          if (item.id != service.id) item,
-      ];
-      await fetchServiceCatalog();
-    } catch (error) {
-      servicesError = _cleanErrorMessage(error);
-      rethrow;
-    } finally {
-      isServicesLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<TeamInvitationLink> createTeamBarber({
-    required String email,
-    required String name,
-    required String bio,
-    required String photoUrl,
-    required double startingPrice,
-    required double commissionPercent,
-  }) async {
-    final token = _accessToken;
-    if (token == null) {
-      throw StateError('Sua sessão expirou. Entre novamente.');
-    }
-
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners();
-
-    try {
-      final shopId = await _ensureBarberShopId(token);
-      final result = await _postRpc(
-        token,
-        'create_shop_invitation',
-        data: {
-          'p_barber_shop_id': shopId,
-          'p_email': email.trim().toLowerCase(),
-          'p_name': name.trim(),
-          'p_role': 'barber',
-          'p_bio': bio.trim().isEmpty ? null : bio.trim(),
-          'p_photo_url': photoUrl.trim().isEmpty ? null : photoUrl.trim(),
-          'p_starting_price': startingPrice,
-          'p_commission_percent': commissionPercent,
-        },
-      );
-
-      if (result is! Map) {
-        throw StateError('O servidor não retornou o convite criado.');
-      }
-      final invitation = Map<String, dynamic>.from(result);
-      final barberId = invitation['barber_id']?.toString() ?? '';
-      final rawInviteToken = invitation['token']?.toString() ?? '';
-      if (barberId.isEmpty || rawInviteToken.isEmpty) {
-        throw StateError('O convite foi criado sem os dados necessários.');
-      }
-
-      final invitedEmail =
-          invitation['email']?.toString() ?? email.trim().toLowerCase();
-      final inviteUri = Uri.base.replace(
+        'management_client_appoi…5097 tokens truncated…= Uri.base.replace(
         path: '/',
         queryParameters: {
           'team_invite': rawInviteToken,
@@ -1373,7 +695,7 @@ class ManagementSession extends ChangeNotifier {
         }
       } catch (error) {
         setupWarning =
-            'O convite foi criado. Revise os serviços e horários do profissional antes de liberar a agenda.';
+            'O convite foi criado. Revise os serviÃ§os e horÃ¡rios do profissional antes de liberar a agenda.';
         await fetchTeamBarbers();
       }
 
@@ -1439,37 +761,6 @@ class ManagementSession extends ChangeNotifier {
       isLoading = false;
       notifyListeners();
     }
-  }
-
-  Future<void> updateCurrentBarberPhoto(String photoUrl) async {
-    final token = _accessToken;
-    final barber = currentBarber;
-    final userId = _userId;
-    if (token == null || barber == null || userId == null) {
-      throw StateError('Não foi possível identificar o barbeiro logado.');
-    }
-
-    final normalizedPhotoUrl = photoUrl.trim();
-    final result = await _postRpc(
-      token,
-      'update_my_barber_photo',
-      data: {
-        'p_barber_id': barber.id,
-        'p_photo_url': normalizedPhotoUrl.isEmpty ? null : normalizedPhotoUrl,
-      },
-    );
-
-    if (result is! Map) {
-      throw StateError(
-          'A foto não foi salva. Atualize a página e tente novamente.');
-    }
-
-    final updated = TeamBarber.fromMap(Map<String, dynamic>.from(result));
-    teamBarbers = [
-      for (final item in teamBarbers)
-        if (item.id == updated.id) updated else item,
-    ]..sort((a, b) => a.name.compareTo(b.name));
-    notifyListeners();
   }
 
   Future<void> deactivateTeamBarber(TeamBarber barber) async {
@@ -1656,7 +947,7 @@ class ManagementSession extends ChangeNotifier {
     if (_barberShopId != null) return _barberShopId!;
     final userId = _userId;
     if (userId == null || userId.isEmpty) {
-      throw StateError('Usuário sem identificação válida.');
+      throw StateError('UsuÃ¡rio sem identificaÃ§Ã£o vÃ¡lida.');
     }
 
     final memberships = await _getRestRows(
@@ -1714,14 +1005,14 @@ class ManagementSession extends ChangeNotifier {
     );
 
     if (shops.isEmpty) {
-      throw StateError('Nenhuma barbearia disponível para este usuário.');
+      throw StateError('Nenhuma barbearia disponÃ­vel para este usuÃ¡rio.');
     }
 
     final shop = shops.first;
     _barberShopId = shop['id']?.toString();
     barberShopName = shop['name']?.toString();
     if (_barberShopId == null || _barberShopId!.isEmpty) {
-      throw StateError('Barbearia sem identificador válido.');
+      throw StateError('Barbearia sem identificador vÃ¡lido.');
     }
 
     return _barberShopId!;
@@ -1968,7 +1259,7 @@ class ManagementSession extends ChangeNotifier {
         message.contains('XMLHttpRequest') ||
         message.contains('SocketException') ||
         message.contains('ClientException')) {
-      return 'Sem internet ou Supabase indisponível. Verifique sua conexão.';
+      return 'Sem internet ou Supabase indisponÃ­vel. Verifique sua conexÃ£o.';
     }
 
     if (message.contains('management_clients') ||
@@ -1980,27 +1271,27 @@ class ManagementSession extends ChangeNotifier {
     if ((message.contains('409') || message.contains('23505')) &&
         (message.contains('appointments_barber_id_starts_at_key') ||
             message.contains('duplicate key value'))) {
-      return 'Este horário já possui um atendimento na agenda. Recuse ou cancele esta solicitação e oriente o cliente a escolher outro horário.';
+      return 'Este horÃ¡rio jÃ¡ possui um atendimento na agenda. Recuse ou cancele esta solicitaÃ§Ã£o e oriente o cliente a escolher outro horÃ¡rio.';
     }
 
     if (message.toLowerCase().contains('horario escolhido ja esta ocupado') ||
-        message.toLowerCase().contains('horário escolhido já está ocupado')) {
-      return 'Este horário já possui um atendimento na agenda. Recuse ou cancele esta solicitação e oriente o cliente a escolher outro horário.';
+        message.toLowerCase().contains('horÃ¡rio escolhido jÃ¡ estÃ¡ ocupado')) {
+      return 'Este horÃ¡rio jÃ¡ possui um atendimento na agenda. Recuse ou cancele esta solicitaÃ§Ã£o e oriente o cliente a escolher outro horÃ¡rio.';
     }
 
     return switch (message) {
       'Login invalido ou usuario sem acesso.' =>
-        'Login inválido ou usuário sem acesso.',
-      'Login inválido ou usuário sem acesso.' =>
-        'Login inválido ou usuário sem acesso.',
+        'Login invÃ¡lido ou usuÃ¡rio sem acesso.',
+      'Login invÃ¡lido ou usuÃ¡rio sem acesso.' =>
+        'Login invÃ¡lido ou usuÃ¡rio sem acesso.',
       'Nao foi possivel carregar pedidos.' =>
-        'Não foi possível carregar os pedidos.',
-      'Não foi possível carregar os pedidos.' =>
-        'Não foi possível carregar os pedidos.',
+        'NÃ£o foi possÃ­vel carregar os pedidos.',
+      'NÃ£o foi possÃ­vel carregar os pedidos.' =>
+        'NÃ£o foi possÃ­vel carregar os pedidos.',
       'Nao foi possivel atualizar o pedido.' =>
-        'Não foi possível atualizar o pedido.',
-      'Não foi possível atualizar o pedido.' =>
-        'Não foi possível atualizar o pedido.',
+        'NÃ£o foi possÃ­vel atualizar o pedido.',
+      'NÃ£o foi possÃ­vel atualizar o pedido.' =>
+        'NÃ£o foi possÃ­vel atualizar o pedido.',
       _ => message,
     };
   }
@@ -2021,3 +1312,4 @@ class ManagementSession extends ChangeNotifier {
     return '${notes.trim()}\n$reasonLine';
   }
 }
+
