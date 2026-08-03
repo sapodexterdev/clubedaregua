@@ -196,7 +196,7 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
             child: SvgPicture.asset(
               'assets/images/brand_v3_segunda_logo.svg',
               fit: BoxFit.contain,
-              semanticsLabel: 'Clube da RÃ©gua',
+              semanticsLabel: 'Clube da Régua',
             ),
           ),
           const SizedBox(width: 11),
@@ -206,7 +206,7 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'CLUBE DA RÃ‰GUA â€¢ GESTÃƒO',
+                  'CLUBE DA RÉGUA • GESTÃO',
                   style: TextStyle(
                     color: SharedAppColors.orange,
                     fontSize: 9,
@@ -228,13 +228,13 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
       ),
       actions: [
         _TopBarAction(
-          tooltip: 'NotificaÃ§Ãµes',
+          tooltip: 'Notificações',
           onPressed: () {},
           icon: Icons.notifications_none_rounded,
         ),
         if (compact)
           PopupMenuButton<String>(
-            tooltip: 'Mais opÃ§Ãµes',
+            tooltip: 'Mais opções',
             icon: const Icon(Icons.more_vert_rounded),
             onSelected: (value) {
               switch (value) {
@@ -470,7 +470,7 @@ class _ManagementTab {
 const _barberTabs = [
   _ManagementTab(
     label: 'Pedidos',
-    title: 'SolicitaÃ§Ãµes recebidas',
+    title: 'Solicitações recebidas',
     icon: Icons.inbox_outlined,
     selectedIcon: Icons.inbox_rounded,
     child: _BookingRequestsPage(),
@@ -483,7 +483,7 @@ const _barberTabs = [
     child: _BarberAgendaPage(),
   ),
   _ManagementTab(
-    label: 'HorÃ¡rios',
+    label: 'Horários',
     title: 'Disponibilidade',
     icon: Icons.schedule_outlined,
     selectedIcon: Icons.schedule_rounded,
@@ -497,8 +497,8 @@ const _barberTabs = [
     child: _ClientsPage(),
   ),
   _ManagementTab(
-    label: 'ComissÃ£o',
-    title: 'ComissÃ£o e faturamento',
+    label: 'Comissão',
+    title: 'Comissão e faturamento',
     icon: Icons.payments_outlined,
     selectedIcon: Icons.payments_rounded,
     child: _CommissionPage(),
@@ -508,7 +508,7 @@ const _barberTabs = [
 const _adminTabs = [
   _ManagementTab(
     label: 'Pedidos',
-    title: 'SolicitaÃ§Ãµes recebidas',
+    title: 'Solicitações recebidas',
     icon: Icons.inbox_outlined,
     selectedIcon: Icons.inbox_rounded,
     child: _BookingRequestsPage(adminView: true),
@@ -528,8 +528,8 @@ const _adminTabs = [
     child: _BarberAgendaPage(adminView: true),
   ),
   _ManagementTab(
-    label: 'ServiÃ§os',
-    title: 'Cadastro de serviÃ§os',
+    label: 'Serviços',
+    title: 'Cadastro de serviços',
     icon: Icons.design_services_outlined,
     selectedIcon: Icons.design_services_rounded,
     child: _ServicesPage(),
@@ -550,7 +550,7 @@ const _adminTabs = [
   ),
   _ManagementTab(
     label: 'Config',
-    title: 'ConfiguraÃ§Ã£o da barbearia',
+    title: 'Configuração da barbearia',
     icon: Icons.settings_outlined,
     selectedIcon: Icons.settings_rounded,
     child: _SettingsPage(),
@@ -683,7 +683,7 @@ class _Header extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isAdmin ? 'VISÃƒO DA BARBEARIA' : 'MINHA OPERAÃ‡ÃƒO',
+                      isAdmin ? 'VISÃO DA BARBEARIA' : 'MINHA OPERAÇÃO',
                       style: const TextStyle(
                         color: SharedAppColors.orange,
                         fontSize: 9,
@@ -703,8 +703,8 @@ class _Header extends StatelessWidget {
                     const SizedBox(height: 5),
                     Text(
                       isAdmin
-                          ? 'Equipe, serviÃ§os, caixa e desempenho em um sÃ³ lugar.'
-                          : 'Pedidos, agenda, horÃ¡rios e comissÃ£o do seu dia.',
+                          ? 'Equipe, serviços, caixa e desempenho em um só lugar.'
+                          : 'Pedidos, agenda, horários e comissão do seu dia.',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall,
@@ -719,4 +719,3 @@ class _Header extends StatelessWidget {
     );
   }
 }
-
