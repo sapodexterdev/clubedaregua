@@ -184,4 +184,3 @@ List<Map<String, dynamic>> _responseFor(Uri uri) {
     _ => const [],
   };
 }
-
