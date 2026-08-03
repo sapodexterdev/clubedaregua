@@ -1,6 +1,3 @@
-Exit code: 0
-Wall time: 0.8 seconds
-Output:
 part of 'management.dart';
 
 class _TeamPage extends StatelessWidget {
