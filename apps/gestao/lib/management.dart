@@ -21,7 +21,6 @@ part 'management_booking_requests_page.dart';
 part 'management_availability_page.dart';
 part 'management_clients_page.dart';
 part 'management_commission_page.dart';
-part 'management_barber_profile_sheet.dart';
 part 'management_owner_dashboard_page.dart';
 part 'management_services_page.dart';
 part 'management_team_page.dart';
@@ -48,7 +47,7 @@ class ClubeDaReguaGestaoApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Clube da Régua Gestão',
+      title: 'Clube da RÃ©gua GestÃ£o',
       debugShowCheckedModeBanner: false,
       theme: _buildManagementTheme(),
       home: Consumer<ManagementSession>(
@@ -61,7 +60,7 @@ class ClubeDaReguaGestaoApp extends StatelessWidget {
               (session.isSignedIn && !session.professionalAccessResolved)) {
             return const Scaffold(
               body: CDRLoading.fullScreen(
-                message: 'Preparando sua área profissional...',
+                message: 'Preparando sua Ã¡rea profissional...',
               ),
             );
           }
@@ -127,7 +126,7 @@ class _EmbeddedManagementAreaState extends State<EmbeddedManagementArea> {
                 (session.isSignedIn && !session.professionalAccessResolved)) {
               return const Scaffold(
                 body: CDRLoading.fullScreen(
-                  message: 'Preparando sua área profissional...',
+                  message: 'Preparando sua Ã¡rea profissional...',
                 ),
               );
             }
@@ -223,3 +222,4 @@ ThemeData _buildManagementTheme() {
     ),
   );
 }
+
