@@ -859,4 +859,3 @@ with check (
   bucket_id = 'shop-media'
   and public.is_shop_member((storage.foldername(name))[1]::uuid)
 );
-
