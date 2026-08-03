@@ -47,7 +47,7 @@ class ClubeDaReguaGestaoApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Clube da RÃ©gua GestÃ£o',
+      title: 'Clube da Régua Gestão',
       debugShowCheckedModeBanner: false,
       theme: _buildManagementTheme(),
       home: Consumer<ManagementSession>(
@@ -60,7 +60,7 @@ class ClubeDaReguaGestaoApp extends StatelessWidget {
               (session.isSignedIn && !session.professionalAccessResolved)) {
             return const Scaffold(
               body: CDRLoading.fullScreen(
-                message: 'Preparando sua Ã¡rea profissional...',
+                message: 'Preparando sua área profissional...',
               ),
             );
           }
@@ -126,7 +126,7 @@ class _EmbeddedManagementAreaState extends State<EmbeddedManagementArea> {
                 (session.isSignedIn && !session.professionalAccessResolved)) {
               return const Scaffold(
                 body: CDRLoading.fullScreen(
-                  message: 'Preparando sua Ã¡rea profissional...',
+                  message: 'Preparando sua área profissional...',
                 ),
               );
             }
@@ -222,4 +222,3 @@ ThemeData _buildManagementTheme() {
     ),
   );
 }
-
