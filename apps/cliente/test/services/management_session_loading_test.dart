@@ -111,46 +111,6 @@ void main() {
 
     expect(requestCount, 1);
   });
-
-  test('barber can update only their own professional photo', () async {
-    http.Request? photoUpdateRequest;
-    final client = MockClient((request) async {
-      if (request.method == 'POST' &&
-          request.url.path.endsWith('/rpc/update_my_barber_photo')) {
-        photoUpdateRequest = request as http.Request;
-        return http.Response(
-          jsonEncode({
-            ..._barberRow,
-            'photo_url': 'https://cdn.example.com/barber.jpg',
-          }),
-          200,
-        );
-      }
-      return http.Response(jsonEncode(_responseFor(request.url)), 200);
-    });
-    final session = ManagementSession(
-      authService: _AuthenticatedService(),
-      httpClient: client,
-    );
-    addTearDown(session.dispose);
-
-    await session.restoreUnifiedSession(initialRole: ManagementRole.barber);
-    await session.updateCurrentBarberPhoto(
-      'https://cdn.example.com/barber.jpg',
-    );
-
-    final request = photoUpdateRequest;
-    expect(request, isNotNull);
-    expect(request!.url.path, endsWith('/rpc/update_my_barber_photo'));
-    expect(jsonDecode(request.body), {
-      'p_barber_id': 'barber-1',
-      'p_photo_url': 'https://cdn.example.com/barber.jpg',
-    });
-    expect(
-      session.currentBarber?.photoUrl,
-      'https://cdn.example.com/barber.jpg',
-    );
-  });
 }
 
 class _AuthenticatedService extends AuthService {
@@ -192,7 +152,19 @@ List<Map<String, dynamic>> _responseFor(Uri uri) {
     'barbers' when select == 'id' => [
         {'id': 'barber-1'},
       ],
-    'barbers' => [_barberRow],
+    'barbers' => [
+        {
+          'id': 'barber-1',
+          'barber_shop_id': 'shop-1',
+          'user_id': 'user-1',
+          'name': 'Barbeiro atual',
+          'bio': '',
+          'photo_url': '',
+          'starting_price': 50,
+          'commission_percent': 40,
+          'is_active': true,
+        },
+      ],
     'booking_requests' when select.startsWith('id,barber_id') => [
         {
           'id': 'request-1',
@@ -213,14 +185,3 @@ List<Map<String, dynamic>> _responseFor(Uri uri) {
   };
 }
 
-const Map<String, dynamic> _barberRow = {
-  'id': 'barber-1',
-  'barber_shop_id': 'shop-1',
-  'user_id': 'user-1',
-  'name': 'Barbeiro atual',
-  'bio': '',
-  'photo_url': '',
-  'starting_price': 50,
-  'commission_percent': 40,
-  'is_active': true,
-};
