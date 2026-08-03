@@ -60,7 +60,6 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
             title: page.title,
             onOpenClientMode: widget.onOpenClientMode,
             onOpenProfile: widget.onOpenProfile,
-            onOpenBarberPhoto: isAdmin ? null : _openBarberPhoto,
             onRefresh: _refreshCurrentTab,
             onSignedOut: widget.onSignedOut,
           ),
@@ -116,20 +115,6 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
     );
   }
 
-  Future<void> _openBarberPhoto() async {
-    final session = context.read<ManagementSession>();
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => ChangeNotifierProvider.value(
-        value: session,
-        child: const _BarberProfileSheet(),
-      ),
-    );
-  }
-
   void _selectTab(int index) {
     setState(() => selectedTab = index);
     unawaited(
@@ -178,7 +163,6 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
     required this.onOpenClientMode,
     required this.onRefresh,
     this.onOpenProfile,
-    this.onOpenBarberPhoto,
     this.onSignedOut,
   });
 
@@ -186,7 +170,6 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback onOpenClientMode;
   final VoidCallback onRefresh;
   final VoidCallback? onOpenProfile;
-  final VoidCallback? onOpenBarberPhoto;
   final VoidCallback? onSignedOut;
 
   @override
@@ -213,7 +196,7 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
             child: SvgPicture.asset(
               'assets/images/brand_v3_segunda_logo.svg',
               fit: BoxFit.contain,
-              semanticsLabel: 'Clube da Régua',
+              semanticsLabel: 'Clube da RÃ©gua',
             ),
           ),
           const SizedBox(width: 11),
@@ -223,7 +206,7 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'CLUBE DA RÉGUA • GESTÃO',
+                  'CLUBE DA RÃ‰GUA â€¢ GESTÃƒO',
                   style: TextStyle(
                     color: SharedAppColors.orange,
                     fontSize: 9,
@@ -245,13 +228,13 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
       ),
       actions: [
         _TopBarAction(
-          tooltip: 'Notificações',
+          tooltip: 'NotificaÃ§Ãµes',
           onPressed: () {},
           icon: Icons.notifications_none_rounded,
         ),
         if (compact)
           PopupMenuButton<String>(
-            tooltip: 'Mais opções',
+            tooltip: 'Mais opÃ§Ãµes',
             icon: const Icon(Icons.more_vert_rounded),
             onSelected: (value) {
               switch (value) {
@@ -260,9 +243,6 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
                   return;
                 case 'profile':
                   onOpenProfile?.call();
-                  return;
-                case 'barber-photo':
-                  onOpenBarberPhoto?.call();
                   return;
                 case 'refresh':
                   onRefresh();
@@ -282,11 +262,6 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
                   value: 'profile',
                   child: Text('Perfil e modos'),
                 ),
-              if (onOpenBarberPhoto != null)
-                const PopupMenuItem(
-                  value: 'barber-photo',
-                  child: Text('Minha foto profissional'),
-                ),
               const PopupMenuItem(
                 value: 'refresh',
                 child: Text('Atualizar dados'),
@@ -305,12 +280,6 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
               tooltip: 'Perfil e modos',
               onPressed: onOpenProfile!,
               icon: Icons.person_outline_rounded,
-            ),
-          if (onOpenBarberPhoto != null)
-            _TopBarAction(
-              tooltip: 'Minha foto profissional',
-              onPressed: onOpenBarberPhoto!,
-              icon: Icons.add_a_photo_outlined,
             ),
           _TopBarAction(
             tooltip: 'Atualizar',
@@ -501,7 +470,7 @@ class _ManagementTab {
 const _barberTabs = [
   _ManagementTab(
     label: 'Pedidos',
-    title: 'Solicitações recebidas',
+    title: 'SolicitaÃ§Ãµes recebidas',
     icon: Icons.inbox_outlined,
     selectedIcon: Icons.inbox_rounded,
     child: _BookingRequestsPage(),
@@ -514,7 +483,7 @@ const _barberTabs = [
     child: _BarberAgendaPage(),
   ),
   _ManagementTab(
-    label: 'Horários',
+    label: 'HorÃ¡rios',
     title: 'Disponibilidade',
     icon: Icons.schedule_outlined,
     selectedIcon: Icons.schedule_rounded,
@@ -528,8 +497,8 @@ const _barberTabs = [
     child: _ClientsPage(),
   ),
   _ManagementTab(
-    label: 'Comissão',
-    title: 'Comissão e faturamento',
+    label: 'ComissÃ£o',
+    title: 'ComissÃ£o e faturamento',
     icon: Icons.payments_outlined,
     selectedIcon: Icons.payments_rounded,
     child: _CommissionPage(),
@@ -539,7 +508,7 @@ const _barberTabs = [
 const _adminTabs = [
   _ManagementTab(
     label: 'Pedidos',
-    title: 'Solicitações recebidas',
+    title: 'SolicitaÃ§Ãµes recebidas',
     icon: Icons.inbox_outlined,
     selectedIcon: Icons.inbox_rounded,
     child: _BookingRequestsPage(adminView: true),
@@ -559,8 +528,8 @@ const _adminTabs = [
     child: _BarberAgendaPage(adminView: true),
   ),
   _ManagementTab(
-    label: 'Serviços',
-    title: 'Cadastro de serviços',
+    label: 'ServiÃ§os',
+    title: 'Cadastro de serviÃ§os',
     icon: Icons.design_services_outlined,
     selectedIcon: Icons.design_services_rounded,
     child: _ServicesPage(),
@@ -581,7 +550,7 @@ const _adminTabs = [
   ),
   _ManagementTab(
     label: 'Config',
-    title: 'Configuração da barbearia',
+    title: 'ConfiguraÃ§Ã£o da barbearia',
     icon: Icons.settings_outlined,
     selectedIcon: Icons.settings_rounded,
     child: _SettingsPage(),
@@ -714,7 +683,7 @@ class _Header extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isAdmin ? 'VISÃO DA BARBEARIA' : 'MINHA OPERAÇÃO',
+                      isAdmin ? 'VISÃƒO DA BARBEARIA' : 'MINHA OPERAÃ‡ÃƒO',
                       style: const TextStyle(
                         color: SharedAppColors.orange,
                         fontSize: 9,
@@ -734,8 +703,8 @@ class _Header extends StatelessWidget {
                     const SizedBox(height: 5),
                     Text(
                       isAdmin
-                          ? 'Equipe, serviços, caixa e desempenho em um só lugar.'
-                          : 'Pedidos, agenda, horários e comissão do seu dia.',
+                          ? 'Equipe, serviÃ§os, caixa e desempenho em um sÃ³ lugar.'
+                          : 'Pedidos, agenda, horÃ¡rios e comissÃ£o do seu dia.',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall,
@@ -750,3 +719,4 @@ class _Header extends StatelessWidget {
     );
   }
 }
+
