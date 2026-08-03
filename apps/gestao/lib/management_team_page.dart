@@ -1,3 +1,6 @@
+Exit code: 0
+Wall time: 0.8 seconds
+Output:
 part of 'management.dart';
 
 class _TeamPage extends StatelessWidget {
@@ -52,7 +55,7 @@ class _TeamPage extends StatelessWidget {
             if (session.errorMessage != null)
               _InlineNotice(
                 icon: Icons.warning_amber_rounded,
-                title: 'Não foi possível carregar a equipe',
+                title: 'NÃ£o foi possÃ­vel carregar a equipe',
                 subtitle: session.errorMessage!,
                 actionLabel: 'TENTAR NOVAMENTE',
                 onAction: session.fetchTeamBarbers,
@@ -111,8 +114,10 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
   late final TextEditingController _commissionController;
   late bool _isActive;
   var _isSaving = false;
+  var _isUploadingPhoto = false;
 
   bool get _isEditing => widget.barber != null;
+  bool get _isBusy => _isSaving || _isUploadingPhoto;
 
   @override
   void initState() {
@@ -155,9 +160,9 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _SheetHeader(
-              eyebrow: _isEditing ? 'EDITAR PROFISSIONAL' : 'NOVA CONTRATAÇÃO',
+              eyebrow: _isEditing ? 'EDITAR PROFISSIONAL' : 'NOVA CONTRATAÃ‡ÃƒO',
               title: _isEditing ? 'Dados do barbeiro' : 'Convide um barbeiro',
-              onClose: _isSaving ? null : () => Navigator.pop(context),
+              onClose: _isBusy ? null : () => Navigator.pop(context),
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -184,12 +189,12 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
                 decoration: const InputDecoration(
                   labelText: 'E-mail de acesso',
                   prefixIcon: Icon(Icons.mail_outline_rounded),
-                  helperText: 'O convite será válido somente para este e-mail.',
+                  helperText: 'O convite serÃ¡ vÃ¡lido somente para este e-mail.',
                 ),
                 validator: (value) {
                   final email = value?.trim() ?? '';
                   if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
-                    return 'Informe um e-mail válido.';
+                    return 'Informe um e-mail vÃ¡lido.';
                   }
                   return null;
                 },
@@ -206,14 +211,59 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
               ),
             ),
             const SizedBox(height: 12),
-            TextFormField(
-              controller: _photoUrlController,
-              textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                labelText: 'URL da foto',
-                prefixIcon: Icon(Icons.image_outlined),
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _photoUrlController,
+                    textInputAction: TextInputAction.next,
+                    onChanged: (_) => setState(() {}),
+                    decoration: const InputDecoration(
+                      labelText: 'Foto do profissional',
+                      hintText: 'Selecione uma imagem',
+                      prefixIcon: Icon(Icons.image_outlined),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                IconButton.filled(
+                  onPressed: _isBusy ? null : _pickAndUploadPhoto,
+                  style: IconButton.styleFrom(
+                    backgroundColor: SharedAppColors.orange,
+                    foregroundColor: SharedAppColors.onGold,
+                  ),
+                  icon: _isUploadingPhoto
+                      ? const CDRLoading.compact(size: 22)
+                      : const Icon(Icons.upload_rounded),
+                  tooltip: 'Enviar foto do profissional',
+                ),
+              ],
             ),
+            if (_photoUrlController.text.trim().isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: ClipOval(
+                  child: Image.network(
+                    _photoUrlController.text.trim(),
+                    width: 88,
+                    height: 88,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 88,
+                      height: 88,
+                      color: SharedAppColors.elevated,
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        Icons.broken_image_outlined,
+                        color: SharedAppColors.muted,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             _ResponsiveFieldRow(
               children: [
@@ -222,7 +272,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(
-                    labelText: 'Preço inicial',
+                    labelText: 'PreÃ§o inicial',
                     prefixIcon: Icon(Icons.attach_money),
                   ),
                   validator: _validateMoney,
@@ -232,7 +282,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(
-                    labelText: 'Comissão %',
+                    labelText: 'ComissÃ£o %',
                     prefixIcon: Icon(Icons.percent),
                   ),
                   validator: _validateCommission,
@@ -242,15 +292,14 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
             const SizedBox(height: 12),
             _CDRToggleTile(
               value: _isActive,
-              onChanged: _isSaving
-                  ? null
-                  : (value) => setState(() => _isActive = value),
+              onChanged:
+                  _isBusy ? null : (value) => setState(() => _isActive = value),
               title: 'Agenda ativa',
               subtitle: 'Barbeiros inativos deixam de aparecer.',
             ),
             const SizedBox(height: 12),
             CDRButton.primary(
-              onPressed: _isSaving ? null : _save,
+              onPressed: _isBusy ? null : _save,
               label: 'SALVAR PROFISSIONAL',
               isLoading: _isSaving,
               leading: const Icon(Icons.save_outlined),
@@ -258,7 +307,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
             if (_isEditing) ...[
               const SizedBox(height: 8),
               TextButton(
-                onPressed: _isSaving ? null : _deactivate,
+                onPressed: _isBusy ? null : _deactivate,
                 child: const Text('Desativar barbeiro'),
               ),
             ],
@@ -270,7 +319,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
 
   String? _validateMoney(String? value) {
     final parsed = _parseNumber(value);
-    if (parsed == null || parsed < 0) return 'Valor inválido.';
+    if (parsed == null || parsed < 0) return 'Valor invÃ¡lido.';
     return null;
   }
 
@@ -285,6 +334,35 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
   double? _parseNumber(String? value) {
     if (value == null) return null;
     return double.tryParse(value.trim().replaceAll(',', '.'));
+  }
+
+  Future<void> _pickAndUploadPhoto() async {
+    setState(() => _isUploadingPhoto = true);
+    try {
+      final file = await pickLogoFile(
+        maxWidth: 1024,
+        maxHeight: 1024,
+        compressionThresholdBytes: 600 * 1024,
+        quality: 0.86,
+      );
+      if (file == null) return;
+
+      final url = await context
+          .read<ManagementSession>()
+          .uploadShopMedia(file, folder: 'barbers');
+      if (!mounted) return;
+      setState(() => _photoUrlController.text = url);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Foto enviada com sucesso.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _isUploadingPhoto = false);
+    }
   }
 
   Future<void> _save() async {
@@ -345,7 +423,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
           children: [
             Text(
               'Envie este link para ${invitation.email}. '
-              'O profissional deverá entrar ou criar a conta usando esse mesmo e-mail.',
+              'O profissional deverÃ¡ entrar ou criar a conta usando esse mesmo e-mail.',
             ),
             const SizedBox(height: 14),
             SelectableText(
@@ -426,3 +504,4 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
     }
   }
 }
+
