@@ -21,6 +21,7 @@ part 'management_booking_requests_page.dart';
 part 'management_availability_page.dart';
 part 'management_clients_page.dart';
 part 'management_commission_page.dart';
+part 'management_barber_profile_sheet.dart';
 part 'management_owner_dashboard_page.dart';
 part 'management_services_page.dart';
 part 'management_team_page.dart';

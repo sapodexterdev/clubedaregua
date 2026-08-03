@@ -60,6 +60,7 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
             title: page.title,
             onOpenClientMode: widget.onOpenClientMode,
             onOpenProfile: widget.onOpenProfile,
+            onOpenBarberPhoto: isAdmin ? null : _openBarberPhoto,
             onRefresh: _refreshCurrentTab,
             onSignedOut: widget.onSignedOut,
           ),
@@ -115,6 +116,20 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
     );
   }
 
+  Future<void> _openBarberPhoto() async {
+    final session = context.read<ManagementSession>();
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ChangeNotifierProvider.value(
+        value: session,
+        child: const _BarberProfileSheet(),
+      ),
+    );
+  }
+
   void _selectTab(int index) {
     setState(() => selectedTab = index);
     unawaited(
@@ -163,6 +178,7 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
     required this.onOpenClientMode,
     required this.onRefresh,
     this.onOpenProfile,
+    this.onOpenBarberPhoto,
     this.onSignedOut,
   });
 
@@ -170,6 +186,7 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback onOpenClientMode;
   final VoidCallback onRefresh;
   final VoidCallback? onOpenProfile;
+  final VoidCallback? onOpenBarberPhoto;
   final VoidCallback? onSignedOut;
 
   @override
@@ -244,6 +261,9 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
                 case 'profile':
                   onOpenProfile?.call();
                   return;
+                case 'barber-photo':
+                  onOpenBarberPhoto?.call();
+                  return;
                 case 'refresh':
                   onRefresh();
                   return;
@@ -261,6 +281,11 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
                 const PopupMenuItem(
                   value: 'profile',
                   child: Text('Perfil e modos'),
+                ),
+              if (onOpenBarberPhoto != null)
+                const PopupMenuItem(
+                  value: 'barber-photo',
+                  child: Text('Minha foto profissional'),
                 ),
               const PopupMenuItem(
                 value: 'refresh',
@@ -280,6 +305,12 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
               tooltip: 'Perfil e modos',
               onPressed: onOpenProfile!,
               icon: Icons.person_outline_rounded,
+            ),
+          if (onOpenBarberPhoto != null)
+            _TopBarAction(
+              tooltip: 'Minha foto profissional',
+              onPressed: onOpenBarberPhoto!,
+              icon: Icons.add_a_photo_outlined,
             ),
           _TopBarAction(
             tooltip: 'Atualizar',

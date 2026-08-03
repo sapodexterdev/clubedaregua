@@ -1441,6 +1441,37 @@ class ManagementSession extends ChangeNotifier {
     }
   }
 
+  Future<void> updateCurrentBarberPhoto(String photoUrl) async {
+    final token = _accessToken;
+    final barber = currentBarber;
+    final userId = _userId;
+    if (token == null || barber == null || userId == null) {
+      throw StateError('Não foi possível identificar o barbeiro logado.');
+    }
+
+    final normalizedPhotoUrl = photoUrl.trim();
+    final result = await _postRpc(
+      token,
+      'update_my_barber_photo',
+      data: {
+        'p_barber_id': barber.id,
+        'p_photo_url': normalizedPhotoUrl.isEmpty ? null : normalizedPhotoUrl,
+      },
+    );
+
+    if (result is! Map) {
+      throw StateError(
+          'A foto não foi salva. Atualize a página e tente novamente.');
+    }
+
+    final updated = TeamBarber.fromMap(Map<String, dynamic>.from(result));
+    teamBarbers = [
+      for (final item in teamBarbers)
+        if (item.id == updated.id) updated else item,
+    ]..sort((a, b) => a.name.compareTo(b.name));
+    notifyListeners();
+  }
+
   Future<void> deactivateTeamBarber(TeamBarber barber) async {
     await updateTeamBarber(
       barber,
