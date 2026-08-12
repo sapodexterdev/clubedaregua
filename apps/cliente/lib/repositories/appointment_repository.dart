@@ -49,23 +49,26 @@ class AppointmentRepository {
       );
       if (hasConflict) return false;
 
-      return await _rest.insertRow('booking_requests', {
-        'barber_shop_id': barberShopId,
-        if (session != null) 'client_id': session.user.id,
-        'barber_id': barberId,
-        'service_id': serviceId,
-        'requested_date': _dateOnly(date),
-        'requested_time': time,
-        'customer_name': customerName.trim(),
-        'customer_phone': customerPhone.trim(),
-        'total_price': total,
-        'notes':
-            'Solicitacao criada pelo PWA Cliente. Pagamento: $paymentMethodLabel',
-      }, accessToken: session?.accessToken);
+      return await _rest.insertRow(
+          'booking_requests',
+          {
+            'barber_shop_id': barberShopId,
+            if (session != null) 'client_id': session.user.id,
+            'barber_id': barberId,
+            'service_id': serviceId,
+            'requested_date': _dateOnly(date),
+            'requested_time': time,
+            'customer_name': customerName.trim(),
+            'customer_phone': customerPhone.trim(),
+            'total_price': total,
+            'notes':
+                'Solicitacao criada pelo PWA Cliente. Pagamento: $paymentMethodLabel',
+          },
+          accessToken: session?.accessToken);
     } catch (error, stackTrace) {
       debugPrint('Falha ao criar solicitação: $error');
       debugPrintStack(stackTrace: stackTrace);
-      return false;
+      rethrow;
     }
   }
 
@@ -125,8 +128,7 @@ class AppointmentRepository {
       for (final schedule in schedules) {
         final start = _timeOfDay(schedule['start_time']?.toString());
         final end = _timeOfDay(schedule['end_time']?.toString());
-        final slotMinutes =
-            (schedule['slot_minutes'] as num?)?.toInt() ?? 30;
+        final slotMinutes = (schedule['slot_minutes'] as num?)?.toInt() ?? 30;
         if (start == null ||
             end == null ||
             slotMinutes <= 0 ||
@@ -148,8 +150,8 @@ class AppointmentRepository {
             minute % 60,
           );
           final slotEnd = slotStart.add(Duration(minutes: durationMinutes));
-          final isPast = selectedDay.isAtSameMomentAs(today) &&
-              !slotStart.isAfter(now);
+          final isPast =
+              selectedDay.isAtSameMomentAs(today) && !slotStart.isAfter(now);
           final conflicts = blocked.any(
             (interval) => _overlaps(
               slotStart,

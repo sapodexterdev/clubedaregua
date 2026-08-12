@@ -247,7 +247,8 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
       );
     } else {
       _showMessage(
-        'Não foi possível enviar. Confira o horário e tente novamente.',
+        state.lastBookingErrorMessage ??
+            'Não foi possível agendar. Confira o horário e tente novamente.',
       );
     }
   }

@@ -167,13 +167,17 @@ class _CustomerDetailsSheet extends StatefulWidget {
   State<_CustomerDetailsSheet> createState() => _CustomerDetailsSheetState();
 }
 
+enum _BookingBlockScope { none, general, barber }
+
 class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _phoneController;
   late final TextEditingController _notesController;
-  late bool _isActive;
   var _isSaving = false;
+  var _isSavingBlock = false;
+  late _BookingBlockScope _blockScope;
+  String? _blockedBarberId;
 
   @override
   void initState() {
@@ -181,7 +185,14 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
     _nameController = TextEditingController(text: widget.customer.name);
     _phoneController = TextEditingController(text: widget.customer.phone);
     _notesController = TextEditingController(text: widget.customer.notes);
-    _isActive = widget.customer.isActive;
+    _blockScope = widget.customer.isBlocked
+        ? _BookingBlockScope.general
+        : widget.customer.blockedBarberIds.isNotEmpty
+            ? _BookingBlockScope.barber
+            : _BookingBlockScope.none;
+    _blockedBarberId = widget.customer.blockedBarberIds.isEmpty
+        ? null
+        : widget.customer.blockedBarberIds.first;
   }
 
   @override
@@ -200,6 +211,9 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
       orElse: () => widget.customer,
     );
     final appointments = session.appointmentsForCustomer(customer.clientId);
+    final availableBarbers = session.teamBarbers
+        .where((barber) => barber.isActive || barber.id == _blockedBarberId)
+        .toList();
     final bottomPadding = MediaQuery.viewInsetsOf(context).bottom + 20;
 
     return SingleChildScrollView(
@@ -274,15 +288,6 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
               ),
             ),
             const SizedBox(height: 12),
-            _CDRToggleTile(
-              value: _isActive,
-              onChanged: _isSaving || !customer.canEdit
-                  ? null
-                  : (value) => setState(() => _isActive = value),
-              title: 'Cliente ativo',
-              subtitle: 'Clientes inativos ficam filtráveis.',
-            ),
-            const SizedBox(height: 12),
             if (!customer.canEdit)
               const _InlineNotice(
                 icon: Icons.info_outline_rounded,
@@ -297,6 +302,90 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
                 isLoading: _isSaving,
                 leading: const Icon(Icons.save_outlined),
               ),
+            if (session.canManageCustomerBlocks) ...[
+              const SizedBox(height: 28),
+              const Divider(height: 1),
+              const SizedBox(height: 20),
+              const _SectionTitle(
+                'Bloqueio de agendamento',
+                eyebrow: 'ACESSO À AGENDA',
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Configuração exclusiva do Dono. Agendamentos existentes não serão cancelados.',
+                style: TextStyle(color: SharedAppColors.muted, height: 1.4),
+              ),
+              const SizedBox(height: 14),
+              DropdownButtonFormField<_BookingBlockScope>(
+                value: _blockScope,
+                decoration: const InputDecoration(
+                  labelText: 'Novos agendamentos',
+                  prefixIcon: Icon(Icons.block_rounded),
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: _BookingBlockScope.none,
+                    child: Text('Permitir agendamentos'),
+                  ),
+                  DropdownMenuItem(
+                    value: _BookingBlockScope.general,
+                    child: Text('Bloquear em toda a barbearia'),
+                  ),
+                  DropdownMenuItem(
+                    value: _BookingBlockScope.barber,
+                    child: Text('Bloquear para um barbeiro'),
+                  ),
+                ],
+                onChanged: _isSavingBlock
+                    ? null
+                    : (value) => setState(() {
+                          _blockScope = value ?? _BookingBlockScope.none;
+                          if (_blockScope == _BookingBlockScope.barber &&
+                              _blockedBarberId == null &&
+                              availableBarbers.isNotEmpty) {
+                            _blockedBarberId = availableBarbers.first.id;
+                          }
+                        }),
+              ),
+              if (_blockScope == _BookingBlockScope.barber) ...[
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: availableBarbers.any(
+                    (barber) => barber.id == _blockedBarberId,
+                  )
+                      ? _blockedBarberId
+                      : null,
+                  decoration: const InputDecoration(
+                    labelText: 'Barbeiro bloqueado',
+                    prefixIcon: Icon(Icons.content_cut_rounded),
+                  ),
+                  items: [
+                    for (final barber in availableBarbers)
+                      DropdownMenuItem(
+                        value: barber.id,
+                        child: Text(barber.name),
+                      ),
+                  ],
+                  onChanged: _isSavingBlock
+                      ? null
+                      : (value) => setState(() => _blockedBarberId = value),
+                ),
+              ],
+              const SizedBox(height: 12),
+              CDRButton.primary(
+                label: _blockScope == _BookingBlockScope.none
+                    ? 'REMOVER BLOQUEIO'
+                    : 'SALVAR BLOQUEIO',
+                onPressed:
+                    _isSavingBlock ? null : () => _saveBookingBlock(customer),
+                isLoading: _isSavingBlock,
+                leading: Icon(
+                  _blockScope == _BookingBlockScope.none
+                      ? Icons.lock_open_rounded
+                      : Icons.block_rounded,
+                ),
+              ),
+            ],
             const SizedBox(height: 28),
             _SectionTitle(
               'Histórico de agendamentos',
@@ -329,7 +418,6 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
             name: _nameController.text,
             phone: _phoneController.text,
             notes: _notesController.text,
-            isActive: _isActive,
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -342,6 +430,43 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
       );
     } finally {
       if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _saveBookingBlock(ManagedCustomer customer) async {
+    if (_blockScope == _BookingBlockScope.barber && _blockedBarberId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecione o barbeiro do bloqueio.')),
+      );
+      return;
+    }
+
+    setState(() => _isSavingBlock = true);
+    try {
+      await context.read<ManagementSession>().setCustomerBookingBlock(
+            customer,
+            blocked: _blockScope != _BookingBlockScope.none,
+            barberId: _blockScope == _BookingBlockScope.barber
+                ? _blockedBarberId
+                : null,
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _blockScope == _BookingBlockScope.none
+                ? 'Bloqueio removido com sucesso.'
+                : 'Bloqueio salvo com sucesso.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _isSavingBlock = false);
     }
   }
 }

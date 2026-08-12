@@ -482,6 +482,7 @@ class ManagedCustomer {
     required this.lastAppointmentAt,
     required this.notes,
     required this.isBlocked,
+    required this.blockedBarberIds,
     required this.appointmentCount,
     required this.favoriteBarber,
   });
@@ -497,13 +498,19 @@ class ManagedCustomer {
   final DateTime? lastAppointmentAt;
   final String notes;
   final bool isBlocked;
+  final Set<String> blockedBarberIds;
   final int appointmentCount;
   final String favoriteBarber;
 
   bool get canEdit =>
       relationshipId.isNotEmpty && !clientId.startsWith('booking:');
   bool get isActive => !isBlocked;
-  String get statusLabel => isActive ? 'Ativo' : 'Inativo';
+  bool get hasBookingBlock => isBlocked || blockedBarberIds.isNotEmpty;
+  String get statusLabel => isBlocked
+      ? 'Bloqueado'
+      : blockedBarberIds.isNotEmpty
+          ? 'Restrito'
+          : 'Ativo';
   String get lastAppointmentLabel => lastAppointmentAt == null
       ? 'Sem atendimento'
       : _formatDate(lastAppointmentAt!);
@@ -535,6 +542,7 @@ class ManagedCustomer {
           _parseDateTime(map['last_appointment_at']?.toString()),
       notes: map['notes']?.toString() ?? '',
       isBlocked: map['is_blocked'] == true,
+      blockedBarberIds: const {},
       appointmentCount: appointmentCount,
       favoriteBarber: favoriteBarber,
     );
@@ -559,6 +567,7 @@ class ManagedCustomer {
       lastAppointmentAt: computedLastAppointmentAt,
       notes: map['notes']?.toString() ?? '',
       isBlocked: false,
+      blockedBarberIds: const {},
       appointmentCount: appointmentCount,
       favoriteBarber: favoriteBarber,
     );
@@ -569,6 +578,7 @@ class ManagedCustomer {
     String? phone,
     String? notes,
     bool? isBlocked,
+    Set<String>? blockedBarberIds,
   }) {
     return ManagedCustomer(
       relationshipId: relationshipId,
@@ -582,6 +592,7 @@ class ManagedCustomer {
       lastAppointmentAt: lastAppointmentAt,
       notes: notes ?? this.notes,
       isBlocked: isBlocked ?? this.isBlocked,
+      blockedBarberIds: blockedBarberIds ?? this.blockedBarberIds,
       appointmentCount: appointmentCount,
       favoriteBarber: favoriteBarber,
     );

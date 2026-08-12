@@ -76,6 +76,7 @@ class AppState extends ChangeNotifier {
   final Set<String> _favoriteUpdates = <String>{};
   bool isSignedIn = false;
   bool lastBookingRequestCreated = false;
+  String? lastBookingErrorMessage;
   BookingReceipt? lastBookingReceipt;
   Set<String> professionalRoles = const <String>{};
   Set<String> professionalShopIds = const <String>{};
@@ -86,8 +87,7 @@ class AppState extends ChangeNotifier {
         (role) => const {'owner', 'manager', 'admin'}.contains(role),
       );
 
-  bool get hasProfessionalAccess =>
-      hasBarberAccess || hasOwnerAccess;
+  bool get hasProfessionalAccess => hasBarberAccess || hasOwnerAccess;
 
   int get unreadNotificationCount =>
       notifications.where((item) => !item.isRead).length;
@@ -96,8 +96,7 @@ class AppState extends ChangeNotifier {
     final query = _normalizedSearch(discoveryQuery);
     return publicBarbershops.where((shop) {
       if (useCurrentLocation &&
-          (!shop.distanceKm.isFinite ||
-              shop.distanceKm > discoveryRadiusKm)) {
+          (!shop.distanceKm.isFinite || shop.distanceKm > discoveryRadiusKm)) {
         return false;
       }
       if (discoveryLocation?.isNotEmpty == true &&
@@ -297,8 +296,7 @@ class AppState extends ChangeNotifier {
         notifications = await _notificationRepository.fetchNotifications();
       } catch (_) {
         notifications = const [];
-        notificationsLoadError =
-            'Não foi possível carregar suas notificações.';
+        notificationsLoadError = 'Não foi possível carregar suas notificações.';
       }
       try {
         userAccess = await _userAccessRepository.fetchAccess();
@@ -384,8 +382,7 @@ class AppState extends ChangeNotifier {
   }
 
   void toggleDiscoveryCategory(String categoryId) {
-    discoveryCategoryId =
-        discoveryCategoryId == categoryId ? null : categoryId;
+    discoveryCategoryId = discoveryCategoryId == categoryId ? null : categoryId;
     notifyListeners();
   }
 
@@ -598,17 +595,28 @@ class AppState extends ChangeNotifier {
     await refreshAvailableTimes(preserveSelectedTime: true);
     if (!availableTimes.contains(requestedTime)) return false;
 
-    lastBookingRequestCreated = await _appointmentRepository.createAppointment(
-      barberId: barber.id,
-      serviceId: service.id,
-      date: requestedDate,
-      time: requestedTime,
-      total: service.price,
-      barberShopId: barber.barberShopId,
-      customerName: customerName,
-      customerPhone: customerPhone,
-      paymentMethodLabel: paymentMethodLabel,
-    );
+    lastBookingErrorMessage = null;
+    try {
+      lastBookingRequestCreated =
+          await _appointmentRepository.createAppointment(
+        barberId: barber.id,
+        serviceId: service.id,
+        date: requestedDate,
+        time: requestedTime,
+        total: service.price,
+        barberShopId: barber.barberShopId,
+        customerName: customerName,
+        customerPhone: customerPhone,
+        paymentMethodLabel: paymentMethodLabel,
+      );
+    } catch (error) {
+      lastBookingRequestCreated = false;
+      final message = error.toString().toLowerCase();
+      if (message.contains('cliente bloqueado para agendamentos')) {
+        lastBookingErrorMessage =
+            'Esta barbearia não está aceitando novos agendamentos para este contato.';
+      }
+    }
 
     if (lastBookingRequestCreated) {
       lastBookingReceipt = BookingReceipt(
@@ -858,7 +866,8 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> refreshAvailableTimes({bool preserveSelectedTime = false}) async {
+  Future<void> refreshAvailableTimes(
+      {bool preserveSelectedTime = false}) async {
     final requestId = ++_availabilityRequestId;
     final barber = selectedBarber;
     final service = selectedService;

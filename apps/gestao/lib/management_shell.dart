@@ -542,6 +542,13 @@ const _adminTabs = [
     child: _TeamPage(),
   ),
   _ManagementTab(
+    label: 'Clientes',
+    title: 'Controle de clientes',
+    icon: Icons.people_alt_outlined,
+    selectedIcon: Icons.people_alt_rounded,
+    child: _ClientsPage(),
+  ),
+  _ManagementTab(
     label: 'Caixa',
     title: 'Caixa e estoque',
     icon: Icons.point_of_sale_outlined,
