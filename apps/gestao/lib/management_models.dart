@@ -1,5 +1,7 @@
 part of 'management.dart';
 
+enum ProductStatusFilter { all, active, lowStock, inactive }
+
 class PasswordRecoveryLink {
   const PasswordRecoveryLink._();
 
@@ -674,6 +676,148 @@ class CustomerAppointment {
       _ => status.isEmpty ? 'Solicitado' : status,
     };
   }
+}
+
+class ManagedProduct {
+  const ManagedProduct({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.sku,
+    required this.barcode,
+    required this.category,
+    required this.unit,
+    required this.quantity,
+    required this.minQuantity,
+    required this.unitCost,
+    required this.salePrice,
+    required this.isActive,
+  });
+
+  final String id;
+  final String name;
+  final String description;
+  final String sku;
+  final String barcode;
+  final String category;
+  final String unit;
+  final int quantity;
+  final int minQuantity;
+  final double unitCost;
+  final double salePrice;
+  final bool isActive;
+
+  bool get isLowStock => isActive && quantity <= minQuantity;
+  double get stockCost => quantity * unitCost;
+  double get stockSaleValue => quantity * salePrice;
+
+  factory ManagedProduct.fromMap(Map<String, dynamic> map) {
+    return ManagedProduct(
+      id: map['id']?.toString() ?? '',
+      name: map['name']?.toString() ?? '',
+      description: map['description']?.toString() ?? '',
+      sku: map['sku']?.toString() ?? '',
+      barcode: map['barcode']?.toString() ?? '',
+      category: map['category']?.toString() ?? '',
+      unit: map['unit']?.toString() ?? 'un',
+      quantity: int.tryParse(map['quantity']?.toString() ?? '') ?? 0,
+      minQuantity: int.tryParse(map['min_quantity']?.toString() ?? '') ?? 0,
+      unitCost: double.tryParse(map['unit_cost']?.toString() ?? '') ?? 0,
+      salePrice: double.tryParse(map['sale_price']?.toString() ?? '') ?? 0,
+      isActive: map['is_active'] != false,
+    );
+  }
+}
+
+class ProductSaleItem {
+  const ProductSaleItem({
+    required this.productId,
+    required this.productName,
+    required this.quantity,
+    required this.unit,
+    required this.unitPrice,
+    required this.lineTotal,
+  });
+
+  final String productId;
+  final String productName;
+  final int quantity;
+  final String unit;
+  final double unitPrice;
+  final double lineTotal;
+
+  factory ProductSaleItem.fromMap(Map<String, dynamic> map) {
+    return ProductSaleItem(
+      productId: map['stock_item_id']?.toString() ?? '',
+      productName: map['product_name']?.toString() ?? 'Produto',
+      quantity: int.tryParse(map['quantity']?.toString() ?? '') ?? 0,
+      unit: map['unit']?.toString() ?? 'un',
+      unitPrice: double.tryParse(map['unit_price']?.toString() ?? '') ?? 0,
+      lineTotal: double.tryParse(map['line_total']?.toString() ?? '') ?? 0,
+    );
+  }
+}
+
+class ProductSale {
+  const ProductSale({
+    required this.id,
+    required this.status,
+    required this.subtotal,
+    required this.discount,
+    required this.total,
+    required this.paymentMethod,
+    required this.customerName,
+    required this.notes,
+    required this.soldAt,
+    required this.cancellationReason,
+    required this.items,
+  });
+
+  final String id;
+  final String status;
+  final double subtotal;
+  final double discount;
+  final double total;
+  final String paymentMethod;
+  final String customerName;
+  final String notes;
+  final DateTime? soldAt;
+  final String cancellationReason;
+  final List<ProductSaleItem> items;
+
+  bool get isCancelled => status == 'cancelled';
+
+  factory ProductSale.fromMap(Map<String, dynamic> map) {
+    final rawItems = map['product_sale_items'];
+    return ProductSale(
+      id: map['id']?.toString() ?? '',
+      status: map['status']?.toString() ?? 'completed',
+      subtotal: double.tryParse(map['subtotal']?.toString() ?? '') ?? 0,
+      discount: double.tryParse(map['discount']?.toString() ?? '') ?? 0,
+      total: double.tryParse(map['total']?.toString() ?? '') ?? 0,
+      paymentMethod: map['payment_method']?.toString() ?? 'other',
+      customerName: map['customer_name']?.toString() ?? '',
+      notes: map['notes']?.toString() ?? '',
+      soldAt: DateTime.tryParse(map['sold_at']?.toString() ?? ''),
+      cancellationReason: map['cancellation_reason']?.toString() ?? '',
+      items: rawItems is List
+          ? rawItems
+              .whereType<Map>()
+              .map((item) => ProductSaleItem.fromMap(
+                    Map<String, dynamic>.from(item),
+                  ))
+              .toList()
+          : const [],
+    );
+  }
+}
+
+class ProductCartLine {
+  const ProductCartLine({required this.product, required this.quantity});
+
+  final ManagedProduct product;
+  final int quantity;
+  double get total => product.salePrice * quantity;
 }
 
 class ShopBusinessDay {

@@ -19,6 +19,7 @@ class ManagementSession extends ChangeNotifier {
   var _scheduleLoaded = false;
   var _servicesLoaded = false;
   var _customersLoaded = false;
+  var _commerceLoaded = false;
   var _settingsLoaded = false;
   String? _accessToken;
   String? _userId;
@@ -42,17 +43,21 @@ class ManagementSession extends ChangeNotifier {
   List<ServiceCategory> serviceCategories = [];
   List<ManagedCustomer> customers = [];
   List<CustomerAppointment> customerAppointments = [];
+  List<ManagedProduct> products = [];
+  List<ProductSale> productSales = [];
   ShopConfiguration? shopConfiguration;
   bool isScheduleLoading = false;
   bool isAvailabilityLoading = false;
   bool isAvailabilitySaving = false;
   bool isServicesLoading = false;
   bool isCustomersLoading = false;
+  bool isCommerceLoading = false;
   bool isSettingsLoading = false;
   String? scheduleError;
   String? availabilityError;
   String? servicesError;
   String? customersError;
+  String? commerceError;
   String? settingsError;
   DateTime selectedScheduleDate = DateTime.now();
   String? selectedScheduleBarberId;
@@ -61,9 +66,11 @@ class ManagementSession extends ChangeNotifier {
       BarberAvailabilityDay.defaults();
   ServiceStatusFilter serviceStatusFilter = ServiceStatusFilter.all;
   CustomerStatusFilter customerStatusFilter = CustomerStatusFilter.all;
+  ProductStatusFilter productStatusFilter = ProductStatusFilter.all;
   String? selectedServiceCategoryId;
   String serviceSearchQuery = '';
   String customerSearchQuery = '';
+  String productSearchQuery = '';
 
   bool get isSignedIn => _accessToken != null;
   bool get professionalAccessResolved =>
@@ -76,6 +83,7 @@ class ManagementSession extends ChangeNotifier {
       _membershipRole == 'manager';
   bool get canManageCustomerBlocks =>
       _isPlatformAdmin || _isShopOwner || _membershipRole == 'owner';
+  bool get canManageCommerce => canManageCustomerBlocks;
   bool get hasProfessionalAccess => canWorkAsBarber || canManageShop;
 
   bool _professionalAccessResolved = false;
@@ -192,6 +200,48 @@ class ManagementSession extends ChangeNotifier {
       ..sort((a, b) => a.name.compareTo(b.name));
   }
 
+  List<ManagedProduct> get filteredProducts {
+    final query = productSearchQuery.trim().toLowerCase();
+    return products.where((product) {
+      final matchesStatus = switch (productStatusFilter) {
+        ProductStatusFilter.all => true,
+        ProductStatusFilter.active => product.isActive,
+        ProductStatusFilter.lowStock => product.isLowStock,
+        ProductStatusFilter.inactive => !product.isActive,
+      };
+      final matchesSearch = query.isEmpty ||
+          product.name.toLowerCase().contains(query) ||
+          product.category.toLowerCase().contains(query) ||
+          product.sku.toLowerCase().contains(query) ||
+          product.barcode.toLowerCase().contains(query);
+      return matchesStatus && matchesSearch;
+    }).toList()
+      ..sort((a, b) {
+        final critical =
+            b.isLowStock.toString().compareTo(a.isLowStock.toString());
+        if (critical != 0) return critical;
+        return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      });
+  }
+
+  double get productSalesTodayTotal {
+    final now = DateTime.now();
+    return productSales
+        .where((sale) =>
+            !sale.isCancelled &&
+            sale.soldAt?.year == now.year &&
+            sale.soldAt?.month == now.month &&
+            sale.soldAt?.day == now.day)
+        .fold(0, (total, sale) => total + sale.total);
+  }
+
+  int get lowStockProductCount =>
+      products.where((product) => product.isLowStock).length;
+
+  double get inventoryCostValue => products
+      .where((product) => product.isActive)
+      .fold(0, (total, product) => total + product.stockCost);
+
   Future<void> signIn(String emailValue, String password) async {
     if (!SupabaseConfig.isConfigured) {
       errorMessage = 'Configure SUPABASE_URL e SUPABASE_ANON_KEY.';
@@ -279,6 +329,8 @@ class ManagementSession extends ChangeNotifier {
         if (force || !_teamLoaded) await fetchTeamBarbers();
       case 5:
         if (force || !_customersLoaded) await fetchCustomers();
+      case 6:
+        if (force || !_commerceLoaded) await fetchCommerce();
       case 7:
         if (force || !_settingsLoaded) await fetchShopConfiguration();
       default:
@@ -1111,6 +1163,196 @@ class ManagementSession extends ChangeNotifier {
     };
   }
 
+  Future<void> fetchCommerce() async {
+    final token = _accessToken;
+    if (token == null || !canManageCommerce) return;
+
+    isCommerceLoading = true;
+    commerceError = null;
+    notifyListeners();
+    try {
+      final shopId = await _ensureBarberShopId(token);
+      final productRows = await _getRestRows(
+        token,
+        'stock_items',
+        query: {
+          'select':
+              'id,name,description,sku,barcode,category,unit,quantity,min_quantity,unit_cost,sale_price,is_active',
+          'barber_shop_id': 'eq.$shopId',
+          'order': 'name.asc',
+        },
+      );
+      final saleRows = await _getRestRows(
+        token,
+        'product_sales',
+        query: {
+          'select':
+              'id,status,subtotal,discount,total,payment_method,customer_name,notes,sold_at,cancellation_reason,product_sale_items(stock_item_id,product_name,quantity,unit,unit_price,line_total)',
+          'barber_shop_id': 'eq.$shopId',
+          'order': 'sold_at.desc',
+          'limit': '100',
+        },
+      );
+      if (_disposed) return;
+      products = productRows
+          .map(ManagedProduct.fromMap)
+          .where((product) => product.id.isNotEmpty)
+          .toList();
+      productSales = saleRows
+          .map(ProductSale.fromMap)
+          .where((sale) => sale.id.isNotEmpty)
+          .toList();
+      _commerceLoaded = true;
+    } catch (error) {
+      commerceError = _cleanErrorMessage(error);
+    } finally {
+      isCommerceLoading = false;
+      notifyListeners();
+    }
+  }
+
+  void setProductSearchQuery(String value) {
+    productSearchQuery = value;
+    notifyListeners();
+  }
+
+  void setProductStatusFilter(ProductStatusFilter value) {
+    productStatusFilter = value;
+    notifyListeners();
+  }
+
+  Future<void> saveProduct({
+    ManagedProduct? product,
+    required String name,
+    required String description,
+    required String sku,
+    required String barcode,
+    required String category,
+    required String unit,
+    required int initialQuantity,
+    required int minQuantity,
+    required double unitCost,
+    required double salePrice,
+    required bool isActive,
+  }) async {
+    final token = _accessToken;
+    if (token == null || !canManageCommerce) {
+      throw StateError('Apenas o Dono pode gerenciar produtos.');
+    }
+
+    isCommerceLoading = true;
+    commerceError = null;
+    notifyListeners();
+    try {
+      final shopId = await _ensureBarberShopId(token);
+      await _postRpc(
+        token,
+        'save_commerce_product',
+        data: {
+          'p_barber_shop_id': shopId,
+          'p_product_id': product?.id,
+          'p_name': name.trim(),
+          'p_description': description.trim(),
+          'p_sku': sku.trim(),
+          'p_barcode': barcode.trim(),
+          'p_category': category.trim(),
+          'p_unit': unit.trim().isEmpty ? 'un' : unit.trim(),
+          'p_initial_quantity': initialQuantity,
+          'p_min_quantity': minQuantity,
+          'p_unit_cost': unitCost,
+          'p_sale_price': salePrice,
+          'p_is_active': isActive,
+        },
+      );
+      await fetchCommerce();
+    } catch (error) {
+      commerceError = _cleanErrorMessage(error);
+      rethrow;
+    } finally {
+      isCommerceLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> adjustProductStock(
+    ManagedProduct product, {
+    required int quantityDelta,
+    required String reason,
+  }) async {
+    final token = _accessToken;
+    if (token == null || !canManageCommerce) {
+      throw StateError('Apenas o Dono pode ajustar o estoque.');
+    }
+    try {
+      await _postRpc(
+        token,
+        'adjust_product_stock',
+        data: {
+          'p_stock_item_id': product.id,
+          'p_quantity_delta': quantityDelta,
+          'p_reason': reason.trim(),
+        },
+      );
+      await fetchCommerce();
+    } catch (error) {
+      commerceError = _cleanErrorMessage(error);
+      rethrow;
+    }
+  }
+
+  Future<void> registerProductSale({
+    required List<ProductCartLine> items,
+    required String paymentMethod,
+    required double discount,
+    required String customerName,
+    required String notes,
+  }) async {
+    final token = _accessToken;
+    if (token == null || !canManageCommerce) {
+      throw StateError('Apenas o Dono pode registrar vendas.');
+    }
+    final shopId = await _ensureBarberShopId(token);
+    try {
+      await _postRpc(
+        token,
+        'register_product_sale',
+        data: {
+          'p_barber_shop_id': shopId,
+          'p_items': [
+            for (final item in items)
+              {'product_id': item.product.id, 'quantity': item.quantity},
+          ],
+          'p_payment_method': paymentMethod,
+          'p_discount': discount,
+          'p_customer_name': customerName.trim(),
+          'p_notes': notes.trim(),
+        },
+      );
+      await fetchCommerce();
+    } catch (error) {
+      commerceError = _cleanErrorMessage(error);
+      rethrow;
+    }
+  }
+
+  Future<void> cancelProductSale(ProductSale sale, String reason) async {
+    final token = _accessToken;
+    if (token == null || !canManageCommerce) {
+      throw StateError('Apenas o Dono pode cancelar vendas.');
+    }
+    try {
+      await _postRpc(
+        token,
+        'cancel_product_sale',
+        data: {'p_sale_id': sale.id, 'p_reason': reason.trim()},
+      );
+      await fetchCommerce();
+    } catch (error) {
+      commerceError = _cleanErrorMessage(error);
+      rethrow;
+    }
+  }
+
   Future<void> fetchServiceCatalog() async {
     final token = _accessToken;
     if (token == null) return;
@@ -1670,6 +1912,12 @@ class ManagementSession extends ChangeNotifier {
     isCustomersLoading = false;
     customerStatusFilter = CustomerStatusFilter.all;
     customerSearchQuery = '';
+    products = [];
+    productSales = [];
+    commerceError = null;
+    isCommerceLoading = false;
+    productStatusFilter = ProductStatusFilter.all;
+    productSearchQuery = '';
     shopConfiguration = null;
     settingsError = null;
     isSettingsLoading = false;
@@ -1681,6 +1929,7 @@ class ManagementSession extends ChangeNotifier {
     _scheduleLoaded = false;
     _servicesLoaded = false;
     _customersLoaded = false;
+    _commerceLoaded = false;
     _settingsLoaded = false;
     errorMessage = null;
   }
@@ -2020,7 +2269,20 @@ class ManagementSession extends ChangeNotifier {
     if (message.contains('management_clients') ||
         message.contains('management_client_appointments') ||
         message.contains('PGRST205')) {
+      if (message.contains('stock_items') ||
+          message.contains('product_sales') ||
+          message.contains('product_sale_items') ||
+          message.contains('save_commerce_product')) {
+        return 'Execute o script supabase/issue_023_product_sales.sql no Supabase e atualize a tela.';
+      }
       return 'Execute o script supabase/issue_006_customer_management.sql no Supabase e atualize a tela. Ele cria as views necessarias para listar clientes.';
+    }
+
+    if (message.contains('PGRST202') &&
+        (message.contains('commerce_product') ||
+            message.contains('product_stock') ||
+            message.contains('product_sale'))) {
+      return 'Execute o script supabase/issue_023_product_sales.sql no Supabase e atualize a tela.';
     }
 
     if ((message.contains('409') || message.contains('23505')) &&
