@@ -113,7 +113,7 @@ create table if not exists public.shop_settings (
   barber_shop_id uuid not null unique references public.barber_shops(id) on delete cascade,
   booking_interval_minutes integer not null default 30,
   min_cancel_hours integer not null default 2,
-  auto_confirm_appointments boolean not null default false,
+  auto_confirm_appointments boolean not null default true,
   require_payment_to_confirm boolean not null default false,
   loyalty_enabled boolean not null default true,
   pix_key text,

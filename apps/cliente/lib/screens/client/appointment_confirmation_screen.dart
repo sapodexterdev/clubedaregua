@@ -31,66 +31,68 @@ class AppointmentConfirmationScreen extends StatelessWidget {
                       child: ListView(
                         padding: const EdgeInsets.fromLTRB(18, 36, 18, 28),
                         children: [
-                      const _SuccessMark(),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Solicitação enviada!',
-                        textAlign: TextAlign.center,
-                        style:
-                            Theme.of(context).textTheme.displaySmall?.copyWith(
+                          const _SuccessMark(),
+                          const SizedBox(height: 24),
+                          Text(
+                            'Agendamento confirmado!',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context)
+                                .textTheme
+                                .displaySmall
+                                ?.copyWith(
                                   fontSize: 32,
                                   fontWeight: FontWeight.w800,
                                 ),
-                      ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        'Agora a barbearia analisará o pedido e retornará pelo WhatsApp informado.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: AppColors.muted,
-                          fontSize: 14,
-                          height: 1.5,
-                        ),
-                      ),
-                      const SizedBox(height: 22),
-                      const Center(child: _PendingBadge()),
-                      const SizedBox(height: 26),
-                      _ReceiptCard(
-                        shopName: receipt!.shopName,
-                        serviceName: receipt.serviceName,
-                        barberName: receipt.barberName,
-                        date: receipt.date,
-                        time: receipt.time,
-                        total: receipt.total,
-                      ),
-                      const SizedBox(height: 26),
-                      const _NextSteps(),
-                      const SizedBox(height: 28),
-                      if (!state.isSignedIn) ...[
-                        OutlinedButton.icon(
-                          onPressed: () => Navigator.pushNamed(
-                            context,
-                            RegisterScreen.route,
                           ),
-                          icon: const Icon(Icons.person_add_alt_1_rounded),
-                          label: const Text(
-                            'CRIAR MINHA CONTA',
+                          const SizedBox(height: 10),
+                          const Text(
+                            'Seu horário já entrou na agenda do profissional.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 14,
+                              height: 1.5,
+                            ),
                           ),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(52),
+                          const SizedBox(height: 22),
+                          const Center(child: _ConfirmedBadge()),
+                          const SizedBox(height: 26),
+                          _ReceiptCard(
+                            shopName: receipt!.shopName,
+                            serviceName: receipt.serviceName,
+                            barberName: receipt.barberName,
+                            date: receipt.date,
+                            time: receipt.time,
+                            total: receipt.total,
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-                      FilledButton(
-                        onPressed: () => _goHome(context),
-                        style: FilledButton.styleFrom(
-                          minimumSize: const Size.fromHeight(54),
-                          backgroundColor: AppColors.orange,
-                          foregroundColor: AppColors.onGold,
-                        ),
-                        child: const Text('VOLTAR PARA DESCOBRIR'),
-                      ),
+                          const SizedBox(height: 26),
+                          const _NextSteps(),
+                          const SizedBox(height: 28),
+                          if (!state.isSignedIn) ...[
+                            OutlinedButton.icon(
+                              onPressed: () => Navigator.pushNamed(
+                                context,
+                                RegisterScreen.route,
+                              ),
+                              icon: const Icon(Icons.person_add_alt_1_rounded),
+                              label: const Text(
+                                'CRIAR MINHA CONTA',
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size.fromHeight(52),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                          FilledButton(
+                            onPressed: () => _goHome(context),
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size.fromHeight(54),
+                              backgroundColor: AppColors.orange,
+                              foregroundColor: AppColors.onGold,
+                            ),
+                            child: const Text('VOLTAR PARA DESCOBRIR'),
+                          ),
                         ],
                       ),
                     ),
@@ -135,27 +137,28 @@ class _SuccessMark extends StatelessWidget {
   }
 }
 
-class _PendingBadge extends StatelessWidget {
-  const _PendingBadge();
+class _ConfirmedBadge extends StatelessWidget {
+  const _ConfirmedBadge();
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: AppColors.orange.withOpacity(.1),
+        color: AppColors.success.withOpacity(.1),
         borderRadius: BorderRadius.circular(99),
-        border: Border.all(color: AppColors.orange.withOpacity(.55)),
+        border: Border.all(color: AppColors.success.withOpacity(.55)),
       ),
       child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.schedule_rounded, color: AppColors.orange, size: 16),
+          Icon(Icons.event_available_rounded,
+              color: AppColors.success, size: 16),
           SizedBox(width: 6),
           Text(
-            'AGUARDANDO CONFIRMAÇÃO',
+            'HORÁRIO CONFIRMADO',
             style: TextStyle(
-              color: AppColors.orange,
+              color: AppColors.success,
               fontSize: 12,
               fontWeight: FontWeight.w900,
             ),
@@ -196,7 +199,7 @@ class _ReceiptCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'RESUMO DA SOLICITAÇÃO',
+            'RESUMO DO AGENDAMENTO',
             style: TextStyle(
               color: AppColors.muted,
               fontSize: 12,
@@ -232,7 +235,7 @@ class _ReceiptCard extends StatelessWidget {
           ),
           _ReceiptRow(
             icon: Icons.schedule_outlined,
-            label: 'Horário solicitado',
+            label: 'Horário confirmado',
             value: time,
           ),
           const Divider(height: 28, color: AppColors.stroke),
@@ -328,19 +331,21 @@ class _NextSteps extends StatelessWidget {
         const SizedBox(height: 14),
         const _TimelineItem(
           icon: Icons.check_rounded,
-          title: 'Solicitação recebida',
-          description: 'Os dados foram enviados para a barbearia.',
+          title: 'Agendamento criado',
+          description: 'O horário foi reservado para você.',
           active: true,
         ),
         const _TimelineItem(
-          icon: Icons.storefront_outlined,
-          title: 'Análise da barbearia',
-          description: 'A equipe verificará o horário solicitado.',
+          icon: Icons.event_available_outlined,
+          title: 'Agenda atualizada',
+          description: 'O profissional já visualiza o atendimento na agenda.',
+          active: true,
         ),
         const _TimelineItem(
-          icon: Icons.chat_outlined,
-          title: 'Retorno pelo WhatsApp',
-          description: 'Você receberá a confirmação ou uma alternativa.',
+          icon: Icons.notifications_active_outlined,
+          title: 'Pronto para o atendimento',
+          description: 'Guarde a data e chegue no horário combinado.',
+          active: true,
           last: true,
         ),
       ],

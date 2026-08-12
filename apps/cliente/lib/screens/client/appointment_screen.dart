@@ -93,117 +93,119 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                       child: ListView(
                         padding: const EdgeInsets.fromLTRB(18, 8, 18, 32),
                         children: [
-                      const _Intro(),
-                      const SizedBox(height: 20),
-                      _AppointmentSummary(
-                        shopName: shop.identity.name,
-                        serviceName: service.name,
-                        barberName: barber.name,
-                        date: state.selectedDate,
-                        time: state.selectedTime,
-                        durationMinutes: service.durationMinutes,
-                        total: service.price,
-                      ),
-                      const SizedBox(height: 22),
-                        const _SectionTitle('Seus dados'),
-                        const SizedBox(height: 6),
-                        const Text(
-                          'A barbearia usará estes dados para confirmar a solicitação.',
-                          style: TextStyle(
-                            color: AppColors.muted,
-                            fontSize: 14,
-                            height: 1.4,
+                          const _Intro(),
+                          const SizedBox(height: 20),
+                          _AppointmentSummary(
+                            shopName: shop.identity.name,
+                            serviceName: service.name,
+                            barberName: barber.name,
+                            date: state.selectedDate,
+                            time: state.selectedTime,
+                            durationMinutes: service.durationMinutes,
+                            total: service.price,
                           ),
-                        ),
-                        const SizedBox(height: 14),
-                        TextFormField(
-                          controller: _nameController,
-                          textInputAction: TextInputAction.next,
-                          autofillHints: const [AutofillHints.name],
-                          decoration: const InputDecoration(
-                            labelText: 'Nome completo',
-                            prefixIcon: Icon(Icons.person_outline_rounded),
-                          ),
-                          validator: (value) =>
-                              (value?.trim().length ?? 0) < 3
-                                  ? 'Informe seu nome completo.'
-                                  : null,
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _phoneController,
-                          keyboardType: TextInputType.phone,
-                          textInputAction: TextInputAction.done,
-                          autofillHints: const [AutofillHints.telephoneNumber],
-                          inputFormatters: const [WhatsappInputFormatter()],
-                          decoration: const InputDecoration(
-                            labelText: 'WhatsApp',
-                            hintText: '(00)00000-0000',
-                            prefixIcon: Icon(Icons.phone_outlined),
-                          ),
-                          validator: (value) =>
-                              _digitsOnly(value ?? '').length != 11
-                                  ? 'Use o formato (00)00000-0000.'
-                                  : null,
-                        ),
-                        if (!state.isSignedIn) ...[
-                          const SizedBox(height: 8),
-                          CheckboxListTile(
-                            value: _rememberData,
-                            contentPadding: EdgeInsets.zero,
-                            controlAffinity: ListTileControlAffinity.leading,
-                            activeColor: AppColors.orange,
-                            title: const Text(
-                              'Lembrar meus dados neste dispositivo',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                              ),
+                          const SizedBox(height: 22),
+                          const _SectionTitle('Seus dados'),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'A barbearia usará estes dados para identificar seu agendamento.',
+                            style: TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 14,
+                              height: 1.4,
                             ),
-                            subtitle: const Text(
-                              'Você poderá editar os dados no próximo agendamento.',
-                              style: TextStyle(
-                                color: AppColors.muted,
-                                fontSize: 12,
-                              ),
-                            ),
-                            onChanged: _loadingRememberedData
-                                ? null
-                                : (value) => setState(
-                                      () => _rememberData = value ?? true,
-                                    ),
                           ),
+                          const SizedBox(height: 14),
+                          TextFormField(
+                            controller: _nameController,
+                            textInputAction: TextInputAction.next,
+                            autofillHints: const [AutofillHints.name],
+                            decoration: const InputDecoration(
+                              labelText: 'Nome completo',
+                              prefixIcon: Icon(Icons.person_outline_rounded),
+                            ),
+                            validator: (value) =>
+                                (value?.trim().length ?? 0) < 3
+                                    ? 'Informe seu nome completo.'
+                                    : null,
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _phoneController,
+                            keyboardType: TextInputType.phone,
+                            textInputAction: TextInputAction.done,
+                            autofillHints: const [
+                              AutofillHints.telephoneNumber
+                            ],
+                            inputFormatters: const [WhatsappInputFormatter()],
+                            decoration: const InputDecoration(
+                              labelText: 'WhatsApp',
+                              hintText: '(00)00000-0000',
+                              prefixIcon: Icon(Icons.phone_outlined),
+                            ),
+                            validator: (value) =>
+                                _digitsOnly(value ?? '').length != 11
+                                    ? 'Use o formato (00)00000-0000.'
+                                    : null,
+                          ),
+                          if (!state.isSignedIn) ...[
+                            const SizedBox(height: 8),
+                            CheckboxListTile(
+                              value: _rememberData,
+                              contentPadding: EdgeInsets.zero,
+                              controlAffinity: ListTileControlAffinity.leading,
+                              activeColor: AppColors.orange,
+                              title: const Text(
+                                'Lembrar meus dados neste dispositivo',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              subtitle: const Text(
+                                'Você poderá editar os dados no próximo agendamento.',
+                                style: TextStyle(
+                                  color: AppColors.muted,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              onChanged: _loadingRememberedData
+                                  ? null
+                                  : (value) => setState(
+                                        () => _rememberData = value ?? true,
+                                      ),
+                            ),
+                          ],
+                          const SizedBox(height: 26),
+                          const _SectionTitle('Preferência de pagamento'),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'O pagamento será combinado diretamente com a barbearia.',
+                            style: TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 14,
+                              height: 1.4,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          _PaymentMethodSelector(
+                            selected: _selectedPaymentMethod,
+                            onChanged: (method) {
+                              setState(() => _selectedPaymentMethod = method);
+                            },
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            _selectedPaymentMethod.description,
+                            style: const TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 13,
+                              height: 1.4,
+                            ),
+                          ),
+                          const SizedBox(height: 22),
+                          const _RequestNotice(),
                         ],
-                        const SizedBox(height: 26),
-                        const _SectionTitle('Preferência de pagamento'),
-                        const SizedBox(height: 6),
-                        const Text(
-                          'O pagamento será combinado diretamente com a barbearia.',
-                          style: TextStyle(
-                            color: AppColors.muted,
-                            fontSize: 14,
-                            height: 1.4,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        _PaymentMethodSelector(
-                          selected: _selectedPaymentMethod,
-                          onChanged: (method) {
-                            setState(() => _selectedPaymentMethod = method);
-                          },
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          _selectedPaymentMethod.description,
-                          style: const TextStyle(
-                            color: AppColors.muted,
-                            fontSize: 13,
-                            height: 1.4,
-                          ),
-                        ),
-                        const SizedBox(height: 22),
-                        const _RequestNotice(),
-                      ],
                       ),
                     ),
                   ),
@@ -646,7 +648,7 @@ class _RequestNotice extends StatelessWidget {
         SizedBox(width: 8),
         Expanded(
           child: Text(
-            'O envio não confirma automaticamente o horário. A barbearia retornará pelo WhatsApp.',
+            'Ao confirmar, o horário entra imediatamente na agenda do profissional.',
             style: TextStyle(
               color: AppColors.muted,
               fontSize: 13,
@@ -690,7 +692,7 @@ class _SubmitBar extends StatelessWidget {
           child: submitting
               ? const CDRLoading.compact(size: 24)
               : Text(
-                  'ENVIAR SOLICITAÇÃO',
+                  'CONFIRMAR AGENDAMENTO',
                 ),
         ),
       ),
