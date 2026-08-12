@@ -177,7 +177,7 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
   var _isSaving = false;
   var _isSavingBlock = false;
   late _BookingBlockScope _blockScope;
-  String? _blockedBarberId;
+  late Set<String> _blockedBarberIds;
 
   @override
   void initState() {
@@ -190,9 +190,7 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
         : widget.customer.blockedBarberIds.isNotEmpty
             ? _BookingBlockScope.barber
             : _BookingBlockScope.none;
-    _blockedBarberId = widget.customer.blockedBarberIds.isEmpty
-        ? null
-        : widget.customer.blockedBarberIds.first;
+    _blockedBarberIds = {...widget.customer.blockedBarberIds};
   }
 
   @override
@@ -212,15 +210,13 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
     );
     final appointments = session.appointmentsForCustomer(customer.clientId);
     final availableBarbers = session.teamBarbers
-        .where((barber) => barber.isActive || barber.id == _blockedBarberId)
+        .where((barber) =>
+            barber.isActive || _blockedBarberIds.contains(barber.id))
         .toList();
-    String? blockedBarberName;
-    for (final barber in availableBarbers) {
-      if (barber.id == _blockedBarberId) {
-        blockedBarberName = barber.name;
-        break;
-      }
-    }
+    final blockedBarberNames = availableBarbers
+        .where((barber) => _blockedBarberIds.contains(barber.id))
+        .map((barber) => barber.name)
+        .toList();
     final bottomPadding = MediaQuery.viewInsetsOf(context).bottom + 20;
 
     return SingleChildScrollView(
@@ -355,40 +351,44 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
                     ? null
                     : () => setState(() {
                           _blockScope = _BookingBlockScope.barber;
-                          if (_blockedBarberId == null &&
+                          if (_blockedBarberIds.isEmpty &&
                               availableBarbers.isNotEmpty) {
-                            _blockedBarberId = availableBarbers.first.id;
+                            _blockedBarberIds.add(availableBarbers.first.id);
                           }
                         }),
               ),
               if (_blockScope == _BookingBlockScope.barber) ...[
                 const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  value: availableBarbers.any(
-                    (barber) => barber.id == _blockedBarberId,
-                  )
-                      ? _blockedBarberId
-                      : null,
-                  decoration: const InputDecoration(
-                    labelText: 'Barbeiro bloqueado',
-                    prefixIcon: Icon(Icons.content_cut_rounded),
+                const Text(
+                  'Marque os profissionais que não poderão receber agendamentos deste cliente:',
+                  style: TextStyle(
+                    color: SharedAppColors.muted,
+                    fontSize: 13,
+                    height: 1.4,
                   ),
-                  items: [
-                    for (final barber in availableBarbers)
-                      DropdownMenuItem(
-                        value: barber.id,
-                        child: Text(barber.name),
-                      ),
-                  ],
-                  onChanged: _isSavingBlock
-                      ? null
-                      : (value) => setState(() => _blockedBarberId = value),
                 ),
+                const SizedBox(height: 10),
+                for (final barber in availableBarbers) ...[
+                  _BarberBlockChoice(
+                    barber: barber,
+                    selected: _blockedBarberIds.contains(barber.id),
+                    onChanged: _isSavingBlock
+                        ? null
+                        : (selected) => setState(() {
+                              if (selected) {
+                                _blockedBarberIds.add(barber.id);
+                              } else {
+                                _blockedBarberIds.remove(barber.id);
+                              }
+                            }),
+                  ),
+                  const SizedBox(height: 8),
+                ],
               ],
               const SizedBox(height: 14),
               _BookingBlockMessage(
                 scope: _blockScope,
-                barberName: blockedBarberName,
+                barberNames: blockedBarberNames,
               ),
               const SizedBox(height: 14),
               CDRButton.primary(
@@ -446,7 +446,7 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
   }
 
   Future<void> _saveBookingBlock(ManagedCustomer customer) async {
-    if (_blockScope == _BookingBlockScope.barber && _blockedBarberId == null) {
+    if (_blockScope == _BookingBlockScope.barber && _blockedBarberIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Selecione o barbeiro do bloqueio.')),
       );
@@ -458,9 +458,9 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
       await context.read<ManagementSession>().setCustomerBookingBlock(
             customer,
             blocked: _blockScope != _BookingBlockScope.none,
-            barberId: _blockScope == _BookingBlockScope.barber
-                ? _blockedBarberId
-                : null,
+            barberIds: _blockScope == _BookingBlockScope.barber
+                ? _blockedBarberIds
+                : const {},
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -601,11 +601,11 @@ class _BookingBlockOption extends StatelessWidget {
 class _BookingBlockMessage extends StatelessWidget {
   const _BookingBlockMessage({
     required this.scope,
-    required this.barberName,
+    required this.barberNames,
   });
 
   final _BookingBlockScope scope;
-  final String? barberName;
+  final List<String> barberNames;
 
   @override
   Widget build(BuildContext context) {
@@ -623,9 +623,11 @@ class _BookingBlockMessage extends StatelessWidget {
       _BookingBlockScope.barber => (
           Icons.info_outline_rounded,
           'Bloqueio específico',
-          barberName == null
-              ? 'Escolha o profissional para aplicar este bloqueio.'
-              : 'Ao salvar, o cliente continuará agendando com a equipe, exceto com $barberName.',
+          barberNames.isEmpty
+              ? 'Escolha ao menos um profissional para aplicar este bloqueio.'
+              : barberNames.length == 1
+                  ? 'Ao salvar, o cliente continuará agendando com a equipe, exceto com ${barberNames.first}.'
+                  : 'Ao salvar, o cliente ficará bloqueado para ${barberNames.length} profissionais selecionados.',
         ),
     };
 
@@ -664,6 +666,86 @@ class _BookingBlockMessage extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _BarberBlockChoice extends StatelessWidget {
+  const _BarberBlockChoice({
+    required this.barber,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final TeamBarber barber;
+  final bool selected;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onChanged == null ? null : () => onChanged!(!selected),
+        borderRadius: BorderRadius.circular(14),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+          decoration: BoxDecoration(
+            color: selected
+                ? SharedAppColors.orange.withOpacity(.08)
+                : SharedAppColors.elevated.withOpacity(.45),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: selected
+                  ? SharedAppColors.orange.withOpacity(.7)
+                  : SharedAppColors.stroke,
+            ),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: selected
+                    ? SharedAppColors.orange.withOpacity(.16)
+                    : SharedAppColors.card,
+                child: Text(
+                  barber.name.trim().isEmpty
+                      ? '?'
+                      : barber.name.trim()[0].toUpperCase(),
+                  style: TextStyle(
+                    color: selected
+                        ? SharedAppColors.orange
+                        : SharedAppColors.muted,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Text(
+                  barber.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: SharedAppColors.text,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ),
+              Checkbox(
+                value: selected,
+                onChanged: onChanged == null
+                    ? null
+                    : (value) => onChanged!(value ?? false),
+                activeColor: SharedAppColors.orange,
+                checkColor: SharedAppColors.onGold,
+                side: const BorderSide(color: SharedAppColors.stroke),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

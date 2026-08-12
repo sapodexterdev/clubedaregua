@@ -826,7 +826,7 @@ class ManagementSession extends ChangeNotifier {
   Future<void> setCustomerBookingBlock(
     ManagedCustomer customer, {
     required bool blocked,
-    String? barberId,
+    Set<String> barberIds = const {},
   }) async {
     final token = _accessToken;
     if (token == null) {
@@ -839,13 +839,13 @@ class ManagementSession extends ChangeNotifier {
     final shopId = await _ensureBarberShopId(token);
     await _postRpc(
       token,
-      'set_client_booking_block',
+      'set_client_booking_blocks',
       data: {
         'p_barber_shop_id': shopId,
         'p_client_id':
             customer.clientId.startsWith('booking:') ? null : customer.clientId,
         'p_customer_phone': customer.phone,
-        'p_barber_id': blocked ? barberId : null,
+        'p_barber_ids': blocked ? barberIds.toList() : <String>[],
         'p_blocked': blocked,
       },
     );
@@ -854,9 +854,8 @@ class ManagementSession extends ChangeNotifier {
       for (final item in customers)
         if (item.clientId == customer.clientId)
           item.copyWith(
-            isBlocked: blocked && barberId == null,
-            blockedBarberIds:
-                blocked && barberId != null ? {barberId} : <String>{},
+            isBlocked: blocked && barberIds.isEmpty,
+            blockedBarberIds: blocked ? barberIds : <String>{},
           )
         else
           item,

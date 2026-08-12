@@ -7,12 +7,15 @@ void main() {
       final customer = _customer();
 
       final general = customer.copyWith(isBlocked: true);
-      final specific = customer.copyWith(blockedBarberIds: {'barber-1'});
+      final specific = customer.copyWith(
+        blockedBarberIds: {'barber-1', 'barber-2'},
+      );
 
       expect(general.hasBookingBlock, isTrue);
       expect(general.statusLabel, 'Bloqueado');
       expect(specific.hasBookingBlock, isTrue);
       expect(specific.isBlocked, isFalse);
+      expect(specific.blockedBarberIds, hasLength(2));
       expect(specific.statusLabel, 'Restrito');
     });
 
