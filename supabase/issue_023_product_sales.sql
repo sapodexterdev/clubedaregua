@@ -117,9 +117,6 @@ drop policy if exists stock_read_owner on public.stock_items;
 drop policy if exists stock_manage_owner on public.stock_items;
 create policy stock_read_owner on public.stock_items
 for select using (public.is_shop_owner(barber_shop_id));
-create policy stock_manage_owner on public.stock_items
-for all using (public.is_shop_owner(barber_shop_id))
-with check (public.is_shop_owner(barber_shop_id));
 
 drop policy if exists product_sales_owner on public.product_sales;
 create policy product_sales_owner on public.product_sales
@@ -482,3 +479,5 @@ grant execute on function public.adjust_product_stock(uuid, integer, text) to au
 grant execute on function public.save_commerce_product(uuid, uuid, text, text, text, text, text, text, integer, integer, numeric, numeric, boolean) to authenticated;
 grant execute on function public.register_product_sale(uuid, jsonb, text, numeric, text, text) to authenticated;
 grant execute on function public.cancel_product_sale(uuid, text) to authenticated;
+
+notify pgrst, 'reload schema';
