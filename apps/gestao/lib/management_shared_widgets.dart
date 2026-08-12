@@ -619,7 +619,203 @@ class _AppointmentTile extends StatelessWidget {
                       ),
                     ],
                   ],
-    …1956 tokens truncated…
+                ),
+              ),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    constraints: const BoxConstraints(maxWidth: 104),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(.1),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      entry.status.toUpperCase(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontSize: 9,
+                        letterSpacing: .3,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: SharedAppColors.muted,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BookingRequestTile extends StatelessWidget {
+  const _BookingRequestTile({
+    required this.request,
+    required this.total,
+    required this.onAccepted,
+    required this.onDeclined,
+    required this.onCancelled,
+  });
+
+  final BookingRequest request;
+  final String total;
+  final VoidCallback onAccepted;
+  final VoidCallback onDeclined;
+  final VoidCallback onCancelled;
+
+  @override
+  Widget build(BuildContext context) {
+    final status = request.status;
+    final isClosed = status == 'converted' || status == 'cancelled';
+    final wasDeclined =
+        status == 'cancelled' && request.notes.contains('Motivo:');
+    final statusLabel = switch (status) {
+      'contacted' => 'Contatado',
+      'converted' => 'Aceito',
+      'cancelled' => wasDeclined ? 'Recusado' : 'Cancelado',
+      _ => 'Novo',
+    };
+    final statusColor = switch (status) {
+      'contacted' => CDRColorTokens.info,
+      'converted' => CDRColorTokens.success,
+      'cancelled' => CDRColorTokens.error,
+      _ => SharedAppColors.orange,
+    };
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: SharedAppColors.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: SharedAppColors.stroke),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          Container(
+            height: 2,
+            color: isClosed ? SharedAppColors.stroke : statusColor,
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    _ClientAvatar(photoUrl: request.clientPhotoUrl),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            request.client,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            request.phone.isEmpty
+                                ? 'Telefone não informado'
+                                : request.phone,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(total,
+                            style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: statusColor.withOpacity(.1),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            statusLabel.toUpperCase(),
+                            style: TextStyle(
+                              color: statusColor,
+                              fontSize: 10,
+                              letterSpacing: .4,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Divider(height: 1),
+                const SizedBox(height: 6),
+                _RequestInfoRow(
+                  icon: Icons.content_cut_rounded,
+                  label: 'Serviço',
+                  value: request.service,
+                ),
+                _RequestInfoRow(
+                  icon: Icons.badge_outlined,
+                  label: 'Barbeiro',
+                  value: request.barber,
+                ),
+                _RequestInfoRow(
+                  icon: Icons.event_rounded,
+                  label: 'Data e horário',
+                  value: request.formattedDateTime,
+                ),
+                _RequestInfoRow(
+                  icon: Icons.payments_outlined,
+                  label: 'Pagamento',
+                  value: request.paymentMethod,
+                ),
+                _RequestInfoRow(
+                  icon: Icons.notes_rounded,
+                  label: 'Observações',
+                  value: request.observation,
+                ),
+                if (!isClosed) ...[
+                  const SizedBox(height: 18),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final compact = constraints.maxWidth < 430;
+                      final decline = CDRButton.outlined(
+                        label: 'RECUSAR',
+                        onPressed: onDeclined,
+                        isExpanded: compact,
+                        leading: const Icon(Icons.block_rounded),
+                      );
+                      final accept = CDRButton.primary(
+                        label: 'ACEITAR',
+                        onPressed: onAccepted,
+                        isExpanded: compact,
+                        leading: const Icon(Icons.check_rounded),
+                      );
                       if (compact) {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
