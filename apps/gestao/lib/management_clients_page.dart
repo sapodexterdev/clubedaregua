@@ -214,6 +214,13 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
     final availableBarbers = session.teamBarbers
         .where((barber) => barber.isActive || barber.id == _blockedBarberId)
         .toList();
+    String? blockedBarberName;
+    for (final barber in availableBarbers) {
+      if (barber.id == _blockedBarberId) {
+        blockedBarberName = barber.name;
+        break;
+      }
+    }
     final bottomPadding = MediaQuery.viewInsetsOf(context).bottom + 20;
 
     return SingleChildScrollView(
@@ -300,7 +307,6 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
                 label: 'SALVAR ALTERAÇÕES',
                 onPressed: _isSaving ? null : () => _save(customer),
                 isLoading: _isSaving,
-                leading: const Icon(Icons.save_outlined),
               ),
             if (session.canManageCustomerBlocks) ...[
               const SizedBox(height: 28),
@@ -316,32 +322,40 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
                 style: TextStyle(color: SharedAppColors.muted, height: 1.4),
               ),
               const SizedBox(height: 14),
-              DropdownButtonFormField<_BookingBlockScope>(
-                value: _blockScope,
-                decoration: const InputDecoration(
-                  labelText: 'Novos agendamentos',
-                  prefixIcon: Icon(Icons.block_rounded),
-                ),
-                items: const [
-                  DropdownMenuItem(
-                    value: _BookingBlockScope.none,
-                    child: Text('Permitir agendamentos'),
-                  ),
-                  DropdownMenuItem(
-                    value: _BookingBlockScope.general,
-                    child: Text('Bloquear em toda a barbearia'),
-                  ),
-                  DropdownMenuItem(
-                    value: _BookingBlockScope.barber,
-                    child: Text('Bloquear para um barbeiro'),
-                  ),
-                ],
-                onChanged: _isSavingBlock
+              _BookingBlockOption(
+                title: 'Agendamento liberado',
+                subtitle: 'O cliente pode escolher qualquer profissional.',
+                icon: Icons.event_available_outlined,
+                selected: _blockScope == _BookingBlockScope.none,
+                onTap: _isSavingBlock
                     ? null
-                    : (value) => setState(() {
-                          _blockScope = value ?? _BookingBlockScope.none;
-                          if (_blockScope == _BookingBlockScope.barber &&
-                              _blockedBarberId == null &&
+                    : () => setState(
+                          () => _blockScope = _BookingBlockScope.none,
+                        ),
+              ),
+              const SizedBox(height: 10),
+              _BookingBlockOption(
+                title: 'Bloquear toda a barbearia',
+                subtitle: 'Impede novos agendamentos com toda a equipe.',
+                icon: Icons.storefront_outlined,
+                selected: _blockScope == _BookingBlockScope.general,
+                onTap: _isSavingBlock
+                    ? null
+                    : () => setState(
+                          () => _blockScope = _BookingBlockScope.general,
+                        ),
+              ),
+              const SizedBox(height: 10),
+              _BookingBlockOption(
+                title: 'Bloquear um profissional',
+                subtitle: 'Restringe apenas o barbeiro selecionado.',
+                icon: Icons.content_cut_rounded,
+                selected: _blockScope == _BookingBlockScope.barber,
+                onTap: _isSavingBlock
+                    ? null
+                    : () => setState(() {
+                          _blockScope = _BookingBlockScope.barber;
+                          if (_blockedBarberId == null &&
                               availableBarbers.isNotEmpty) {
                             _blockedBarberId = availableBarbers.first.id;
                           }
@@ -371,19 +385,17 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
                       : (value) => setState(() => _blockedBarberId = value),
                 ),
               ],
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
+              _BookingBlockMessage(
+                scope: _blockScope,
+                barberName: blockedBarberName,
+              ),
+              const SizedBox(height: 14),
               CDRButton.primary(
-                label: _blockScope == _BookingBlockScope.none
-                    ? 'REMOVER BLOQUEIO'
-                    : 'SALVAR BLOQUEIO',
+                label: 'SALVAR CONFIGURAÇÃO',
                 onPressed:
                     _isSavingBlock ? null : () => _saveBookingBlock(customer),
                 isLoading: _isSavingBlock,
-                leading: Icon(
-                  _blockScope == _BookingBlockScope.none
-                      ? Icons.lock_open_rounded
-                      : Icons.block_rounded,
-                ),
               ),
             ],
             const SizedBox(height: 28),
@@ -453,11 +465,14 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            _blockScope == _BookingBlockScope.none
-                ? 'Bloqueio removido com sucesso.'
-                : 'Bloqueio salvo com sucesso.',
-          ),
+          content: Text(switch (_blockScope) {
+            _BookingBlockScope.none =>
+              'Tudo certo! O cliente pode voltar a agendar normalmente.',
+            _BookingBlockScope.general =>
+              'Configuração salva. Novos agendamentos foram bloqueados para toda a barbearia.',
+            _BookingBlockScope.barber =>
+              'Configuração salva. O bloqueio vale somente para o profissional escolhido.',
+          }),
         ),
       );
     } catch (error) {
@@ -468,6 +483,189 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
     } finally {
       if (mounted) setState(() => _isSavingBlock = false);
     }
+  }
+}
+
+class _BookingBlockOption extends StatelessWidget {
+  const _BookingBlockOption({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      decoration: BoxDecoration(
+        color: selected
+            ? SharedAppColors.orange.withOpacity(.08)
+            : SharedAppColors.elevated.withOpacity(.45),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: selected ? SharedAppColors.orange : SharedAppColors.stroke,
+          width: selected ? 1.4 : 1,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? SharedAppColors.orange.withOpacity(.16)
+                        : SharedAppColors.card,
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: selected
+                        ? SharedAppColors.orange
+                        : SharedAppColors.muted,
+                    size: 21,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              color: selected
+                                  ? SharedAppColors.text
+                                  : SharedAppColors.muted,
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        subtitle,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: SharedAppColors.muted,
+                              height: 1.35,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color:
+                        selected ? SharedAppColors.orange : Colors.transparent,
+                    border: Border.all(
+                      color: selected
+                          ? SharedAppColors.orange
+                          : SharedAppColors.stroke,
+                    ),
+                  ),
+                  child: selected
+                      ? const Icon(
+                          Icons.check_rounded,
+                          size: 15,
+                          color: SharedAppColors.onGold,
+                        )
+                      : null,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BookingBlockMessage extends StatelessWidget {
+  const _BookingBlockMessage({
+    required this.scope,
+    required this.barberName,
+  });
+
+  final _BookingBlockScope scope;
+  final String? barberName;
+
+  @override
+  Widget build(BuildContext context) {
+    final (icon, title, message) = switch (scope) {
+      _BookingBlockScope.none => (
+          Icons.check_circle_outline_rounded,
+          'Agendamento liberado',
+          'Ao salvar, o cliente poderá agendar normalmente com toda a equipe.',
+        ),
+      _BookingBlockScope.general => (
+          Icons.info_outline_rounded,
+          'Bloqueio geral',
+          'Ao salvar, o cliente não poderá criar novos agendamentos nesta barbearia.',
+        ),
+      _BookingBlockScope.barber => (
+          Icons.info_outline_rounded,
+          'Bloqueio específico',
+          barberName == null
+              ? 'Escolha o profissional para aplicar este bloqueio.'
+              : 'Ao salvar, o cliente continuará agendando com a equipe, exceto com $barberName.',
+        ),
+    };
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: SharedAppColors.orange.withOpacity(.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: SharedAppColors.orange.withOpacity(.28)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: SharedAppColors.orange, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: SharedAppColors.orange,
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  message,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: SharedAppColors.text,
+                        height: 1.4,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
