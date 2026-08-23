@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:clubedaregua_shared/clubedaregua_shared.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'utils/logo_file.dart';
 import 'utils/logo_picker.dart';
@@ -68,7 +68,7 @@ class ClubeDaReguaGestaoApp extends StatelessWidget {
           if (!session.hasProfessionalAccess) {
             return const _ProfessionalAccessDeniedScreen();
           }
-          return const ManagementHomeScreen();
+          return ManagementHomeScreen(initialRole: session.activeRole);
         },
       ),
     );
@@ -80,12 +80,14 @@ class EmbeddedManagementArea extends StatefulWidget {
     required this.initialRole,
     required this.onOpenClientMode,
     required this.onSignedOut,
+    this.session,
     this.onOpenProfile,
     this.onRoleChanged,
     super.key,
   });
 
   final ManagementRole initialRole;
+  final ManagementSession? session;
   final VoidCallback onOpenClientMode;
   final VoidCallback onSignedOut;
   final VoidCallback? onOpenProfile;
@@ -96,21 +98,42 @@ class EmbeddedManagementArea extends StatefulWidget {
 }
 
 class _EmbeddedManagementAreaState extends State<EmbeddedManagementArea> {
-  late final ManagementSession _session;
+  late ManagementSession _session;
+  late bool _ownsSession;
 
   @override
   void initState() {
     super.initState();
-    PaintingBinding.instance.imageCache
-      ..clear()
-      ..clearLiveImages();
-    _session = ManagementSession();
-    _session.restoreUnifiedSession(initialRole: widget.initialRole);
+    _attachSession();
+  }
+
+  @override
+  void didUpdateWidget(covariant EmbeddedManagementArea oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.session, widget.session)) {
+      if (_ownsSession) _session.dispose();
+      _attachSession();
+      return;
+    }
+  }
+
+  void _attachSession() {
+    final externalSession = widget.session;
+    _ownsSession = externalSession == null;
+    _session = externalSession ?? ManagementSession();
+    if (_ownsSession) {
+      PaintingBinding.instance.imageCache
+        ..clear()
+        ..clearLiveImages();
+    }
+    unawaited(
+      _session.restoreUnifiedSession(initialRole: widget.initialRole),
+    );
   }
 
   @override
   void dispose() {
-    _session.dispose();
+    if (_ownsSession) _session.dispose();
     super.dispose();
   }
 
@@ -140,10 +163,7 @@ class _EmbeddedManagementAreaState extends State<EmbeddedManagementArea> {
               onOpenClientMode: widget.onOpenClientMode,
               onOpenProfile: widget.onOpenProfile,
               onRoleChanged: widget.onRoleChanged,
-              onSignedOut: () async {
-                await session.signOut();
-                widget.onSignedOut();
-              },
+              onSignedOut: widget.onSignedOut,
             );
           },
         ),

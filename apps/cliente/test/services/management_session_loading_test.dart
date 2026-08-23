@@ -42,7 +42,7 @@ void main() {
     expect(barberRequests.queryParameters['limit'], '50');
   });
 
-  test('owner data is loaded lazily by the selected tab', () async {
+  test('owner data is loaded lazily by the selected destination', () async {
     final requests = <Uri>[];
     final client = MockClient((request) async {
       requests.add(request.url);
@@ -61,16 +61,13 @@ void main() {
 
     await session.activateRole(ManagementRole.admin);
 
-    expect(
-      requests.map(_tableName),
-      everyElement(equals('booking_requests')),
-    );
-    final ownerRequests = requests.single;
-    expect(ownerRequests.queryParameters.containsKey('barber_id'), isFalse);
-    expect(ownerRequests.queryParameters['limit'], '200');
+    expect(requests, isEmpty);
 
     requests.clear();
-    await session.ensureDataForTab(ManagementRole.admin, 3);
+    await session.ensureDataForDestination(
+      ManagementRole.admin,
+      ManagementDestinationId.services,
+    );
 
     expect(
       requests.map(_tableName),
@@ -89,6 +86,26 @@ void main() {
           .queryParameters['limit'],
       '500',
     );
+  });
+
+  test('reusing an initialized session does not restore authentication again',
+      () async {
+    final auth = _AuthenticatedService();
+    final client = MockClient((request) async {
+      return http.Response(jsonEncode(_responseFor(request.url)), 200);
+    });
+    final session = ManagementSession(
+      authService: auth,
+      httpClient: client,
+    );
+    addTearDown(session.dispose);
+
+    await session.restoreUnifiedSession(initialRole: ManagementRole.barber);
+    await session.restoreUnifiedSession(initialRole: ManagementRole.admin);
+
+    expect(auth.validSessionCalls, 1);
+    expect(session.activeRole, ManagementRole.admin);
+    expect(session.isRestoringSession, isFalse);
   });
 
   test('disposing the session stops the remaining startup requests', () async {
@@ -111,21 +128,152 @@ void main() {
 
     expect(requestCount, 1);
   });
+
+  test('clearing during restore cannot resurrect the previous user', () async {
+    final auth = _PendingThenAuthenticatedService();
+    final client = MockClient((request) async {
+      return http.Response(jsonEncode(_responseFor(request.url)), 200);
+    });
+    final session = ManagementSession(
+      authService: auth,
+      httpClient: client,
+    );
+    addTearDown(session.dispose);
+
+    final oldRestore = session.restoreUnifiedSession();
+    await auth.firstRequestStarted.future;
+    session.clearUnifiedSession();
+    auth.firstResponse.complete(_sessionFor('user-a'));
+    await oldRestore;
+
+    expect(session.isSignedIn, isFalse);
+    expect(session.barberShopName, isNull);
+
+    await session.restoreUnifiedSession(initialRole: ManagementRole.admin);
+    expect(auth.validSessionCalls, 2);
+    expect(session.isSignedIn, isTrue);
+    expect(session.activeRole, ManagementRole.admin);
+  });
+
+  test('a transient professional resolution failure is retried', () async {
+    final auth = _AuthenticatedService();
+    var shouldFail = true;
+    final client = MockClient((request) async {
+      if (shouldFail) {
+        shouldFail = false;
+        return http.Response('temporary failure', 503);
+      }
+      return http.Response(jsonEncode(_responseFor(request.url)), 200);
+    });
+    final session = ManagementSession(
+      authService: auth,
+      httpClient: client,
+    );
+    addTearDown(session.dispose);
+
+    await session.restoreUnifiedSession();
+    expect(session.errorMessage, isNotNull);
+
+    await session.restoreUnifiedSession(initialRole: ManagementRole.admin);
+
+    expect(auth.validSessionCalls, 2);
+    expect(session.isSignedIn, isTrue);
+    expect(session.hasProfessionalAccess, isTrue);
+    expect(session.activeRole, ManagementRole.admin);
+  });
+
+  test('restore without an authenticated session always closes loading',
+      () async {
+    final session = ManagementSession(
+      authService: _SignedOutService(),
+      httpClient: MockClient((_) async => http.Response('[]', 200)),
+    );
+    addTearDown(session.dispose);
+    var notifications = 0;
+    session.addListener(() => notifications++);
+
+    await session.restoreUnifiedSession();
+
+    expect(session.isRestoringSession, isFalse);
+    expect(session.isSignedIn, isFalse);
+    expect(notifications, greaterThanOrEqualTo(2));
+  });
+
+  test('authentication restore errors always close loading', () async {
+    final session = ManagementSession(
+      authService: _FailingRestoreService(),
+      httpClient: MockClient((_) async => http.Response('[]', 200)),
+    );
+    addTearDown(session.dispose);
+    var notifications = 0;
+    session.addListener(() => notifications++);
+
+    await session.restoreUnifiedSession();
+
+    expect(session.isRestoringSession, isFalse);
+    expect(session.isSignedIn, isFalse);
+    expect(session.errorMessage, isNotNull);
+    expect(notifications, greaterThanOrEqualTo(2));
+  });
 }
 
 class _AuthenticatedService extends AuthService {
+  var validSessionCalls = 0;
+
   @override
-  Future<AuthSession?> getValidSession() async => AuthSession(
-        accessToken: 'access-token',
-        refreshToken: 'refresh-token',
-        expiresAt: DateTime.now().add(const Duration(hours: 1)),
-        user: const AuthUser(
-          id: 'user-1',
-          email: 'professional@example.com',
-          name: 'Professional',
-        ),
-      );
+  Future<AuthSession?> getValidSession() async {
+    validSessionCalls++;
+    return AuthSession(
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+      expiresAt: DateTime.now().add(const Duration(hours: 1)),
+      user: const AuthUser(
+        id: 'user-1',
+        email: 'professional@example.com',
+        name: 'Professional',
+      ),
+    );
+  }
 }
+
+class _PendingThenAuthenticatedService extends AuthService {
+  final firstRequestStarted = Completer<void>();
+  final firstResponse = Completer<AuthSession?>();
+  var validSessionCalls = 0;
+
+  @override
+  Future<AuthSession?> getValidSession() {
+    validSessionCalls++;
+    if (validSessionCalls == 1) {
+      firstRequestStarted.complete();
+      return firstResponse.future;
+    }
+    return Future.value(_sessionFor('user-b'));
+  }
+}
+
+class _SignedOutService extends AuthService {
+  @override
+  Future<AuthSession?> getValidSession() async => null;
+}
+
+class _FailingRestoreService extends AuthService {
+  @override
+  Future<AuthSession?> getValidSession() async {
+    throw StateError('temporary authentication failure');
+  }
+}
+
+AuthSession _sessionFor(String userId) => AuthSession(
+      accessToken: '$userId-access-token',
+      refreshToken: '$userId-refresh-token',
+      expiresAt: DateTime.now().add(const Duration(hours: 1)),
+      user: AuthUser(
+        id: userId,
+        email: '$userId@example.com',
+        name: userId,
+      ),
+    );
 
 String _tableName(Uri uri) {
   final segments = uri.pathSegments;

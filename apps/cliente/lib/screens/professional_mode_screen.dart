@@ -28,14 +28,15 @@ class ProfessionalModeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return EmbeddedManagementArea(
+      session: context.read<ManagementSession>(),
       initialRole:
           mode == AppMode.owner ? ManagementRole.admin : ManagementRole.barber,
       onOpenClientMode: () => _openMode(context, AppMode.client),
       onSignedOut: () => _finishSignOut(context),
-      onOpenProfile: () => Navigator.pushNamedAndRemoveUntil(
+      onOpenProfile: () => Navigator.pushNamed(
         context,
         ProfileScreen.route,
-        (_) => false,
+        arguments: mode,
       ),
       onRoleChanged: (role) async {
         await context.read<AppModeController>().selectMode(
@@ -60,7 +61,9 @@ class ProfessionalModeScreen extends StatelessWidget {
   Future<void> _finishSignOut(BuildContext context) async {
     final appState = context.read<AppState>();
     final modes = context.read<AppModeController>();
+    final managementSession = context.read<ManagementSession>();
     await appState.signOut();
+    managementSession.clearUnifiedSession();
     await modes.resetToClient();
     if (!context.mounted) return;
     Navigator.pushNamedAndRemoveUntil(

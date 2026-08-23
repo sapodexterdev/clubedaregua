@@ -6,7 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('migrates the legacy preference to a user-scoped preference', () async {
+  test('ignores and removes the legacy preference for an authenticated user',
+      () async {
     SharedPreferences.setMockInitialValues({
       AppModeController.legacyPreferenceKey: 'barber',
     });
@@ -18,11 +19,45 @@ void main() {
       professionalRoles: const {'barber'},
     );
 
-    expect(controller.currentMode, AppMode.barber);
+    expect(controller.currentMode, AppMode.client);
     final preferences = await SharedPreferences.getInstance();
     expect(
       preferences.getString('clubedaregua.last_mode.user-1'),
-      'barber',
+      'client',
+    );
+    expect(
+      preferences.getString(AppModeController.legacyPreferenceKey),
+      isNull,
+    );
+  });
+
+  test('keeps the last mode isolated between two users', () async {
+    SharedPreferences.setMockInitialValues({
+      'clubedaregua.last_mode.user-a': 'owner',
+      AppModeController.legacyPreferenceKey: 'barber',
+    });
+    final controller = AppModeController();
+
+    await controller.synchronizeAccess(
+      isSignedIn: true,
+      userId: 'user-a',
+      professionalRoles: const {'owner', 'barber'},
+    );
+    expect(controller.currentMode, AppMode.owner);
+
+    await controller.synchronizeAccess(
+      isSignedIn: true,
+      userId: 'user-b',
+      professionalRoles: const {'owner', 'barber'},
+    );
+    expect(controller.currentMode, AppMode.client);
+
+    final preferences = await SharedPreferences.getInstance();
+    expect(preferences.getString('clubedaregua.last_mode.user-a'), 'owner');
+    expect(preferences.getString('clubedaregua.last_mode.user-b'), 'client');
+    expect(
+      preferences.getString(AppModeController.legacyPreferenceKey),
+      isNull,
     );
   });
 
@@ -56,6 +91,65 @@ void main() {
 
     expect(controller.currentMode, AppMode.client);
     expect(controller.availableModes, const {AppMode.client});
+    final preferences = await SharedPreferences.getInstance();
+    expect(
+      preferences.getString(AppModeController.legacyPreferenceKey),
+      isNull,
+    );
+  });
+
+  test('synchronizeAccess only notifies when observable state changes',
+      () async {
+    SharedPreferences.setMockInitialValues({});
+    final controller = AppModeController();
+    var notifications = 0;
+    controller.addListener(() => notifications++);
+
+    await controller.synchronizeAccess(
+      isSignedIn: false,
+      userId: null,
+      professionalRoles: const {},
+    );
+    expect(notifications, 0);
+
+    await controller.synchronizeAccess(
+      isSignedIn: true,
+      userId: 'barber-user',
+      professionalRoles: const {'barber'},
+    );
+    expect(notifications, 1);
+
+    await controller.synchronizeAccess(
+      isSignedIn: true,
+      userId: 'barber-user',
+      professionalRoles: const {'barber'},
+    );
+    expect(notifications, 1);
+  });
+
+  test('selectMode does not notify or persist when mode is already active',
+      () async {
+    SharedPreferences.setMockInitialValues({
+      'clubedaregua.last_mode.owner-user': 'owner',
+    });
+    final controller = AppModeController();
+    await controller.synchronizeAccess(
+      isSignedIn: true,
+      userId: 'owner-user',
+      professionalRoles: const {'owner'},
+    );
+    var notifications = 0;
+    controller.addListener(() => notifications++);
+
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString('clubedaregua.last_mode.owner-user', 'client');
+
+    expect(await controller.selectMode(AppMode.owner), isTrue);
+    expect(notifications, 0);
+    expect(
+      preferences.getString('clubedaregua.last_mode.owner-user'),
+      'client',
+    );
   });
 
   test('persists repeated professional switches without rebuilding the app',
@@ -86,7 +180,7 @@ void main() {
     final preferences = await SharedPreferences.getInstance();
     expect(
       preferences.getString(AppModeController.legacyPreferenceKey),
-      'barber',
+      isNull,
     );
     expect(
       preferences.getString('clubedaregua.last_mode.professional-user'),

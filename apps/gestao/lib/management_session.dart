@@ -10,6 +10,9 @@ class ManagementSession extends ChangeNotifier {
   final http.Client _httpClient;
   final bool _ownsHttpClient;
   var _disposed = false;
+  Future<void>? _unifiedSessionInitialization;
+  var _unifiedSessionInitialized = false;
+  var _sessionLifecycleGeneration = 0;
   var _refreshGeneration = 0;
   var _activeRole = ManagementRole.barber;
   var _barberRequestsLoaded = false;
@@ -85,51 +88,93 @@ class ManagementSession extends ChangeNotifier {
       _isPlatformAdmin || _isShopOwner || _membershipRole == 'owner';
   bool get canManageCommerce => canManageCustomerBlocks;
   bool get hasProfessionalAccess => canWorkAsBarber || canManageShop;
+  ManagementRole get activeRole => _effectiveRole(_activeRole);
 
   bool _professionalAccessResolved = false;
 
   Future<void> restoreUnifiedSession({
     ManagementRole initialRole = ManagementRole.barber,
-  }) async {
+  }) {
+    if (_disposed) return Future<void>.value();
+    if (_unifiedSessionInitialized) return activateRole(initialRole);
+    final pending = _unifiedSessionInitialization;
+    if (pending != null) {
+      return pending.then((_) => restoreUnifiedSession(
+            initialRole: initialRole,
+          ));
+    }
+
+    _clearSessionInMemory(invalidateLifecycle: false);
+    isRestoringSession = true;
+    notifyListeners();
+    final lifecycleGeneration = _sessionLifecycleGeneration;
+    final initialization = _restoreUnifiedSession(
+      initialRole,
+      lifecycleGeneration,
+    );
+    _unifiedSessionInitialization = initialization;
+    return initialization;
+  }
+
+  Future<void> _restoreUnifiedSession(
+    ManagementRole initialRole,
+    int lifecycleGeneration,
+  ) async {
     _activeRole = initialRole;
     try {
       final session = await _authService.getValidSession();
+      if (!_isSessionLifecycleActive(lifecycleGeneration)) return;
       if (session == null) {
-        _clearSessionInMemory();
+        _clearSessionInMemory(invalidateLifecycle: false);
         return;
       }
       _applyAuthSession(session);
       _professionalAccessResolved = false;
-      await _loadRestoredManagementData();
+      final restored = await _loadRestoredManagementData(lifecycleGeneration);
+      if (!_isSessionLifecycleActive(lifecycleGeneration)) return;
+      _unifiedSessionInitialized = restored;
     } catch (error) {
-      _clearSessionInMemory();
+      if (!_isSessionLifecycleActive(lifecycleGeneration)) return;
+      _clearSessionInMemory(invalidateLifecycle: false);
       errorMessage = 'Sua conta não possui acesso profissional ativo.';
     } finally {
-      isRestoringSession = false;
-      notifyListeners();
+      _unifiedSessionInitialization = null;
+      if (_isSessionLifecycleActive(lifecycleGeneration)) {
+        isRestoringSession = false;
+        notifyListeners();
+      }
     }
   }
 
-  Future<void> _loadRestoredManagementData() async {
+  Future<bool> _loadRestoredManagementData(int lifecycleGeneration) async {
     final token = _accessToken;
-    if (token == null || token.isEmpty) return;
+    if (token == null || token.isEmpty) return false;
 
     try {
       await _resolvePlatformAdmin(token).timeout(const Duration(seconds: 8));
-      if (_disposed) return;
+      if (!_isSessionLifecycleActive(lifecycleGeneration)) return false;
       await _ensureBarberShopId(token).timeout(const Duration(seconds: 8));
-      if (_disposed) return;
+      if (!_isSessionLifecycleActive(lifecycleGeneration)) return false;
       await _resolveShopCapabilities(token).timeout(const Duration(seconds: 8));
-      if (_disposed) return;
+      if (!_isSessionLifecycleActive(lifecycleGeneration)) return false;
       _activeRole = _effectiveRole(_activeRole);
       await refreshManagementData();
+      if (!_isSessionLifecycleActive(lifecycleGeneration)) return false;
+      return true;
     } catch (error) {
+      if (!_isSessionLifecycleActive(lifecycleGeneration)) return false;
       errorMessage = _cleanErrorMessage(error);
+      return false;
     } finally {
-      _professionalAccessResolved = true;
-      notifyListeners();
+      if (_isSessionLifecycleActive(lifecycleGeneration)) {
+        _professionalAccessResolved = true;
+        notifyListeners();
+      }
     }
   }
+
+  bool _isSessionLifecycleActive(int generation) =>
+      !_disposed && generation == _sessionLifecycleGeneration;
 
   TeamBarber? get currentBarber {
     final userId = _userId;
@@ -265,6 +310,7 @@ class ManagementSession extends ChangeNotifier {
       _professionalAccessResolved = true;
       _activeRole = _effectiveRole(_activeRole);
       await refreshManagementData();
+      _unifiedSessionInitialized = true;
     } catch (error) {
       _accessToken = null;
       errorMessage = _cleanErrorMessage(error);
@@ -281,62 +327,117 @@ class ManagementSession extends ChangeNotifier {
     await fetchBookingRequests(
       adminView: _activeRole == ManagementRole.admin,
     );
+    if (!_isRefreshActive(generation)) return;
+    await ensureDataForDestination(
+      _activeRole,
+      _defaultDestinationFor(_activeRole),
+    );
   }
 
-  Future<void> activateRole(ManagementRole role) async {
+  Future<void> activateRole(
+    ManagementRole role, {
+    ManagementDestinationId? destination,
+  }) async {
     _activeRole = _effectiveRole(role);
-    await ensureDataForTab(_activeRole, 0);
+    await ensureDataForDestination(
+      _activeRole,
+      destination ?? _defaultDestinationFor(_activeRole),
+    );
   }
 
-  Future<void> ensureDataForTab(
+  Future<void> ensureDataForDestination(
     ManagementRole role,
-    int tabIndex, {
+    ManagementDestinationId destination, {
     bool force = false,
   }) async {
     _activeRole = _effectiveRole(role);
     if (_disposed) return;
 
     if (_activeRole == ManagementRole.barber) {
-      switch (tabIndex) {
-        case 0:
+      switch (destination) {
+        case ManagementDestinationId.requests:
           if (force || !_barberRequestsLoaded) {
             await fetchBookingRequests(adminView: false);
           }
-        case 1:
+        case ManagementDestinationId.schedule:
           if (force || !_scheduleLoaded) await fetchScheduleEntries();
-        case 2:
+        case ManagementDestinationId.availability:
           if (force || !_availabilityLoaded) {
             await fetchWeeklyAvailability();
           }
-        case 3:
+        case ManagementDestinationId.clients:
           if (force || !_customersLoaded) await fetchCustomers();
-        default:
+        case ManagementDestinationId.commission:
+        case ManagementDestinationId.dashboard:
+        case ManagementDestinationId.services:
+        case ManagementDestinationId.team:
+        case ManagementDestinationId.commerce:
+        case ManagementDestinationId.settings:
           return;
       }
       return;
     }
 
-    switch (tabIndex) {
-      case 0:
+    switch (destination) {
+      case ManagementDestinationId.requests:
         if (force || !_ownerRequestsLoaded) {
           await fetchBookingRequests(adminView: true);
         }
-      case 2:
-        if (force || !_scheduleLoaded) await fetchScheduleEntries();
-      case 3:
-        if (force || !_servicesLoaded) await fetchServiceCatalog();
-      case 4:
-        if (force || !_teamLoaded) await fetchTeamBarbers();
-      case 5:
-        if (force || !_customersLoaded) await fetchCustomers();
-      case 6:
-        if (force || !_commerceLoaded) await fetchCommerce();
-      case 7:
-        if (force || !_settingsLoaded) await fetchShopConfiguration();
-      default:
+      case ManagementDestinationId.dashboard:
+      case ManagementDestinationId.commission:
+      case ManagementDestinationId.availability:
         return;
+      case ManagementDestinationId.schedule:
+        if (force || !_scheduleLoaded) await fetchScheduleEntries();
+      case ManagementDestinationId.services:
+        if (force || !_servicesLoaded) await fetchServiceCatalog();
+      case ManagementDestinationId.team:
+        if (force || !_teamLoaded) await fetchTeamBarbers();
+      case ManagementDestinationId.clients:
+        if (force || !_customersLoaded) await fetchCustomers();
+      case ManagementDestinationId.commerce:
+        if (force || !_commerceLoaded) await fetchCommerce();
+      case ManagementDestinationId.settings:
+        if (force || !_settingsLoaded) await fetchShopConfiguration();
     }
   }
+
+  @Deprecated('Use ensureDataForDestination with a stable destination ID.')
+  Future<void> ensureDataForTab(
+    ManagementRole role,
+    int tabIndex, {
+    bool force = false,
+  }) async {
+    final legacyDestinations = role == ManagementRole.barber
+        ? const [
+            ManagementDestinationId.requests,
+            ManagementDestinationId.schedule,
+            ManagementDestinationId.availability,
+            ManagementDestinationId.clients,
+            ManagementDestinationId.commission,
+          ]
+        : const [
+            ManagementDestinationId.requests,
+            ManagementDestinationId.dashboard,
+            ManagementDestinationId.schedule,
+            ManagementDestinationId.services,
+            ManagementDestinationId.team,
+            ManagementDestinationId.clients,
+            ManagementDestinationId.commerce,
+            ManagementDestinationId.settings,
+          ];
+    if (tabIndex < 0 || tabIndex >= legacyDestinations.length) return;
+    await ensureDataForDestination(
+      role,
+      legacyDestinations[tabIndex],
+      force: force,
+    );
+  }
+
+  ManagementDestinationId _defaultDestinationFor(ManagementRole role) =>
+      role == ManagementRole.admin
+          ? ManagementDestinationId.dashboard
+          : ManagementDestinationId.schedule;
 
   ManagementRole _effectiveRole(ManagementRole requested) {
     if (requested == ManagementRole.admin && canManageShop) {
@@ -1858,6 +1959,13 @@ class ManagementSession extends ChangeNotifier {
 
   Future<void> signOut() async {
     await _authService.signOut();
+    clearUnifiedSession();
+  }
+
+  /// Limpa somente o estado profissional depois que o shell compartilhado já
+  /// encerrou a autenticação. Evita reutilizar dados de outro usuário sem criar
+  /// um segundo fluxo de logout ou listener de sessão.
+  void clearUnifiedSession() {
     _clearSessionInMemory();
     notifyListeners();
   }
@@ -1871,12 +1979,19 @@ class ManagementSession extends ChangeNotifier {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
+    _sessionLifecycleGeneration++;
     _refreshGeneration++;
     if (_ownsHttpClient) _httpClient.close();
     super.dispose();
   }
 
-  void _clearSessionInMemory() {
+  void _clearSessionInMemory({bool invalidateLifecycle = true}) {
+    if (invalidateLifecycle) {
+      _sessionLifecycleGeneration++;
+      _refreshGeneration++;
+    }
+    _unifiedSessionInitialized = false;
+    isRestoringSession = false;
     _accessToken = null;
     _userId = null;
     _barberShopId = null;

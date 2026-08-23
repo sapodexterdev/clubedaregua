@@ -4,142 +4,147 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 void main() {
+  testWidgets('Dono mobile usa quatro destinos e Mais', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final session = _ProfessionalSession();
+    addTearDown(session.dispose);
+
+    await tester.pumpWidget(_app(session, ManagementRole.admin));
+    await tester.pump();
+
+    for (final label in ['Painel', 'Agenda', 'Clientes', 'Caixa', 'Mais']) {
+      expect(find.text(label), findsOneWidget);
+    }
+    expect(find.text('Serviços'), findsNothing);
+    expect(find.byType(SegmentedButton<ManagementRole>), findsNothing);
+
+    await tester.tap(find.text('Mais'));
+    await tester.pumpAndSettle();
+    for (final label in ['Pedidos', 'Serviços', 'Equipe', 'Configurações']) {
+      expect(find.text(label), findsOneWidget);
+    }
+
+    await tester.tap(find.text('Serviços'));
+    await tester.pumpAndSettle();
+    expect(find.text('Cadastro de serviços'), findsOneWidget);
+    expect(
+      tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+      4,
+    );
+    expect(
+      session.loadedDestinations,
+      contains(ManagementDestinationId.services),
+    );
+
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    expect(find.text('Painel administrativo'), findsOneWidget);
+  });
+
+  testWidgets('Barbeiro mobile mantém cinco destinos e Agenda como fallback',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final session = _ProfessionalSession();
+    addTearDown(session.dispose);
+
+    await tester.pumpWidget(_app(session, ManagementRole.barber));
+    await tester.pump();
+
+    for (final label in [
+      'Agenda',
+      'Horários',
+      'Clientes',
+      'Comissão',
+      'Pedidos',
+    ]) {
+      expect(find.text(label), findsOneWidget);
+    }
+    expect(find.text('Agenda do barbeiro'), findsOneWidget);
+  });
+
+  testWidgets('tablet usa rail com todos os destinos do Dono', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(768, 600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final session = _ProfessionalSession();
+    addTearDown(session.dispose);
+
+    await tester.pumpWidget(_app(session, ManagementRole.admin));
+    await tester.pump();
+
+    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(find.byType(NavigationBar), findsNothing);
+    expect(
+      tester.widget<NavigationRail>(find.byType(NavigationRail)).destinations,
+      hasLength(8),
+    );
+  });
+
   testWidgets(
-    'switches repeatedly between barber and owner without remounting all requests',
-    (tester) async {
-      await tester.binding.setSurfaceSize(const Size(390, 844));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+      'alternâncias repetidas preservam a sessão e não reabrem o splash',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final session = _ProfessionalSession();
+    addTearDown(session.dispose);
 
-      final session = _ProfessionalSession.withRequests(200);
-      final roleChanges = <ManagementRole>[];
+    await tester.pumpWidget(_embeddedApp(session, ManagementRole.barber));
+    await tester.pump();
+    expect(find.text('Agenda do barbeiro'), findsOneWidget);
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: ChangeNotifierProvider<ManagementSession>.value(
-            value: session,
-            child: ManagementHomeScreen(
-              initialRole: ManagementRole.barber,
-              onRoleChanged: (role) async => roleChanges.add(role),
-            ),
-          ),
-        ),
-      );
+    for (var index = 0; index < 10; index++) {
+      final role = index.isEven ? ManagementRole.admin : ManagementRole.barber;
+      await tester.pumpWidget(_embeddedApp(session, role));
       await tester.pump();
 
-      expect(find.text('Solicitações recebidas'), findsOneWidget);
-      expect(find.text('Cliente 0'), findsOneWidget);
-      expect(find.text('Cliente 1'), findsNothing);
-
-      for (var index = 0; index < 6; index++) {
-        final target = index.isEven ? 'Dono' : 'Barbeiro';
-        await tester.tap(_roleOption(target));
-        await tester.pump();
-
-        expect(
-          find.text('Preparando sua área profissional...'),
-          findsNothing,
-        );
-      }
-
-      await tester.tap(_roleOption('Dono'));
-      await tester.pump();
-
-      expect(find.text('Sapao Barber'), findsOneWidget);
-      expect(find.text('Cliente 0'), findsOneWidget);
-      expect(find.text('Cliente 19'), findsOneWidget);
-      expect(find.text('Cliente 20'), findsNothing);
-      expect(find.text('CARREGAR MAIS (180)'), findsOneWidget);
-
-      final loadMore = find.text('CARREGAR MAIS (180)');
-      final listScrollable = find.descendant(
-        of: find.byType(ListView),
-        matching: find.byType(Scrollable),
-      );
-      final scrollableState = tester.state<ScrollableState>(listScrollable);
-      scrollableState.position.jumpTo(
-        scrollableState.position.maxScrollExtent,
-      );
-      await tester.pump();
-      await tester.tap(loadMore);
-      await tester.pump();
-
-      expect(find.text('Cliente 39'), findsOneWidget);
-      expect(find.text('Cliente 40'), findsNothing);
-      expect(find.text('CARREGAR MAIS (160)'), findsOneWidget);
-      expect(roleChanges, hasLength(7));
-    },
-  );
-
-  testWidgets(
-    'keeps owner requests bounded while switching roles on desktop',
-    (tester) async {
-      await tester.binding.setSurfaceSize(const Size(1280, 900));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-
-      final session = _ProfessionalSession.withRequests(200);
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: ChangeNotifierProvider<ManagementSession>.value(
-            value: session,
-            child: ManagementHomeScreen(
-              initialRole: ManagementRole.barber,
-              onRoleChanged: (_) async {},
-            ),
-          ),
-        ),
-      );
-      await tester.pump();
-
-      for (var index = 0; index < 6; index++) {
-        final target = index.isEven ? 'Dono' : 'Barbeiro';
-        await tester.tap(_roleOption(target));
-        await tester.pump();
-      }
-
-      await tester.tap(_roleOption('Dono'));
-      await tester.pump();
-
-      expect(find.text('Cliente 19'), findsOneWidget);
-      expect(find.text('Cliente 20'), findsNothing);
-      expect(find.text('CARREGAR MAIS (180)'), findsOneWidget);
+      expect(find.text('Preparando sua área profissional...'), findsNothing);
       expect(
-        find.text('Preparando sua área profissional...'),
-        findsNothing,
+        find.text(
+          role == ManagementRole.admin
+              ? 'Painel administrativo'
+              : 'Agenda do barbeiro',
+        ),
+        findsOneWidget,
       );
-    },
-  );
+    }
+
+    expect(session.restoreCalls, 1);
+  });
 }
 
-Finder _roleOption(String label) => find.descendant(
-      of: find.byWidgetPredicate(
-        (widget) => widget is SegmentedButton<ManagementRole>,
+Widget _app(ManagementSession session, ManagementRole role) => MaterialApp(
+      home: ChangeNotifierProvider<ManagementSession>.value(
+        value: session,
+        child: ManagementHomeScreen(initialRole: role),
       ),
-      matching: find.text(label),
+    );
+
+Widget _embeddedApp(ManagementSession session, ManagementRole role) =>
+    MaterialApp(
+      home: EmbeddedManagementArea(
+        key: const ValueKey('professional-area'),
+        session: session,
+        initialRole: role,
+        onOpenClientMode: () {},
+        onSignedOut: () {},
+      ),
     );
 
 class _ProfessionalSession extends ManagementSession {
-  _ProfessionalSession.withRequests(int count) {
+  _ProfessionalSession() {
     barberShopName = 'Sapao Barber';
-    bookingRequests = List.generate(
-      count,
-      (index) => BookingRequest(
-        id: 'request-$index',
-        barberId: index == 0 ? 'current-barber' : 'other-barber',
-        client: 'Cliente $index',
-        phone: '(11) 99999-0000',
-        clientPhotoUrl: '',
-        service: 'Corte',
-        barber: index == 0 ? 'Barbeiro atual' : 'Outro barbeiro',
-        date: '2026-07-30',
-        time: '20:00',
-        status: 'new',
-        total: 50,
-        notes: '',
-        updatedAt: '2026-07-30T20:00:00Z',
-      ),
-    );
+    isRestoringSession = false;
   }
+
+  final loadedDestinations = <ManagementDestinationId>[];
+  var restoreCalls = 0;
+
+  @override
+  bool get isSignedIn => true;
+
+  @override
+  bool get professionalAccessResolved => true;
 
   @override
   bool get canWorkAsBarber => true;
@@ -151,6 +156,18 @@ class _ProfessionalSession extends ManagementSession {
   String get barberHeaderName => 'Barbeiro atual';
 
   @override
-  List<BookingRequest> get currentBarberBookingRequests =>
-      bookingRequests.take(1).toList();
+  Future<void> restoreUnifiedSession({
+    ManagementRole initialRole = ManagementRole.barber,
+  }) async {
+    restoreCalls++;
+  }
+
+  @override
+  Future<void> ensureDataForDestination(
+    ManagementRole role,
+    ManagementDestinationId destination, {
+    bool force = false,
+  }) async {
+    loadedDestinations.add(destination);
+  }
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:clubedaregua_gestao/management.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -20,6 +21,7 @@ Future<void> main() async {
       MultiProvider(
         providers: [
           ChangeNotifierProvider(create: (_) => AppModeController()),
+          ChangeNotifierProvider(create: (_) => ManagementSession()),
           ChangeNotifierProvider(
             create: (_) => AppState()..loadInitialData(),
           ),

@@ -1,3 +1,4 @@
+import 'package:clubedaregua_gestao/management.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:clubedaregua_shared/clubedaregua_shared.dart';
@@ -22,6 +23,7 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final activeMode = context.watch<AppModeController>().currentMode;
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -53,125 +55,128 @@ class ProfileScreen extends StatelessWidget {
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(18, 8, 18, 32),
                   children: [
-                _IdentityCard(state: state),
-                if (state.clientProfileError != null) ...[
-                  const SizedBox(height: 12),
-                  _ErrorMessage(message: state.clientProfileError!),
-                ],
-                const SizedBox(height: 24),
-                if (!state.hasProfessionalAccess) ...[
-                  const _SectionLabel('PARA BARBEARIAS'),
-                  const SizedBox(height: 10),
-                  _ActionGroup(
-                    children: [
-                      _ProfileAction(
-                        icon: Icons.storefront_rounded,
-                        title: 'Cadastrar minha barbearia',
-                        subtitle:
-                            'Experimente o Plano Pro gratuitamente por 14 dias',
-                        onTap: () => Navigator.pushNamed(
-                          context,
-                          OwnerOnboardingScreen.route,
-                        ),
-                      ),
+                    _IdentityCard(state: state),
+                    if (state.clientProfileError != null) ...[
+                      const SizedBox(height: 12),
+                      _ErrorMessage(message: state.clientProfileError!),
                     ],
-                  ),
-                  const SizedBox(height: 24),
-                ],
-                if (state.hasProfessionalAccess) ...[
-                  const _SectionLabel('MODOS DO APP'),
-                  const SizedBox(height: 10),
-                  _ActionGroup(
-                    children: [
-                      _ProfileAction(
-                        icon: Icons.search_rounded,
-                        title: 'Modo cliente',
-                        subtitle: 'Descobrir barbearias e agendar horários',
-                        onTap: () => _openMode(context, AppMode.client),
+                    const SizedBox(height: 24),
+                    if (!state.hasProfessionalAccess) ...[
+                      const _SectionLabel('PARA BARBEARIAS'),
+                      const SizedBox(height: 10),
+                      _ActionGroup(
+                        children: [
+                          _ProfileAction(
+                            icon: Icons.storefront_rounded,
+                            title: 'Cadastrar minha barbearia',
+                            subtitle:
+                                'Experimente o Plano Pro gratuitamente por 14 dias',
+                            onTap: () => Navigator.pushNamed(
+                              context,
+                              OwnerOnboardingScreen.route,
+                            ),
+                          ),
+                        ],
                       ),
-                      if (state.hasBarberAccess)
+                      const SizedBox(height: 24),
+                    ],
+                    if (state.hasProfessionalAccess) ...[
+                      const _SectionLabel('MODOS DO APP'),
+                      const SizedBox(height: 10),
+                      _ActionGroup(
+                        children: [
+                          _ProfileAction(
+                            icon: Icons.search_rounded,
+                            title: 'Cliente',
+                            subtitle: 'Descobrir barbearias e agendar horários',
+                            selected: activeMode == AppMode.client,
+                            onTap: () => _openMode(context, AppMode.client),
+                          ),
+                          if (state.hasBarberAccess)
+                            _ProfileAction(
+                              icon: Icons.content_cut_rounded,
+                              title: 'Barbeiro',
+                              subtitle: 'Sua agenda, clientes e comissão',
+                              selected: activeMode == AppMode.barber,
+                              onTap: () => _openMode(
+                                context,
+                                AppMode.barber,
+                              ),
+                            ),
+                          if (state.hasOwnerAccess)
+                            _ProfileAction(
+                              icon: Icons.storefront_rounded,
+                              title: 'Dono',
+                              subtitle: 'Gestão completa da barbearia',
+                              selected: activeMode == AppMode.owner,
+                              onTap: () => _openMode(
+                                context,
+                                AppMode.owner,
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                    const _SectionLabel('CONTA'),
+                    const SizedBox(height: 10),
+                    _ActionGroup(
+                      children: [
                         _ProfileAction(
-                          icon: Icons.content_cut_rounded,
-                          title: 'Modo barbeiro',
-                          subtitle: 'Sua agenda, clientes e comissão',
-                          onTap: () => _openMode(
+                          icon: Icons.edit_outlined,
+                          title: 'Editar dados pessoais',
+                          subtitle: 'Nome e WhatsApp',
+                          onTap: state.isLoadingClientProfile
+                              ? null
+                              : () => _showEditProfile(context, state),
+                        ),
+                        _ProfileAction(
+                          icon: Icons.lock_reset_rounded,
+                          title: 'Segurança',
+                          subtitle: 'Receber link para redefinir a senha',
+                          onTap: () => _sendPasswordRecovery(context, state),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    const _SectionLabel('ATIVIDADE'),
+                    const SizedBox(height: 10),
+                    _ActionGroup(
+                      children: [
+                        _ProfileAction(
+                          icon: Icons.calendar_month_outlined,
+                          title: 'Meus agendamentos',
+                          subtitle: 'Acompanhe seus pedidos e horários',
+                          onTap: () => Navigator.pushReplacementNamed(
                             context,
-                            AppMode.barber,
+                            HistoryScreen.route,
                           ),
                         ),
-                      if (state.hasOwnerAccess)
                         _ProfileAction(
-                          icon: Icons.storefront_rounded,
-                          title: 'Modo dono',
-                          subtitle: 'Gestão completa da barbearia',
-                          onTap: () => _openMode(
+                          icon: Icons.favorite_border_rounded,
+                          title: 'Barbearias favoritas',
+                          subtitle: 'Veja as barbearias que você salvou',
+                          onTap: () => Navigator.pushReplacementNamed(
                             context,
-                            AppMode.owner,
+                            FavoritesScreen.route,
                           ),
                         ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                ],
-                const _SectionLabel('CONTA'),
-                const SizedBox(height: 10),
-                _ActionGroup(
-                  children: [
-                    _ProfileAction(
-                      icon: Icons.edit_outlined,
-                      title: 'Editar dados pessoais',
-                      subtitle: 'Nome e WhatsApp',
-                      onTap: state.isLoadingClientProfile
-                          ? null
-                          : () => _showEditProfile(context, state),
+                      ],
                     ),
-                    _ProfileAction(
-                      icon: Icons.lock_reset_rounded,
-                      title: 'Segurança',
-                      subtitle: 'Receber link para redefinir a senha',
-                      onTap: () => _sendPasswordRecovery(context, state),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                const _SectionLabel('ATIVIDADE'),
-                const SizedBox(height: 10),
-                _ActionGroup(
-                  children: [
-                    _ProfileAction(
-                      icon: Icons.calendar_month_outlined,
-                      title: 'Meus agendamentos',
-                      subtitle: 'Acompanhe seus pedidos e horários',
-                      onTap: () => Navigator.pushReplacementNamed(
-                        context,
-                        HistoryScreen.route,
+                    const SizedBox(height: 24),
+                    OutlinedButton.icon(
+                      onPressed: () => _confirmSignOut(context, state),
+                      icon: const Icon(Icons.logout_rounded),
+                      label: const Text('Sair da conta'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.text,
+                        minimumSize: const Size.fromHeight(54),
+                        side: const BorderSide(color: AppColors.stroke),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
                     ),
-                    _ProfileAction(
-                      icon: Icons.favorite_border_rounded,
-                      title: 'Barbearias favoritas',
-                      subtitle: 'Veja as barbearias que você salvou',
-                      onTap: () => Navigator.pushReplacementNamed(
-                        context,
-                        FavoritesScreen.route,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                OutlinedButton.icon(
-                  onPressed: () => _confirmSignOut(context, state),
-                  icon: const Icon(Icons.logout_rounded),
-                  label: const Text('Sair da conta'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.text,
-                    minimumSize: const Size.fromHeight(54),
-                    side: const BorderSide(color: AppColors.stroke),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                ),
                   ],
                 ),
               ),
@@ -198,7 +203,17 @@ class ProfileScreen extends StatelessWidget {
   }
 
   static Future<void> _openMode(BuildContext context, AppMode mode) async {
-    final selected = await context.read<AppModeController>().selectMode(mode);
+    final controller = context.read<AppModeController>();
+    final activeMode = controller.currentMode;
+    final returnMode = ModalRoute.of(context)?.settings.arguments;
+    if (mode == activeMode) {
+      if (returnMode == activeMode && Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+      return;
+    }
+
+    final selected = await controller.selectMode(mode);
     if (!selected || !context.mounted) return;
     Navigator.pushNamedAndRemoveUntil(
       context,
@@ -249,10 +264,7 @@ class ProfileScreen extends StatelessWidget {
               const SizedBox(height: 22),
               Text(
                 'Editar dados pessoais',
-                style: Theme.of(sheetContext)
-                    .textTheme
-                    .headlineSmall
-                    ?.copyWith(
+                style: Theme.of(sheetContext).textTheme.headlineSmall?.copyWith(
                       fontSize: 23,
                       fontWeight: FontWeight.w800,
                     ),
@@ -372,8 +384,11 @@ class ProfileScreen extends StatelessWidget {
     if (confirmed != true) return;
     if (!context.mounted) return;
     final modeController = context.read<AppModeController>();
+    final managementSession = context.read<ManagementSession>();
     await state.signOut();
+    managementSession.clearUnifiedSession();
     await modeController.resetToClient();
+    if (!context.mounted) return;
     if (context.mounted) {
       Navigator.pushNamedAndRemoveUntil(
         context,
@@ -458,8 +473,7 @@ class _IdentityCard extends StatelessWidget {
               ],
             ),
           ),
-          if (state.isLoadingClientProfile)
-            const CDRLoading.compact(size: 22),
+          if (state.isLoadingClientProfile) const CDRLoading.compact(size: 22),
         ],
       ),
     );
@@ -513,41 +527,48 @@ class _ProfileAction extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
+    this.selected = false,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback? onTap;
+  final bool selected;
 
   @override
-  Widget build(BuildContext context) => ListTile(
-        onTap: onTap,
-        minVerticalPadding: 13,
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: AppColors.orange.withOpacity(.1),
-            borderRadius: BorderRadius.circular(12),
+  Widget build(BuildContext context) => Semantics(
+        selected: selected,
+        child: ListTile(
+          onTap: onTap,
+          selected: selected,
+          selectedTileColor: AppColors.orange.withOpacity(.06),
+          minVerticalPadding: 13,
+          leading: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.orange.withOpacity(.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: AppColors.orange, size: 21),
           ),
-          child: Icon(icon, color: AppColors.orange, size: 21),
-        ),
-        title: Text(
-          title,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-        ),
-        subtitle: Text(
-          subtitle,
-          style: const TextStyle(
-            color: AppColors.muted,
-            fontSize: 13,
-            height: 1.4,
+          title: Text(
+            title,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
           ),
-        ),
-        trailing: const Icon(
-          Icons.chevron_right_rounded,
-          color: AppColors.muted,
+          subtitle: Text(
+            subtitle,
+            style: const TextStyle(
+              color: AppColors.muted,
+              fontSize: 13,
+              height: 1.4,
+            ),
+          ),
+          trailing: Icon(
+            selected ? Icons.check_circle_rounded : Icons.chevron_right_rounded,
+            color: selected ? AppColors.orange : AppColors.muted,
+          ),
         ),
       );
 }

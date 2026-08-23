@@ -2,6 +2,19 @@ part of 'management.dart';
 
 enum ManagementRole { barber, admin }
 
+enum ManagementDestinationId {
+  requests,
+  dashboard,
+  schedule,
+  availability,
+  clients,
+  commission,
+  services,
+  team,
+  commerce,
+  settings,
+}
+
 class ManagementHomeScreen extends StatefulWidget {
   const ManagementHomeScreen({
     this.initialRole,
@@ -24,15 +37,33 @@ class ManagementHomeScreen extends StatefulWidget {
 
 class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
   late ManagementRole selectedRole;
-  var selectedTab = 0;
+  final FocusNode _pageTitleFocusNode = FocusNode(
+    debugLabel: 'management-page-title',
+  );
+  final Map<ManagementRole, ManagementDestinationId> _selectedDestinations = {
+    ManagementRole.barber: ManagementDestinationId.schedule,
+    ManagementRole.admin: ManagementDestinationId.dashboard,
+  };
 
   @override
   void initState() {
     super.initState();
-    selectedRole = widget.initialRole ??
-        (Uri.base.queryParameters['mode'] == 'owner'
-            ? ManagementRole.admin
-            : ManagementRole.barber);
+    selectedRole = widget.initialRole ?? ManagementRole.barber;
+  }
+
+  @override
+  void didUpdateWidget(covariant ManagementHomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final nextRole = widget.initialRole;
+    if (nextRole == null || nextRole == oldWidget.initialRole) return;
+    selectedRole = nextRole;
+    unawaited(context.read<ManagementSession>().activateRole(nextRole));
+  }
+
+  @override
+  void dispose() {
+    _pageTitleFocusNode.dispose();
+    super.dispose();
   }
 
   @override
@@ -47,127 +78,179 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
     };
     final isAdmin = effectiveRole == ManagementRole.admin;
     final tabs = isAdmin ? _adminTabs : _barberTabs;
-    final safeTab = selectedTab >= tabs.length ? 0 : selectedTab;
-    final page = tabs[safeTab];
+    final selectedDestination = _destinationFor(effectiveRole, tabs);
+    final page = tabs.firstWhere((tab) => tab.id == selectedDestination);
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final useSideNavigation = constraints.maxWidth >= 900;
-        final extendedNavigation = constraints.maxWidth >= 1280;
-        return Scaffold(
-          backgroundColor: SharedAppColors.background,
-          appBar: _ManagementTopBar(
-            title: page.title,
-            onOpenClientMode: widget.onOpenClientMode,
-            onOpenProfile: widget.onOpenProfile,
-            onRefresh: _refreshCurrentTab,
-            onSignedOut: widget.onSignedOut,
-          ),
-          bottomNavigationBar: useSideNavigation
-              ? null
-              : _ManagementBottomNavigation(
-                  tabs: tabs,
-                  selectedIndex: safeTab,
-                  onSelected: _selectTab,
-                ),
-          body: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (useSideNavigation)
-                _ManagementSideNavigation(
-                  tabs: tabs,
-                  selectedIndex: safeTab,
-                  extended: extendedNavigation,
-                  onSelected: _selectTab,
-                ),
-              Expanded(
-                child: _ManagementPageContent(
-                  horizontalPadding: useSideNavigation ? 32 : 16,
-                  children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: session.canWorkAsBarber && session.canManageShop
-                          ? _RoleSwitch(
-                              selectedRole: effectiveRole,
-                              onChanged: _changeRole,
-                            )
-                          : _AvailabilityStatus(
-                              label: isAdmin ? 'MODO DONO' : 'MODO BARBEIRO',
-                              color: SharedAppColors.orange,
-                            ),
-                    ),
-                    const SizedBox(height: 16),
-                    _Header(
-                      isAdmin: isAdmin,
-                      title: isAdmin
-                          ? session.barberShopName ?? 'Barbearia'
-                          : session.barberHeaderName,
-                    ),
-                    const SizedBox(height: 24),
-                    page.child,
-                  ],
-                ),
+        final useSideNavigation = constraints.maxWidth >= 600;
+        final extendedNavigation = constraints.maxWidth >= 1024;
+        final horizontalPadding = constraints.maxWidth >= 1024
+            ? 32.0
+            : useSideNavigation
+                ? 24.0
+                : 16.0;
+        final fallbackDestination = _fallbackDestination(effectiveRole);
+        final isAtFallback = selectedDestination == fallbackDestination;
+        return PopScope(
+          canPop: isAtFallback,
+          onPopInvoked: (didPop) {
+            if (!didPop && !isAtFallback) {
+              _selectDestination(effectiveRole, fallbackDestination);
+            }
+          },
+          child: Scaffold(
+            backgroundColor: SharedAppColors.background,
+            appBar: _ManagementTopBar(
+              title: page.title,
+              titleFocusNode: _pageTitleFocusNode,
+              onOpenProfile: widget.onOpenProfile,
+              onRefresh: () => _refreshCurrentDestination(
+                effectiveRole,
+                selectedDestination,
               ),
-            ],
+              onSignedOut: widget.onSignedOut,
+            ),
+            bottomNavigationBar: useSideNavigation
+                ? null
+                : _ManagementBottomNavigation(
+                    tabs: tabs,
+                    selectedDestination: selectedDestination,
+                    ownerMode: isAdmin,
+                    onSelected: (destination) => _selectDestination(
+                      effectiveRole,
+                      destination,
+                    ),
+                    onOpenMore: () => _openMoreDestinations(
+                      effectiveRole,
+                      selectedDestination,
+                    ),
+                  ),
+            body: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (useSideNavigation)
+                  _ManagementSideNavigation(
+                    tabs: tabs,
+                    selectedDestination: selectedDestination,
+                    extended: extendedNavigation,
+                    onSelected: (destination) => _selectDestination(
+                      effectiveRole,
+                      destination,
+                    ),
+                  ),
+                Expanded(
+                  child: _ManagementPageContent(
+                    horizontalPadding: horizontalPadding,
+                    children: [
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: _AvailabilityStatus(
+                          label: isAdmin ? 'MODO DONO' : 'MODO BARBEIRO',
+                          color: SharedAppColors.orange,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _Header(
+                        isAdmin: isAdmin,
+                        title: isAdmin
+                            ? session.barberShopName ?? 'Barbearia'
+                            : session.barberHeaderName,
+                      ),
+                      const SizedBox(height: 24),
+                      page.child,
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
     );
   }
 
-  void _selectTab(int index) {
-    setState(() => selectedTab = index);
+  ManagementDestinationId _destinationFor(
+    ManagementRole role,
+    List<_ManagementTab> tabs,
+  ) {
+    final selected = _selectedDestinations[role];
+    if (selected != null && tabs.any((tab) => tab.id == selected)) {
+      return selected;
+    }
+    return tabs.first.id;
+  }
+
+  ManagementDestinationId _fallbackDestination(ManagementRole role) =>
+      role == ManagementRole.admin
+          ? ManagementDestinationId.dashboard
+          : ManagementDestinationId.schedule;
+
+  void _selectDestination(
+    ManagementRole role,
+    ManagementDestinationId destination,
+  ) {
+    if (_selectedDestinations[role] == destination) return;
+    setState(() => _selectedDestinations[role] = destination);
+    if (kIsWeb) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _pageTitleFocusNode.canRequestFocus) {
+          _pageTitleFocusNode.requestFocus();
+        }
+      });
+    }
     unawaited(
-      context.read<ManagementSession>().ensureDataForTab(
-            selectedRole,
-            index,
+      context.read<ManagementSession>().ensureDataForDestination(
+            role,
+            destination,
           ),
     );
   }
 
-  Future<void> _refreshCurrentTab() =>
-      context.read<ManagementSession>().ensureDataForTab(
-            selectedRole,
-            selectedTab,
+  Future<void> _refreshCurrentDestination(
+    ManagementRole role,
+    ManagementDestinationId destination,
+  ) =>
+      context.read<ManagementSession>().ensureDataForDestination(
+            role,
+            destination,
             force: true,
           );
 
-  Future<void> _changeRole(ManagementRole role) async {
-    if (role == selectedRole) return;
-
-    setState(() {
-      selectedRole = role;
-      selectedTab = 0;
-    });
-
-    await context.read<ManagementSession>().activateRole(role);
-    if (!mounted) return;
-
-    final onRoleChanged = widget.onRoleChanged;
-    if (onRoleChanged != null) {
-      await onRoleChanged(role);
-      return;
-    }
-
-    final preferences = await SharedPreferences.getInstance();
-    await preferences.setString(
-      'clubedaregua.last_mode',
-      role == ManagementRole.admin ? 'owner' : 'barber',
+  Future<void> _openMoreDestinations(
+    ManagementRole role,
+    ManagementDestinationId selectedDestination,
+  ) async {
+    final previousFocus = FocusManager.instance.primaryFocus;
+    final selected = await showModalBottomSheet<ManagementDestinationId>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      backgroundColor: SharedAppColors.card,
+      builder: (sheetContext) => _ManagementMoreSheet(
+        tabs: _ownerOverflowTabs,
+        selectedDestination: selectedDestination,
+      ),
     );
+    if (previousFocus?.canRequestFocus ?? false) {
+      previousFocus!.requestFocus();
+    }
+    if (!mounted || selected == null) return;
+    _selectDestination(role, selected);
   }
 }
 
 class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
   const _ManagementTopBar({
     required this.title,
-    required this.onOpenClientMode,
+    required this.titleFocusNode,
     required this.onRefresh,
     this.onOpenProfile,
     this.onSignedOut,
   });
 
   final String title;
-  final VoidCallback onOpenClientMode;
+  final FocusNode titleFocusNode;
   final VoidCallback onRefresh;
   final VoidCallback? onOpenProfile;
   final VoidCallback? onSignedOut;
@@ -215,11 +298,17 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
                   ),
                 ),
                 const SizedBox(height: 3),
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium,
+                Semantics(
+                  header: true,
+                  child: Focus(
+                    focusNode: titleFocusNode,
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -238,9 +327,6 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
             icon: const Icon(Icons.more_vert_rounded),
             onSelected: (value) {
               switch (value) {
-                case 'client':
-                  onOpenClientMode();
-                  return;
                 case 'profile':
                   onOpenProfile?.call();
                   return;
@@ -253,14 +339,10 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'client',
-                child: Text('Modo cliente'),
-              ),
               if (onOpenProfile != null)
                 const PopupMenuItem(
                   value: 'profile',
-                  child: Text('Perfil e modos'),
+                  child: Text('Abrir Perfil'),
                 ),
               const PopupMenuItem(
                 value: 'refresh',
@@ -270,14 +352,9 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
             ],
           )
         else ...[
-          _TopBarAction(
-            tooltip: 'Modo cliente',
-            onPressed: onOpenClientMode,
-            icon: Icons.swap_horiz_rounded,
-          ),
           if (onOpenProfile != null)
             _TopBarAction(
-              tooltip: 'Perfil e modos',
+              tooltip: 'Abrir Perfil',
               onPressed: onOpenProfile!,
               icon: Icons.person_outline_rounded,
             ),
@@ -366,102 +443,227 @@ class _ManagementPageContent extends StatelessWidget {
 class _ManagementSideNavigation extends StatelessWidget {
   const _ManagementSideNavigation({
     required this.tabs,
-    required this.selectedIndex,
+    required this.selectedDestination,
     required this.extended,
     required this.onSelected,
   });
 
   final List<_ManagementTab> tabs;
-  final int selectedIndex;
+  final ManagementDestinationId selectedDestination;
   final bool extended;
-  final ValueChanged<int> onSelected;
+  final ValueChanged<ManagementDestinationId> onSelected;
 
   @override
-  Widget build(BuildContext context) => Container(
-        decoration: const BoxDecoration(
-          color: SharedAppColors.card,
-          border: Border(
-            right: BorderSide(color: SharedAppColors.stroke),
-          ),
+  Widget build(BuildContext context) {
+    final selectedIndex = tabs.indexWhere(
+      (tab) => tab.id == selectedDestination,
+    );
+    return Container(
+      decoration: const BoxDecoration(
+        color: SharedAppColors.card,
+        border: Border(
+          right: BorderSide(color: SharedAppColors.stroke),
         ),
-        child: NavigationRail(
-          selectedIndex: selectedIndex,
-          extended: extended,
-          minWidth: 82,
-          minExtendedWidth: 220,
-          groupAlignment: -.72,
-          backgroundColor: SharedAppColors.card,
-          indicatorColor: SharedAppColors.orange.withOpacity(.14),
-          selectedIconTheme: const IconThemeData(color: SharedAppColors.orange),
-          unselectedIconTheme:
-              const IconThemeData(color: SharedAppColors.muted),
-          selectedLabelTextStyle: const TextStyle(
-            color: SharedAppColors.text,
-            fontWeight: FontWeight.w800,
-          ),
-          unselectedLabelTextStyle:
-              const TextStyle(color: SharedAppColors.muted),
-          onDestinationSelected: onSelected,
-          destinations: [
-            for (final tab in tabs)
-              NavigationRailDestination(
-                icon: Icon(tab.icon),
-                selectedIcon: Icon(tab.selectedIcon),
-                label: Text(tab.label),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final requiredHeight = tabs.length * 64.0 + 24;
+          final railHeight = constraints.maxHeight > requiredHeight
+              ? constraints.maxHeight
+              : requiredHeight;
+          return Scrollbar(
+            child: SingleChildScrollView(
+              child: SizedBox(
+                height: railHeight,
+                child: NavigationRail(
+                  selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
+                  extended: extended,
+                  minWidth: 82,
+                  minExtendedWidth: 220,
+                  groupAlignment: -1,
+                  backgroundColor: SharedAppColors.card,
+                  indicatorColor: SharedAppColors.orange.withOpacity(.14),
+                  selectedIconTheme:
+                      const IconThemeData(color: SharedAppColors.orange),
+                  unselectedIconTheme:
+                      const IconThemeData(color: SharedAppColors.muted),
+                  selectedLabelTextStyle: const TextStyle(
+                    color: SharedAppColors.text,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  unselectedLabelTextStyle:
+                      const TextStyle(color: SharedAppColors.muted),
+                  onDestinationSelected: (index) => onSelected(tabs[index].id),
+                  destinations: [
+                    for (final tab in tabs)
+                      NavigationRailDestination(
+                        icon: Tooltip(
+                          message: tab.label,
+                          child: Icon(tab.icon),
+                        ),
+                        selectedIcon: Tooltip(
+                          message: tab.label,
+                          child: Icon(tab.selectedIcon),
+                        ),
+                        label: Text(tab.label),
+                      ),
+                  ],
+                ),
               ),
-          ],
-        ),
-      );
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
 
 class _ManagementBottomNavigation extends StatelessWidget {
   const _ManagementBottomNavigation({
     required this.tabs,
-    required this.selectedIndex,
+    required this.selectedDestination,
+    required this.ownerMode,
     required this.onSelected,
+    required this.onOpenMore,
   });
 
   final List<_ManagementTab> tabs;
-  final int selectedIndex;
-  final ValueChanged<int> onSelected;
+  final ManagementDestinationId selectedDestination;
+  final bool ownerMode;
+  final ValueChanged<ManagementDestinationId> onSelected;
+  final VoidCallback onOpenMore;
 
   @override
-  Widget build(BuildContext context) => Container(
-        decoration: const BoxDecoration(
-          color: SharedAppColors.background,
-          border: Border(
-            top: BorderSide(color: SharedAppColors.stroke),
-          ),
+  Widget build(BuildContext context) {
+    final visibleTabs = ownerMode ? _ownerMobileTabs : tabs;
+    final moreSelected = ownerMode &&
+        _ownerOverflowTabs.any((tab) => tab.id == selectedDestination);
+    var selectedIndex = visibleTabs.indexWhere(
+      (tab) => tab.id == selectedDestination,
+    );
+    if (moreSelected) selectedIndex = visibleTabs.length;
+    if (selectedIndex < 0) selectedIndex = 0;
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: SharedAppColors.background,
+        border: Border(
+          top: BorderSide(color: SharedAppColors.stroke),
         ),
-        child: SafeArea(
-          top: false,
-          child: NavigationBar(
-            selectedIndex: selectedIndex,
-            onDestinationSelected: onSelected,
-            destinations: [
-              for (final tab in tabs)
-                NavigationDestination(
-                  icon: Icon(tab.icon),
-                  selectedIcon: Icon(tab.selectedIcon),
-                  label: tab.label,
-                ),
-            ],
-          ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: NavigationBar(
+          selectedIndex: selectedIndex,
+          onDestinationSelected: (index) {
+            if (ownerMode && index == visibleTabs.length) {
+              onOpenMore();
+              return;
+            }
+            onSelected(visibleTabs[index].id);
+          },
+          destinations: [
+            for (final tab in visibleTabs)
+              NavigationDestination(
+                icon: Icon(tab.icon),
+                selectedIcon: Icon(tab.selectedIcon),
+                label: tab.label,
+              ),
+            if (ownerMode)
+              const NavigationDestination(
+                icon: Icon(Icons.apps_outlined),
+                selectedIcon: Icon(Icons.apps_rounded),
+                label: 'Mais',
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ManagementMoreSheet extends StatelessWidget {
+  const _ManagementMoreSheet({
+    required this.tabs,
+    required this.selectedDestination,
+  });
+
+  final List<_ManagementTab> tabs;
+  final ManagementDestinationId selectedDestination;
+
+  @override
+  Widget build(BuildContext context) => ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * .72,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 8, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Mais áreas da Gestão',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+                  IconButton(
+                    autofocus: true,
+                    tooltip: 'Fechar',
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 20),
+                itemCount: tabs.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 4),
+                itemBuilder: (context, index) {
+                  final tab = tabs[index];
+                  final selected = tab.id == selectedDestination;
+                  return ListTile(
+                    selected: selected,
+                    selectedColor: SharedAppColors.orange,
+                    selectedTileColor: SharedAppColors.orange.withOpacity(.1),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    leading: Icon(selected ? tab.selectedIcon : tab.icon),
+                    title: Text(tab.label),
+                    subtitle: Text(tab.description),
+                    trailing: selected ? const Icon(Icons.check_rounded) : null,
+                    onTap: () => Navigator.pop(context, tab.id),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       );
 }
 
 class _ManagementTab {
   const _ManagementTab({
+    required this.id,
     required this.label,
     required this.title,
+    required this.description,
     required this.icon,
     required this.selectedIcon,
     required this.child,
   });
 
+  final ManagementDestinationId id;
   final String label;
   final String title;
+  final String description;
   final IconData icon;
   final IconData selectedIcon;
   final Widget child;
@@ -469,170 +671,152 @@ class _ManagementTab {
 
 const _barberTabs = [
   _ManagementTab(
-    label: 'Pedidos',
-    title: 'Solicitações recebidas',
-    icon: Icons.inbox_outlined,
-    selectedIcon: Icons.inbox_rounded,
-    child: _BookingRequestsPage(),
-  ),
-  _ManagementTab(
+    id: ManagementDestinationId.schedule,
     label: 'Agenda',
     title: 'Agenda do barbeiro',
+    description: 'Atendimentos confirmados e operação do dia.',
     icon: Icons.calendar_month_outlined,
     selectedIcon: Icons.calendar_month_rounded,
     child: _BarberAgendaPage(),
   ),
   _ManagementTab(
+    id: ManagementDestinationId.availability,
     label: 'Horários',
     title: 'Disponibilidade',
+    description: 'Dias e horários disponíveis para agendamento.',
     icon: Icons.schedule_outlined,
     selectedIcon: Icons.schedule_rounded,
     child: _AvailabilityPage(),
   ),
   _ManagementTab(
+    id: ManagementDestinationId.clients,
     label: 'Clientes',
     title: 'Clientes atendidos',
+    description: 'Histórico de clientes atendidos.',
     icon: Icons.people_alt_outlined,
     selectedIcon: Icons.people_alt_rounded,
     child: _ClientsPage(),
   ),
   _ManagementTab(
+    id: ManagementDestinationId.commission,
     label: 'Comissão',
     title: 'Comissão e faturamento',
+    description: 'Comissões e desempenho profissional.',
     icon: Icons.payments_outlined,
     selectedIcon: Icons.payments_rounded,
     child: _CommissionPage(),
+  ),
+  _ManagementTab(
+    id: ManagementDestinationId.requests,
+    label: 'Pedidos',
+    title: 'Solicitações recebidas',
+    description: 'Histórico e triagem operacional.',
+    icon: Icons.inbox_outlined,
+    selectedIcon: Icons.inbox_rounded,
+    child: _BookingRequestsPage(),
   ),
 ];
 
 const _adminTabs = [
   _ManagementTab(
-    label: 'Pedidos',
-    title: 'Solicitações recebidas',
-    icon: Icons.inbox_outlined,
-    selectedIcon: Icons.inbox_rounded,
-    child: _BookingRequestsPage(adminView: true),
-  ),
-  _ManagementTab(
+    id: ManagementDestinationId.dashboard,
     label: 'Painel',
     title: 'Painel administrativo',
+    description: 'Visão geral da operação da barbearia.',
     icon: Icons.dashboard_outlined,
     selectedIcon: Icons.dashboard_rounded,
     child: _AdminDashboardPage(),
   ),
   _ManagementTab(
+    id: ManagementDestinationId.schedule,
     label: 'Agenda',
     title: 'Agenda por barbeiro',
+    description: 'Agenda consolidada por profissional.',
     icon: Icons.calendar_month_outlined,
     selectedIcon: Icons.calendar_month_rounded,
     child: _BarberAgendaPage(adminView: true),
   ),
   _ManagementTab(
-    label: 'Serviços',
-    title: 'Cadastro de serviços',
-    icon: Icons.design_services_outlined,
-    selectedIcon: Icons.design_services_rounded,
-    child: _ServicesPage(),
-  ),
-  _ManagementTab(
-    label: 'Equipe',
-    title: 'Cadastro de barbeiros',
-    icon: Icons.badge_outlined,
-    selectedIcon: Icons.badge_rounded,
-    child: _TeamPage(),
-  ),
-  _ManagementTab(
+    id: ManagementDestinationId.clients,
     label: 'Clientes',
     title: 'Controle de clientes',
+    description: 'Clientes, histórico e bloqueios autorizados.',
     icon: Icons.people_alt_outlined,
     selectedIcon: Icons.people_alt_rounded,
     child: _ClientsPage(),
   ),
   _ManagementTab(
+    id: ManagementDestinationId.commerce,
     label: 'Caixa',
     title: 'Caixa e estoque',
+    description: 'Caixa, produtos, estoque e vendas.',
     icon: Icons.point_of_sale_outlined,
     selectedIcon: Icons.point_of_sale_rounded,
     child: _CashPage(),
   ),
   _ManagementTab(
-    label: 'Config',
+    id: ManagementDestinationId.requests,
+    label: 'Pedidos',
+    title: 'Solicitações recebidas',
+    description: 'Histórico e triagem operacional.',
+    icon: Icons.inbox_outlined,
+    selectedIcon: Icons.inbox_rounded,
+    child: _BookingRequestsPage(adminView: true),
+  ),
+  _ManagementTab(
+    id: ManagementDestinationId.services,
+    label: 'Serviços',
+    title: 'Cadastro de serviços',
+    description: 'Catálogo e regras dos serviços.',
+    icon: Icons.design_services_outlined,
+    selectedIcon: Icons.design_services_rounded,
+    child: _ServicesPage(),
+  ),
+  _ManagementTab(
+    id: ManagementDestinationId.team,
+    label: 'Equipe',
+    title: 'Cadastro de barbeiros',
+    description: 'Profissionais e acessos da unidade.',
+    icon: Icons.badge_outlined,
+    selectedIcon: Icons.badge_rounded,
+    child: _TeamPage(),
+  ),
+  _ManagementTab(
+    id: ManagementDestinationId.settings,
+    label: 'Configurações',
     title: 'Configuração da barbearia',
+    description: 'Identidade e regras operacionais.',
     icon: Icons.settings_outlined,
     selectedIcon: Icons.settings_rounded,
     child: _SettingsPage(),
   ),
 ];
 
-class _RoleSwitch extends StatelessWidget {
-  const _RoleSwitch({
-    required this.selectedRole,
-    required this.onChanged,
-  });
+final _ownerMobileTabs = _tabsById(
+  _adminTabs,
+  const {
+    ManagementDestinationId.dashboard,
+    ManagementDestinationId.schedule,
+    ManagementDestinationId.clients,
+    ManagementDestinationId.commerce,
+  },
+);
 
-  final ManagementRole selectedRole;
-  final ValueChanged<ManagementRole> onChanged;
+final _ownerOverflowTabs = _tabsById(
+  _adminTabs,
+  const {
+    ManagementDestinationId.requests,
+    ManagementDestinationId.services,
+    ManagementDestinationId.team,
+    ManagementDestinationId.settings,
+  },
+);
 
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final expanded = constraints.maxWidth < 520;
-        return Container(
-          width: expanded ? double.infinity : null,
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: SharedAppColors.card,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: SharedAppColors.stroke),
-          ),
-          child: SegmentedButton<ManagementRole>(
-            segments: const [
-              ButtonSegment(
-                value: ManagementRole.barber,
-                label: Text('Barbeiro'),
-                icon: Icon(Icons.content_cut_rounded),
-              ),
-              ButtonSegment(
-                value: ManagementRole.admin,
-                label: Text('Dono'),
-                icon: Icon(Icons.storefront_rounded),
-              ),
-            ],
-            selected: {selectedRole},
-            onSelectionChanged: (value) => onChanged(value.first),
-            showSelectedIcon: false,
-            expandedInsets: expanded ? EdgeInsets.zero : null,
-            style: ButtonStyle(
-              visualDensity: VisualDensity.compact,
-              minimumSize: WidgetStateProperty.all(
-                Size(expanded ? 0 : 112, 40),
-              ),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              backgroundColor: WidgetStateProperty.resolveWith(
-                (states) => states.contains(WidgetState.selected)
-                    ? SharedAppColors.orange
-                    : Colors.transparent,
-              ),
-              foregroundColor: WidgetStateProperty.resolveWith(
-                (states) => states.contains(WidgetState.selected)
-                    ? SharedAppColors.onGold
-                    : SharedAppColors.muted,
-              ),
-              side: WidgetStateProperty.all(BorderSide.none),
-              textStyle: WidgetStateProperty.all(
-                const TextStyle(fontWeight: FontWeight.w800),
-              ),
-            ),
-            selectedIcon: const Icon(Icons.check_rounded),
-            multiSelectionEnabled: false,
-            emptySelectionAllowed: false,
-          ),
-        );
-      },
-    );
-  }
-}
+List<_ManagementTab> _tabsById(
+  List<_ManagementTab> tabs,
+  Set<ManagementDestinationId> ids,
+) =>
+    tabs.where((tab) => ids.contains(tab.id)).toList(growable: false);
 
 class _Header extends StatelessWidget {
   const _Header({
