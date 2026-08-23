@@ -21,9 +21,10 @@ A precedência obrigatória é:
 2. `docs/brand/v3/BRAND_FOUNDATIONS.md`;
 3. `docs/brand/v3/MOTION_SYSTEM.md`;
 4. `docs/ui/SHARED_COMPONENTS_V3.md` para componentes compartilhados;
-5. a UI Specification V3 aprovada da tela;
-6. documentos de experiência e UX para jornada, conteúdo e comportamento;
-7. implementação existente, apenas como referência técnica.
+5. `docs/ui/SHARED_NAVIGATION_V3.md` para shell e navegação;
+6. a UI Specification V3 aprovada da tela;
+7. documentos de experiência e UX para jornada, conteúdo e comportamento;
+8. implementação existente, apenas como referência técnica.
 
 `Brand_Kit_v1`, `Brand_Kit_v2`, boards que exibem a identidade antiga e
 especificações não migradas permanecem no repositório como histórico. Eles

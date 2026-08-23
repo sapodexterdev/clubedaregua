@@ -174,6 +174,9 @@ barbearias.
 
 ## Navegação inferior
 
+O shell e o comportamento de rota seguem
+`docs/ui/SHARED_NAVIGATION_V3.md`. Esta seção detalha a composição da Home.
+
 Itens:
 
 1. Descobrir;

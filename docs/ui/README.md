@@ -12,6 +12,9 @@ Os componentes equivalentes de Cliente e Gestão seguem obrigatoriamente o
 contrato `SHARED_COMPONENTS_V3.md`. A spec de tela seleciona as variantes
 permitidas e define a composição, sem criar um componente paralelo.
 
+Shell, destinos raiz, Perfil, troca de modo e comportamento de Voltar seguem o
+contrato `SHARED_NAVIGATION_V3.md`.
+
 ## Niveis de Documentacao
 
 Brand -> identidade visual
@@ -37,6 +40,10 @@ UX
 ->
 
 Contrato de componentes compartilhados
+
+->
+
+Contrato de shell e navegação
 
 ->
 
