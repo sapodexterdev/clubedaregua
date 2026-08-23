@@ -27,6 +27,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final passwordController = TextEditingController();
   final authService = AuthService();
   bool isLoading = false;
+  bool _awaitingEmailConfirmation = false;
 
   bool get _hasTeamInvitation =>
       Uri.base.queryParameters['team_invite']?.trim().isNotEmpty == true;
@@ -47,6 +48,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _register() async {
+    if (isLoading) return;
     final appState = context.read<AppState>();
     final navigator = Navigator.of(context);
 
@@ -68,7 +70,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
       if (session == null) {
         if (mounted) {
-          _showMessage('Cadastro criado. Confirme seu e-mail para entrar.');
+          setState(() => _awaitingEmailConfirmation = true);
         }
         return;
       }
@@ -107,45 +109,65 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
         );
       }
-    } catch (error) {
-      if (mounted) _showMessage(error.toString());
+    } on AuthException catch (error) {
+      if (mounted) _showError(error.message);
+    } catch (_) {
+      if (mounted) {
+        _showError('Não foi possível criar sua conta. Tente novamente.');
+      }
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
   }
 
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+  void _showError(String message) => CDRSnackbar.error(context, message);
+
+  void _returnToLogin() {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+      return;
+    }
+    navigator.pushReplacementNamed(
+      LoginScreen.route,
+      arguments: ModalRoute.of(context)?.settings.arguments,
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leadingWidth: 68,
-        leading: const Padding(
-          padding: EdgeInsets.only(left: 16),
-          child: CDRBackButton(),
-        ),
-      ),
       body: SafeArea(
-        top: false,
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
+            constraints: const BoxConstraints(
+              maxWidth: CDRSizeTokens.clientFrameMaxWidth,
+            ),
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.fromLTRB(
+                CDRSpacingTokens.xxl,
+                CDRSpacingTokens.xxl,
+                CDRSpacingTokens.xxl,
+                CDRSpacingTokens.xxxl,
+              ),
               children: [
-                Center(
-                  child: SvgPicture.asset(
-                    AppConstants.brandV3SecondaryLogo,
-                    width: 104,
-                    semanticsLabel: 'Clube da Régua',
-                  ),
+                Row(
+                  children: [
+                    const CDRBackButton(),
+                    Expanded(
+                      child: Center(
+                        child: SvgPicture.asset(
+                          AppConstants.brandV3SecondaryLogo,
+                          width: 132,
+                          semanticsLabel: 'Clube da Régua',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 44),
+                  ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: CDRSpacingTokens.xxxl),
                 Text(
                   _hasTeamInvitation
                       ? 'Crie sua conta profissional'
@@ -167,41 +189,69 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 const SizedBox(height: 28),
-                CDRTextField(
-                  controller: nameController,
-                  label: 'Nome completo',
-                  leading: Icons.person_outline_rounded,
-                  textInputAction: TextInputAction.next,
-                  autofillHints: const [AutofillHints.name],
-                ),
-                const SizedBox(height: 14),
-                CDRTextField(
-                  controller: emailController,
-                  label: 'E-mail',
-                  leading: Icons.mail_outline_rounded,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  autofillHints: const [AutofillHints.email],
-                ),
-                const SizedBox(height: 14),
-                CDRPasswordField(
-                  controller: passwordController,
-                  onSubmitted: isLoading ? null : (_) => _register(),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Use pelo menos 6 caracteres.',
-                  style: TextStyle(
-                    color: AppColors.muted,
-                    fontSize: 12,
+                if (_awaitingEmailConfirmation)
+                  CDRStatePanel(
+                    icon: Icons.mark_email_read_outlined,
+                    iconColor: CDRColorTokens.success,
+                    title: 'Conta criada',
+                    message:
+                        'Confira seu e-mail para confirmar a conta. Depois, volte para entrar.',
+                    liveRegion: true,
+                    layout: CDRStatePanelLayout.centered,
+                    backgroundColor: AppColors.card,
+                    borderColor: AppColors.stroke,
+                    action: CDRButton.primary(
+                      label: 'Voltar para entrar',
+                      isExpanded: false,
+                      onPressed: _returnToLogin,
+                    ),
+                  )
+                else ...[
+                  AutofillGroup(
+                    child: Column(
+                      children: [
+                        CDRTextField(
+                          controller: nameController,
+                          label: 'Nome completo',
+                          leading: Icons.person_outline_rounded,
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [AutofillHints.name],
+                          enabled: !isLoading,
+                        ),
+                        const SizedBox(height: CDRSpacingTokens.lg),
+                        CDRTextField(
+                          controller: emailController,
+                          label: 'E-mail',
+                          leading: Icons.mail_outline_rounded,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [AutofillHints.email],
+                          enabled: !isLoading,
+                        ),
+                        const SizedBox(height: CDRSpacingTokens.lg),
+                        CDRPasswordField(
+                          controller: passwordController,
+                          enabled: !isLoading,
+                          onSubmitted: isLoading ? null : (_) => _register(),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 22),
-                CDRButton.primary(
-                  label: 'Criar conta',
-                  onPressed: isLoading ? null : _register,
-                  isLoading: isLoading,
-                ),
+                  const SizedBox(height: CDRSpacingTokens.sm),
+                  const Text(
+                    'Use pelo menos 6 caracteres.',
+                    style: TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: CDRSpacingTokens.xl),
+                  CDRButton.primary(
+                    label: 'Criar conta',
+                    onPressed: isLoading ? null : _register,
+                    isLoading: isLoading,
+                  ),
+                ],
               ],
             ),
           ),

@@ -26,7 +26,10 @@ class _LoginScreenState extends State<LoginScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final authService = AuthService();
-  bool isLoading = false;
+  bool _isSigningIn = false;
+  bool _isSendingRecovery = false;
+
+  bool get _isBusy => _isSigningIn || _isSendingRecovery;
 
   bool get _hasTeamInvitation =>
       Uri.base.queryParameters['team_invite']?.trim().isNotEmpty == true;
@@ -46,7 +49,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _loginReal() async {
-    setState(() => isLoading = true);
+    if (_isBusy) return;
+    setState(() => _isSigningIn = true);
     try {
       final email = emailController.text.trim();
       final password = passwordController.text;
@@ -86,38 +90,46 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
         );
       }
-    } catch (error) {
-      if (mounted) _showMessage(error.toString());
+    } on AuthException catch (error) {
+      if (mounted) _showError(error.message);
+    } catch (_) {
+      if (mounted) {
+        _showError('Não foi possível entrar agora. Tente novamente.');
+      }
     } finally {
-      if (mounted) setState(() => isLoading = false);
+      if (mounted) setState(() => _isSigningIn = false);
     }
   }
 
   Future<void> _recoverPassword() async {
+    if (_isBusy) return;
     final email = emailController.text.trim();
     if (email.isEmpty) {
-      _showMessage('Informe seu e-mail para recuperar a senha.');
+      _showError('Informe seu e-mail para recuperar a senha.');
       return;
     }
 
-    setState(() => isLoading = true);
+    setState(() => _isSendingRecovery = true);
     try {
       await authService.recoverPassword(email);
       if (mounted) {
-        _showMessage('Enviamos as instruções de recuperação para seu e-mail.');
+        CDRSnackbar.success(
+          context,
+          'Enviamos as instruções de recuperação para seu e-mail.',
+        );
       }
-    } catch (error) {
-      if (mounted) _showMessage(error.toString());
+    } on AuthException catch (error) {
+      if (mounted) _showError(error.message);
+    } catch (_) {
+      if (mounted) {
+        _showError('Não foi possível enviar as instruções. Tente novamente.');
+      }
     } finally {
-      if (mounted) setState(() => isLoading = false);
+      if (mounted) setState(() => _isSendingRecovery = false);
     }
   }
 
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
+  void _showError(String message) => CDRSnackbar.error(context, message);
 
   void _goBack(BuildContext context) {
     final navigator = Navigator.of(context);
@@ -134,9 +146,17 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
+            constraints: const BoxConstraints(
+              maxWidth: CDRSizeTokens.clientFrameMaxWidth,
+            ),
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.fromLTRB(
+                CDRSpacingTokens.xxl,
+                CDRSpacingTokens.xxl,
+                CDRSpacingTokens.xxl,
+                CDRSpacingTokens.xxxl,
+              ),
               children: [
                 Row(
                   children: [
@@ -175,29 +195,41 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 30),
-                CDRTextField(
-                  controller: emailController,
-                  label: 'E-mail',
-                  leading: Icons.mail_outline_rounded,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  autofillHints: const [AutofillHints.email],
-                ),
-                const SizedBox(height: 14),
-                CDRPasswordField(
-                  controller: passwordController,
-                  onSubmitted: isLoading ? null : (_) => _loginReal(),
+                AutofillGroup(
+                  child: Column(
+                    children: [
+                      CDRTextField(
+                        controller: emailController,
+                        label: 'E-mail',
+                        leading: Icons.mail_outline_rounded,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        autofillHints: const [AutofillHints.email],
+                        enabled: !_isBusy,
+                      ),
+                      const SizedBox(height: CDRSpacingTokens.lg),
+                      CDRPasswordField(
+                        controller: passwordController,
+                        enabled: !_isBusy,
+                        onSubmitted: _isBusy ? null : (_) => _loginReal(),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 22),
                 CDRButton.primary(
                   label: 'Entrar',
-                  onPressed: isLoading ? null : _loginReal,
-                  isLoading: isLoading,
+                  onPressed: _isBusy ? null : _loginReal,
+                  isLoading: _isSigningIn,
                 ),
                 const SizedBox(height: 12),
                 TextButton(
-                  onPressed: isLoading ? null : _recoverPassword,
-                  child: const Text('Esqueci minha senha'),
+                  onPressed: _isBusy ? null : _recoverPassword,
+                  child: Text(
+                    _isSendingRecovery
+                        ? 'Enviando instruções...'
+                        : 'Esqueci minha senha',
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -213,11 +245,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     TextButton(
-                      onPressed: () => Navigator.pushNamed(
-                        context,
-                        RegisterScreen.route,
-                        arguments: ModalRoute.of(context)?.settings.arguments,
-                      ),
+                      onPressed: _isBusy
+                          ? null
+                          : () => Navigator.pushNamed(
+                                context,
+                                RegisterScreen.route,
+                                arguments:
+                                    ModalRoute.of(context)?.settings.arguments,
+                              ),
                       child: const Text('Criar conta'),
                     ),
                   ],
