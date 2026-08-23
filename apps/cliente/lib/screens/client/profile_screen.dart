@@ -17,9 +17,17 @@ import 'history_screen.dart';
 import 'home_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
+  const ProfileScreen({
+    this.onTabSelected,
+    this.showBottomNavigation = true,
+    this.showBackButton = false,
+    super.key,
+  });
 
   static const route = '/profile';
+  final ValueChanged<int>? onTabSelected;
+  final bool showBottomNavigation;
+  final bool showBackButton;
 
   @override
   Widget build(BuildContext context) {
@@ -28,6 +36,13 @@ class ProfileScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        leadingWidth: showBackButton ? 68 : null,
+        leading: showBackButton
+            ? const Padding(
+                padding: EdgeInsets.only(left: 16),
+                child: CDRBackButton(),
+              )
+            : null,
         title: Text(
           'Meu perfil',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -36,10 +51,12 @@ class ProfileScreen extends StatelessWidget {
               ),
         ),
       ),
-      bottomNavigationBar: PremiumBottomNav(
-        currentIndex: 3,
-        onTap: (index) => _navigate(context, index),
-      ),
+      bottomNavigationBar: showBottomNavigation && onTabSelected == null
+          ? PremiumBottomNav(
+              currentIndex: 3,
+              onTap: (index) => _navigate(context, index),
+            )
+          : null,
       body: Consumer<AppState>(
         builder: (context, state, _) {
           if (!state.isSignedIn) return const _ProfileLoginRequired();
@@ -139,31 +156,27 @@ class ProfileScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 24),
-                    const _SectionLabel('ATIVIDADE'),
-                    const SizedBox(height: 10),
-                    _ActionGroup(
-                      children: [
-                        _ProfileAction(
-                          icon: Icons.calendar_month_outlined,
-                          title: 'Meus agendamentos',
-                          subtitle: 'Acompanhe seus pedidos e horários',
-                          onTap: () => Navigator.pushReplacementNamed(
-                            context,
-                            HistoryScreen.route,
+                    if (!showBackButton) ...[
+                      const _SectionLabel('ATIVIDADE'),
+                      const SizedBox(height: 10),
+                      _ActionGroup(
+                        children: [
+                          _ProfileAction(
+                            icon: Icons.calendar_month_outlined,
+                            title: 'Meus agendamentos',
+                            subtitle: 'Acompanhe seus pedidos e horários',
+                            onTap: () => _navigate(context, 2),
                           ),
-                        ),
-                        _ProfileAction(
-                          icon: Icons.favorite_border_rounded,
-                          title: 'Barbearias favoritas',
-                          subtitle: 'Veja as barbearias que você salvou',
-                          onTap: () => Navigator.pushReplacementNamed(
-                            context,
-                            FavoritesScreen.route,
+                          _ProfileAction(
+                            icon: Icons.favorite_border_rounded,
+                            title: 'Barbearias favoritas',
+                            subtitle: 'Veja as barbearias que você salvou',
+                            onTap: () => _navigate(context, 1),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                    ],
                     OutlinedButton.icon(
                       onPressed: () => _confirmSignOut(context, state),
                       icon: const Icon(Icons.logout_rounded),
@@ -187,7 +200,12 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  static Future<void> _navigate(BuildContext context, int index) async {
+  Future<void> _navigate(BuildContext context, int index) async {
+    final shellSelection = onTabSelected;
+    if (shellSelection != null) {
+      shellSelection(index);
+      return;
+    }
     final route = switch (index) {
       0 => HomeScreen.route,
       1 => FavoritesScreen.route,

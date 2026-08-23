@@ -12,9 +12,15 @@ import 'home_screen.dart';
 import 'profile_screen.dart';
 
 class HistoryScreen extends StatefulWidget {
-  const HistoryScreen({super.key});
+  const HistoryScreen({
+    this.onTabSelected,
+    this.isActive = true,
+    super.key,
+  });
 
   static const route = '/history';
+  final ValueChanged<int>? onTabSelected;
+  final bool isActive;
 
   @override
   State<HistoryScreen> createState() => _HistoryScreenState();
@@ -38,12 +44,18 @@ class _HistoryScreenState extends State<HistoryScreen>
   }
 
   @override
+  void didUpdateWidget(covariant HistoryScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.isActive && widget.isActive) _refresh();
+  }
+
+  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _refresh();
+    if (state == AppLifecycleState.resumed && widget.isActive) _refresh();
   }
 
   void _refresh() {
-    if (!mounted) return;
+    if (!mounted || !widget.isActive) return;
     context.read<AppState>().refreshAppointments();
   }
 
@@ -55,11 +67,14 @@ class _HistoryScreenState extends State<HistoryScreen>
         backgroundColor: AppColors.background,
         foregroundColor: AppColors.text,
         elevation: 0,
-        leadingWidth: 68,
-        leading: const Padding(
-          padding: EdgeInsets.only(left: 16),
-          child: CDRBackButton(),
-        ),
+        automaticallyImplyLeading: false,
+        leadingWidth: widget.onTabSelected == null ? 68 : null,
+        leading: widget.onTabSelected == null
+            ? const Padding(
+                padding: EdgeInsets.only(left: 16),
+                child: CDRBackButton(),
+              )
+            : null,
         title: Text(
           'Agenda',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -68,10 +83,12 @@ class _HistoryScreenState extends State<HistoryScreen>
               ),
         ),
       ),
-      bottomNavigationBar: PremiumBottomNav(
-        currentIndex: 2,
-        onTap: (index) => _navigate(context, index),
-      ),
+      bottomNavigationBar: widget.onTabSelected == null
+          ? PremiumBottomNav(
+              currentIndex: 2,
+              onTap: (index) => _navigate(context, index),
+            )
+          : null,
       body: Consumer<AppState>(
         builder: (context, state, _) {
           if (!state.isSignedIn) return const _LoginRequired();
@@ -155,6 +172,11 @@ class _HistoryScreenState extends State<HistoryScreen>
   }
 
   void _navigate(BuildContext context, int index) {
+    final shellSelection = widget.onTabSelected;
+    if (shellSelection != null) {
+      shellSelection(index);
+      return;
+    }
     final route = switch (index) {
       0 => HomeScreen.route,
       1 => FavoritesScreen.route,

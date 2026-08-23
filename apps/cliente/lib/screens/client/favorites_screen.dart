@@ -14,9 +14,10 @@ import 'home_screen.dart';
 import 'profile_screen.dart';
 
 class FavoritesScreen extends StatelessWidget {
-  const FavoritesScreen({super.key});
+  const FavoritesScreen({this.onTabSelected, super.key});
 
   static const route = '/favorites';
+  final ValueChanged<int>? onTabSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -35,10 +36,12 @@ class FavoritesScreen extends StatelessWidget {
               ),
         ),
       ),
-      bottomNavigationBar: PremiumBottomNav(
-        currentIndex: 1,
-        onTap: (index) => _navigate(context, index),
-      ),
+      bottomNavigationBar: onTabSelected == null
+          ? PremiumBottomNav(
+              currentIndex: 1,
+              onTap: (index) => _navigate(context, index),
+            )
+          : null,
       body: Consumer<AppState>(
         builder: (context, state, _) {
           if (!state.isSignedIn) return const _LoginRequired();
@@ -101,7 +104,12 @@ class FavoritesScreen extends StatelessWidget {
     Navigator.pushNamed(context, BarbershopProfileScreen.route);
   }
 
-  static void _navigate(BuildContext context, int index) {
+  void _navigate(BuildContext context, int index) {
+    final shellSelection = onTabSelected;
+    if (shellSelection != null) {
+      shellSelection(index);
+      return;
+    }
     final route = switch (index) {
       0 => HomeScreen.route,
       1 => FavoritesScreen.route,
@@ -193,8 +201,7 @@ class _FavoriteCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color:
-                          shop.isOpen ? AppColors.success : AppColors.muted,
+                      color: shop.isOpen ? AppColors.success : AppColors.muted,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),

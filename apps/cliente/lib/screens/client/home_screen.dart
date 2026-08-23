@@ -18,9 +18,15 @@ import 'notifications_screen.dart';
 import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({
+    this.onTabSelected,
+    this.isActive = true,
+    super.key,
+  });
 
   static const route = '/home';
+  final ValueChanged<int>? onTabSelected;
+  final bool isActive;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -50,12 +56,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   @override
+  void didUpdateWidget(covariant HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.isActive && widget.isActive) {
+      _refreshNotificationCount();
+    }
+  }
+
+  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _refreshNotificationCount();
+    if (state == AppLifecycleState.resumed && widget.isActive) {
+      _refreshNotificationCount();
+    }
   }
 
   void _refreshNotificationCount() {
-    if (!mounted) return;
+    if (!mounted || !widget.isActive) return;
     context.read<AppState>().refreshNotifications();
   }
 
@@ -63,28 +79,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      bottomNavigationBar: PremiumBottomNav(
-        currentIndex: 0,
-        onTap: (index) {
-          final state = context.read<AppState>();
-          if (index == 0) return;
-          final destination = switch (index) {
-            1 => FavoritesScreen.route,
-            2 => HistoryScreen.route,
-            3 => ProfileScreen.route,
-            _ => HomeScreen.route,
-          };
-          if (!state.isSignedIn) {
-            Navigator.pushNamed(
-              context,
-              LoginScreen.route,
-              arguments: destination,
-            );
-            return;
-          }
-          Navigator.pushNamed(context, destination);
-        },
-      ),
+      bottomNavigationBar: widget.onTabSelected == null
+          ? PremiumBottomNav(
+              currentIndex: 0,
+              onTap: (index) {
+                _selectTab(context, index);
+              },
+            )
+          : null,
       body: SafeArea(
         child: Consumer<AppState>(
           builder: (context, state, _) {
@@ -129,82 +131,84 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           32,
                         ),
                         children: [
-                  _DiscoveryHeader(
-                    greeting: state.discoveryGreeting,
-                    unreadCount: state.unreadNotificationCount,
-                    onNotificationsTap: () async {
-                      if (!state.isSignedIn) {
-                        Navigator.pushNamed(
-                          context,
-                          LoginScreen.route,
-                          arguments: NotificationsScreen.route,
-                        );
-                        return;
-                      }
-                      await state.refreshNotifications();
-                      if (!context.mounted) return;
-                      Navigator.pushNamed(context, NotificationsScreen.route);
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  _SearchAndFilter(
-                    value: state.discoveryQuery,
-                    onChanged: state.updateDiscoveryQuery,
-                    onFilterTap: () => _showFilters(context),
-                  ),
-                  const SizedBox(height: 12),
-                  _LocationPill(
-                    label: state.discoveryLocationLabel,
-                    locations: state.availableDiscoveryLocations,
-                    onSelected: state.selectDiscoveryLocation,
-                    isLocating: state.isLocating,
-                    onUseCurrentLocation: state.locateDevice,
-                  ),
-                  const SizedBox(height: 12),
-                  _DiscoveryCategories(
-                    categories: state.discoveryCategories,
-                    selectedId: state.discoveryCategoryId,
-                    onSelected: state.toggleDiscoveryCategory,
-                  ),
-                  const SizedBox(height: 20),
-                  if (state.isLoading && shops.isEmpty)
-                    const _DiscoveryLoading()
-                  else if (state.discoveryLoadError != null && shops.isEmpty)
-                    _DiscoveryError(onRetry: state.loadInitialData)
-                  else if (shops.isEmpty)
-                    _EmptyDiscovery(
-                      isSearch: state.hasDiscoveryQuery,
-                      onClear: state.clearDiscoveryFilters,
-                    )
-                  else if (state.hasDiscoveryQuery)
-                    _SearchResults(shops: shops)
-                  else ...[
-                    if (featured != null)
-                      _DiscoverySection(
-                        title: 'Destaque para você',
-                        shops: [featured],
-                        viewAllTitle: 'Todas as barbearias',
-                        viewAllShops: shops,
-                      ),
-                    if (openShops.isNotEmpty)
-                      _DiscoverySection(
-                        title: 'Abertas agora',
-                        shops: openShops,
-                        compact: true,
-                      ),
-                    if (nearbyShops.isNotEmpty)
-                      _DiscoverySection(
-                        title: 'Perto de você',
-                        shops: nearbyShops,
-                        compact: true,
-                      ),
-                    if (otherShops.isNotEmpty)
-                      _DiscoverySection(
-                        title: 'Outras barbearias',
-                        shops: otherShops,
-                        compact: true,
-                      ),
-                  ],
+                          _DiscoveryHeader(
+                            greeting: state.discoveryGreeting,
+                            unreadCount: state.unreadNotificationCount,
+                            onNotificationsTap: () async {
+                              if (!state.isSignedIn) {
+                                Navigator.pushNamed(
+                                  context,
+                                  LoginScreen.route,
+                                  arguments: NotificationsScreen.route,
+                                );
+                                return;
+                              }
+                              await state.refreshNotifications();
+                              if (!context.mounted) return;
+                              Navigator.pushNamed(
+                                  context, NotificationsScreen.route);
+                            },
+                          ),
+                          const SizedBox(height: 24),
+                          _SearchAndFilter(
+                            value: state.discoveryQuery,
+                            onChanged: state.updateDiscoveryQuery,
+                            onFilterTap: () => _showFilters(context),
+                          ),
+                          const SizedBox(height: 12),
+                          _LocationPill(
+                            label: state.discoveryLocationLabel,
+                            locations: state.availableDiscoveryLocations,
+                            onSelected: state.selectDiscoveryLocation,
+                            isLocating: state.isLocating,
+                            onUseCurrentLocation: state.locateDevice,
+                          ),
+                          const SizedBox(height: 12),
+                          _DiscoveryCategories(
+                            categories: state.discoveryCategories,
+                            selectedId: state.discoveryCategoryId,
+                            onSelected: state.toggleDiscoveryCategory,
+                          ),
+                          const SizedBox(height: 20),
+                          if (state.isLoading && shops.isEmpty)
+                            const _DiscoveryLoading()
+                          else if (state.discoveryLoadError != null &&
+                              shops.isEmpty)
+                            _DiscoveryError(onRetry: state.loadInitialData)
+                          else if (shops.isEmpty)
+                            _EmptyDiscovery(
+                              isSearch: state.hasDiscoveryQuery,
+                              onClear: state.clearDiscoveryFilters,
+                            )
+                          else if (state.hasDiscoveryQuery)
+                            _SearchResults(shops: shops)
+                          else ...[
+                            if (featured != null)
+                              _DiscoverySection(
+                                title: 'Destaque para você',
+                                shops: [featured],
+                                viewAllTitle: 'Todas as barbearias',
+                                viewAllShops: shops,
+                              ),
+                            if (openShops.isNotEmpty)
+                              _DiscoverySection(
+                                title: 'Abertas agora',
+                                shops: openShops,
+                                compact: true,
+                              ),
+                            if (nearbyShops.isNotEmpty)
+                              _DiscoverySection(
+                                title: 'Perto de você',
+                                shops: nearbyShops,
+                                compact: true,
+                              ),
+                            if (otherShops.isNotEmpty)
+                              _DiscoverySection(
+                                title: 'Outras barbearias',
+                                shops: otherShops,
+                                compact: true,
+                              ),
+                          ],
                         ],
                       ),
                     ),
@@ -216,6 +220,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
       ),
     );
+  }
+
+  void _selectTab(BuildContext context, int index) {
+    final shellSelection = widget.onTabSelected;
+    if (shellSelection != null) {
+      shellSelection(index);
+      return;
+    }
+    final state = context.read<AppState>();
+    if (index == 0) return;
+    final destination = switch (index) {
+      1 => FavoritesScreen.route,
+      2 => HistoryScreen.route,
+      3 => ProfileScreen.route,
+      _ => HomeScreen.route,
+    };
+    if (!state.isSignedIn) {
+      Navigator.pushNamed(
+        context,
+        LoginScreen.route,
+        arguments: destination,
+      );
+      return;
+    }
+    Navigator.pushNamed(context, destination);
   }
 
   void _showFilters(BuildContext context) {
@@ -1398,7 +1427,8 @@ class _EmptyDiscovery extends StatelessWidget {
           const Text(
             'Tente alterar a busca, os filtros ou a localização.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.muted, fontSize: 14, height: 1.45),
+            style:
+                TextStyle(color: AppColors.muted, fontSize: 14, height: 1.45),
           ),
           const SizedBox(height: 14),
           OutlinedButton(
@@ -1445,7 +1475,8 @@ class _DiscoveryError extends StatelessWidget {
           const Text(
             'Verifique sua conexão e tente novamente.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.muted, fontSize: 14, height: 1.45),
+            style:
+                TextStyle(color: AppColors.muted, fontSize: 14, height: 1.45),
           ),
           const SizedBox(height: 16),
           FilledButton.icon(

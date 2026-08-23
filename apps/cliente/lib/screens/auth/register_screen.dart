@@ -4,11 +4,13 @@ import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../core/app_constants.dart';
+import '../../core/auth_return_intent.dart';
 import '../../providers/app_mode_controller.dart';
 import '../../providers/app_state.dart';
 import '../../screens/mode_selection_screen.dart';
 import '../../screens/professional_mode_screen.dart';
 import '../../theme/app_colors.dart';
+import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -83,15 +85,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
         if (!mounted) return;
         final returnRoute = ModalRoute.of(context)?.settings.arguments;
+        if (returnRoute is AuthReturnIntent &&
+            returnRoute.onAuthenticated != null) {
+          navigator.popUntil(
+            (route) => route.settings.name == LoginScreen.route,
+          );
+          navigator.pop();
+          await returnRoute.onAuthenticated!();
+          return;
+        }
         navigator.pushReplacementNamed(
-          returnRoute is String
-              ? returnRoute
-              : appState.teamInvitationMessage != null ||
-                      appState.teamInvitationError != null
-                  ? ModeSelectionScreen.route
-                  : ProfessionalModeScreen.routeFor(
-                      modeController.currentMode,
-                    ),
+          returnRoute is AuthReturnIntent
+              ? returnRoute.route
+              : returnRoute is String
+                  ? returnRoute
+                  : appState.teamInvitationMessage != null ||
+                          appState.teamInvitationError != null
+                      ? ModeSelectionScreen.route
+                      : ProfessionalModeScreen.routeFor(
+                          modeController.currentMode,
+                        ),
         );
       }
     } catch (error) {

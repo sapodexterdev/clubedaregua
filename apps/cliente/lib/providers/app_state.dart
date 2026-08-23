@@ -19,14 +19,42 @@ import '../services/location_service.dart';
 class AppState extends ChangeNotifier {
   static const discoveryRadiusKm = 10.0;
 
-  final _barberRepository = BarberRepository();
-  final _appointmentRepository = AppointmentRepository();
-  final _clientProfileRepository = const ClientProfileRepository();
-  final _favoriteRepository = FavoriteRepository();
-  final _notificationRepository = const NotificationRepository();
-  final _teamInvitationRepository = const TeamInvitationRepository();
-  final _userAccessRepository = const UserAccessRepository();
-  final _locationService = const LocationService();
+  AppState({
+    AuthService? authService,
+    BarberRepository? barberRepository,
+    AppointmentRepository? appointmentRepository,
+    ClientProfileRepository? clientProfileRepository,
+    FavoriteRepository? favoriteRepository,
+    NotificationRepository? notificationRepository,
+    TeamInvitationRepository? teamInvitationRepository,
+    UserAccessRepository? userAccessRepository,
+    LocationService? locationService,
+  })  : _authService = authService ?? AuthService(),
+        _barberRepository = barberRepository ?? const BarberRepository(),
+        _appointmentRepository =
+            appointmentRepository ?? const AppointmentRepository(),
+        _clientProfileRepository =
+            clientProfileRepository ?? const ClientProfileRepository(),
+        _favoriteRepository = favoriteRepository ?? const FavoriteRepository(),
+        _notificationRepository =
+            notificationRepository ?? const NotificationRepository(),
+        _teamInvitationRepository =
+            teamInvitationRepository ?? const TeamInvitationRepository(),
+        _userAccessRepository =
+            userAccessRepository ?? const UserAccessRepository(),
+        _locationService = locationService ?? const LocationService();
+
+  final AuthService _authService;
+  final BarberRepository _barberRepository;
+  final AppointmentRepository _appointmentRepository;
+  final ClientProfileRepository _clientProfileRepository;
+  final FavoriteRepository _favoriteRepository;
+  final NotificationRepository _notificationRepository;
+  final TeamInvitationRepository _teamInvitationRepository;
+  final UserAccessRepository _userAccessRepository;
+  final LocationService _locationService;
+  var _accountGeneration = 0;
+  String? _accountUserId;
 
   bool isLoading = false;
   bool isLoadingAvailability = false;
@@ -226,7 +254,13 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> loadInitialData() async {
+    final requestedUserId = _authService.currentUser?.id;
+    if (requestedUserId != null && requestedUserId != _accountUserId) {
+      _activateAccount(requestedUserId);
+      isLoading = false;
+    }
     if (isLoading) return;
+    var generation = _accountGeneration;
 
     isLoading = true;
     discoveryLoadError = null;
@@ -237,6 +271,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
 
     await _teamInvitationRepository.capturePendingInvitation();
+    if (generation != _accountGeneration) return;
 
     final barbersFuture = _barberRepository.fetchBarbers();
     final categoriesFuture = _barberRepository.fetchCategories();
@@ -244,7 +279,7 @@ class AppState extends ChangeNotifier {
     final appointmentsFuture = _appointmentRepository.fetchAppointments();
     final favoritesFuture = _favoriteRepository.fetchFavoriteShopIds();
     final shopsFuture = _barberRepository.fetchShopIdentities();
-    final sessionFuture = AuthService().restoreSession();
+    final sessionFuture = _authService.restoreSession();
 
     final fetchedBarbers = await barbersFuture;
     final fetchedCategories = await categoriesFuture;
@@ -254,24 +289,32 @@ class AppState extends ChangeNotifier {
       fetchedAppointments = await appointmentsFuture;
     } catch (_) {
       fetchedAppointments = const [];
-      appointmentsLoadError = 'Não foi possível carregar sua agenda.';
+      if (generation == _accountGeneration) {
+        appointmentsLoadError = 'Não foi possível carregar sua agenda.';
+      }
     }
     List<ShopIdentity> fetchedShopIdentities;
     try {
       fetchedShopIdentities = await shopsFuture;
     } catch (_) {
       fetchedShopIdentities = const [];
-      discoveryLoadError =
-          'Não foi possível carregar as barbearias. Verifique sua conexão.';
+      if (generation == _accountGeneration) {
+        discoveryLoadError =
+            'Não foi possível carregar as barbearias. Verifique sua conexão.';
+      }
     }
     Set<String> fetchedFavoriteIds;
     try {
       fetchedFavoriteIds = await favoritesFuture;
     } catch (_) {
       fetchedFavoriteIds = <String>{};
-      favoritesLoadError = 'Não foi possível carregar seus favoritos.';
+      if (generation == _accountGeneration) {
+        favoritesLoadError = 'Não foi possível carregar seus favoritos.';
+      }
     }
     final session = await sessionFuture;
+    if (generation != _accountGeneration) return;
+    generation = _activateAccount(session?.user.id);
     ClientProfile? clientProfile;
     UserAccess userAccess = const UserAccess.client();
     if (session != null) {
@@ -280,27 +323,40 @@ class AppState extends ChangeNotifier {
       try {
         final invitation =
             await _teamInvitationRepository.acceptPendingInvitation();
+        if (generation != _accountGeneration) return;
         if (invitation != null) {
           teamInvitationMessage =
               'Convite aceito. Seu acesso profissional foi liberado.';
         }
       } catch (error) {
+        if (generation != _accountGeneration) return;
         teamInvitationError = _cleanTeamInvitationError(error);
       }
       try {
         clientProfile = await _clientProfileRepository.fetchProfile();
+        if (generation != _accountGeneration) return;
       } catch (_) {
+        if (generation != _accountGeneration) return;
         clientProfileError = 'Não foi possível carregar os dados da conta.';
       }
       try {
-        notifications = await _notificationRepository.fetchNotifications();
+        final fetchedNotifications =
+            await _notificationRepository.fetchNotifications();
+        if (generation != _accountGeneration ||
+            session.user.id != _authService.currentUser?.id) {
+          return;
+        }
+        notifications = fetchedNotifications;
       } catch (_) {
+        if (generation != _accountGeneration) return;
         notifications = const [];
         notificationsLoadError = 'Não foi possível carregar suas notificações.';
       }
       try {
         userAccess = await _userAccessRepository.fetchAccess();
+        if (generation != _accountGeneration) return;
       } catch (_) {
+        if (generation != _accountGeneration) return;
         userAccess = const UserAccess.client();
       }
     } else {
@@ -315,6 +371,7 @@ class AppState extends ChangeNotifier {
                     ? null
                     : fetchedBarbers.first.barberShopId,
               );
+    if (generation != _accountGeneration) return;
 
     _applyData(
       barbersData: fetchedBarbers,
@@ -334,6 +391,7 @@ class AppState extends ChangeNotifier {
       ..clear()
       ..addAll(fetchedFavoriteIds);
     await refreshAvailableTimes();
+    if (generation != _accountGeneration) return;
 
     isLoading = false;
     notifyListeners();
@@ -463,8 +521,61 @@ class AppState extends ChangeNotifier {
     refreshAvailableTimes();
   }
 
+  int _activateAccount(String? userId) {
+    if (userId != _accountUserId) {
+      _accountGeneration++;
+      _accountUserId = userId;
+      _clearPrivateState();
+    }
+    isSignedIn = userId != null;
+    return _accountGeneration;
+  }
+
+  ({int generation, String userId})? _captureAccountScope() {
+    final userId = _accountUserId;
+    if (!isSignedIn || userId == null || userId.isEmpty) return null;
+    return (generation: _accountGeneration, userId: userId);
+  }
+
+  bool _isAccountScopeActive(
+    ({int generation, String userId}) scope,
+  ) {
+    return isSignedIn &&
+        scope.generation == _accountGeneration &&
+        scope.userId == _accountUserId &&
+        scope.userId == _authService.currentUser?.id;
+  }
+
+  void _clearPrivateState() {
+    currentUserName = null;
+    currentUserEmail = null;
+    currentUserPhone = null;
+    professionalRoles = const <String>{};
+    professionalShopIds = const <String>{};
+    appointments = const [];
+    notifications = const [];
+    _favoriteShopIds.clear();
+    _favoriteUpdates.clear();
+    lastBookingRequestCreated = false;
+    lastBookingErrorMessage = null;
+    lastBookingReceipt = null;
+    teamInvitationMessage = null;
+    teamInvitationError = null;
+    appointmentsLoadError = null;
+    favoritesLoadError = null;
+    clientProfileError = null;
+    notificationsLoadError = null;
+    isLoadingAppointments = false;
+    isLoadingFavorites = false;
+    isLoadingClientProfile = false;
+    isLoadingNotifications = false;
+  }
+
   void requireSignedIn() {
-    isSignedIn = AuthService().isSignedIn;
+    final nextSignedIn = _authService.isSignedIn;
+    final nextUserId = nextSignedIn ? _authService.currentUser?.id : null;
+    _activateAccount(nextUserId);
+    isSignedIn = nextSignedIn && nextUserId != null;
     notifyListeners();
   }
 
@@ -585,6 +696,8 @@ class AppState extends ChangeNotifier {
     required String customerPhone,
     required String paymentMethodLabel,
   }) async {
+    final accountScope = _captureAccountScope();
+    if (accountScope == null) return false;
     final barber = selectedBarber;
     final service = selectedService;
     final shop = selectedBarbershop;
@@ -593,12 +706,12 @@ class AppState extends ChangeNotifier {
     final requestedDate = selectedDate;
     final requestedTime = selectedTime;
     await refreshAvailableTimes(preserveSelectedTime: true);
+    if (!_isAccountScopeActive(accountScope)) return false;
     if (!availableTimes.contains(requestedTime)) return false;
 
     lastBookingErrorMessage = null;
     try {
-      lastBookingRequestCreated =
-          await _appointmentRepository.createAppointment(
+      final created = await _appointmentRepository.createAppointment(
         barberId: barber.id,
         serviceId: service.id,
         date: requestedDate,
@@ -609,7 +722,10 @@ class AppState extends ChangeNotifier {
         customerPhone: customerPhone,
         paymentMethodLabel: paymentMethodLabel,
       );
+      if (!_isAccountScopeActive(accountScope)) return false;
+      lastBookingRequestCreated = created;
     } catch (error) {
+      if (!_isAccountScopeActive(accountScope)) return false;
       lastBookingRequestCreated = false;
       final message = error.toString().toLowerCase();
       if (message.contains('cliente bloqueado para agendamentos')) {
@@ -628,9 +744,13 @@ class AppState extends ChangeNotifier {
         total: service.price,
       );
       try {
-        appointments = await _appointmentRepository.fetchAppointments();
+        final fetchedAppointments =
+            await _appointmentRepository.fetchAppointments();
+        if (!_isAccountScopeActive(accountScope)) return false;
+        appointments = fetchedAppointments;
         appointmentsLoadError = null;
       } catch (_) {
+        if (!_isAccountScopeActive(accountScope)) return false;
         appointmentsLoadError = 'Não foi possível atualizar sua agenda.';
       }
     }
@@ -639,9 +759,12 @@ class AppState extends ChangeNotifier {
   }
 
   Future<bool> cancelAppointment(String appointmentId) async {
+    final accountScope = _captureAccountScope();
+    if (accountScope == null) return false;
     try {
       final cancelled =
           await _appointmentRepository.cancelAppointment(appointmentId);
+      if (!_isAccountScopeActive(accountScope)) return false;
       if (cancelled) await refreshAppointments();
       return cancelled;
     } catch (_) {
@@ -650,78 +773,105 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> refreshAppointments() async {
-    if (isLoadingAppointments) return;
+    final accountScope = _captureAccountScope();
+    if (accountScope == null || isLoadingAppointments) return;
     isLoadingAppointments = true;
     appointmentsLoadError = null;
     notifyListeners();
     try {
-      appointments = await _appointmentRepository.fetchAppointments();
+      final fetchedAppointments =
+          await _appointmentRepository.fetchAppointments();
+      if (!_isAccountScopeActive(accountScope)) return;
+      appointments = fetchedAppointments;
     } catch (_) {
+      if (!_isAccountScopeActive(accountScope)) return;
       appointmentsLoadError = 'Não foi possível carregar sua agenda.';
     } finally {
-      isLoadingAppointments = false;
-      notifyListeners();
+      if (_isAccountScopeActive(accountScope)) {
+        isLoadingAppointments = false;
+        notifyListeners();
+      }
     }
   }
 
   Future<void> refreshFavorites() async {
-    if (isLoadingFavorites) return;
+    final accountScope = _captureAccountScope();
+    if (accountScope == null || isLoadingFavorites) return;
     isLoadingFavorites = true;
     favoritesLoadError = null;
     notifyListeners();
     try {
       final ids = await _favoriteRepository.fetchFavoriteShopIds();
+      if (!_isAccountScopeActive(accountScope)) return;
       _favoriteShopIds
         ..clear()
         ..addAll(ids);
     } catch (_) {
+      if (!_isAccountScopeActive(accountScope)) return;
       favoritesLoadError = 'Não foi possível carregar seus favoritos.';
     } finally {
-      isLoadingFavorites = false;
-      notifyListeners();
+      if (_isAccountScopeActive(accountScope)) {
+        isLoadingFavorites = false;
+        notifyListeners();
+      }
     }
   }
 
   Future<void> refreshClientProfile() async {
-    if (!isSignedIn || isLoadingClientProfile) return;
+    final accountScope = _captureAccountScope();
+    if (accountScope == null || isLoadingClientProfile) return;
     isLoadingClientProfile = true;
     clientProfileError = null;
     notifyListeners();
     try {
       final profile = await _clientProfileRepository.fetchProfile();
+      if (!_isAccountScopeActive(accountScope)) return;
       if (profile != null) {
         currentUserName = profile.fullName;
         currentUserEmail = profile.email;
         currentUserPhone = profile.phone;
       }
     } catch (_) {
+      if (!_isAccountScopeActive(accountScope)) return;
       clientProfileError = 'Não foi possível carregar os dados da conta.';
     } finally {
-      isLoadingClientProfile = false;
-      notifyListeners();
+      if (_isAccountScopeActive(accountScope)) {
+        isLoadingClientProfile = false;
+        notifyListeners();
+      }
     }
   }
 
   Future<void> refreshNotifications() async {
-    if (!isSignedIn || isLoadingNotifications) return;
+    final accountScope = _captureAccountScope();
+    if (accountScope == null || isLoadingNotifications) return;
     isLoadingNotifications = true;
     notificationsLoadError = null;
     notifyListeners();
     try {
-      notifications = await _notificationRepository.fetchNotifications();
+      final fetchedNotifications =
+          await _notificationRepository.fetchNotifications();
+      if (!_isAccountScopeActive(accountScope)) return;
+      notifications = fetchedNotifications;
     } catch (_) {
+      if (!_isAccountScopeActive(accountScope)) return;
       notificationsLoadError = 'Não foi possível carregar suas notificações.';
     } finally {
-      isLoadingNotifications = false;
-      notifyListeners();
+      if (_isAccountScopeActive(accountScope)) {
+        isLoadingNotifications = false;
+        notifyListeners();
+      }
     }
   }
 
   Future<bool> markNotificationAsRead(String notificationId) async {
+    final accountScope = _captureAccountScope();
+    if (accountScope == null) return false;
     final index = notifications.indexWhere((item) => item.id == notificationId);
     if (index < 0 || notifications[index].isRead) return true;
     try {
       final updated = await _notificationRepository.markAsRead(notificationId);
+      if (!_isAccountScopeActive(accountScope)) return false;
       if (!updated) return false;
       final item = notifications[index];
       notifications = List.of(notifications)
@@ -740,9 +890,12 @@ class AppState extends ChangeNotifier {
   }
 
   Future<bool> markAllNotificationsAsRead() async {
+    final accountScope = _captureAccountScope();
+    if (accountScope == null) return false;
     if (unreadNotificationCount == 0) return true;
     try {
       final updated = await _notificationRepository.markAllAsRead();
+      if (!_isAccountScopeActive(accountScope)) return false;
       if (!updated) return false;
       notifications = notifications
           .map(
@@ -766,7 +919,8 @@ class AppState extends ChangeNotifier {
     required String fullName,
     required String phone,
   }) async {
-    if (!isSignedIn || isLoadingClientProfile) return false;
+    final accountScope = _captureAccountScope();
+    if (accountScope == null || isLoadingClientProfile) return false;
     isLoadingClientProfile = true;
     clientProfileError = null;
     notifyListeners();
@@ -775,37 +929,40 @@ class AppState extends ChangeNotifier {
         fullName: fullName,
         phone: phone,
       );
+      if (!_isAccountScopeActive(accountScope)) return false;
       if (updated) {
         currentUserName = fullName.trim();
         currentUserPhone = phone.trim();
       }
       return updated;
     } catch (_) {
+      if (!_isAccountScopeActive(accountScope)) return false;
       clientProfileError = 'Não foi possível salvar seus dados.';
       return false;
     } finally {
-      isLoadingClientProfile = false;
-      notifyListeners();
+      if (_isAccountScopeActive(accountScope)) {
+        isLoadingClientProfile = false;
+        notifyListeners();
+      }
     }
   }
 
   Future<void> signOut() async {
-    await AuthService().signOut();
+    _accountGeneration++;
+    _accountUserId = null;
     isSignedIn = false;
-    currentUserName = null;
-    currentUserEmail = null;
-    currentUserPhone = null;
-    professionalRoles = const <String>{};
-    professionalShopIds = const <String>{};
-    appointments = const [];
-    notifications = const [];
-    _favoriteShopIds.clear();
+    isLoading = false;
+    _clearPrivateState();
     notifyListeners();
+    await _authService.signOut();
   }
 
   Future<bool> toggleFavorite(PublicBarbershop shop) async {
+    final accountScope = _captureAccountScope();
     final shopId = shop.identity.id;
-    if (!isSignedIn || shopId.isEmpty || _favoriteUpdates.contains(shopId)) {
+    if (accountScope == null ||
+        shopId.isEmpty ||
+        _favoriteUpdates.contains(shopId)) {
       return false;
     }
     _favoriteUpdates.add(shopId);
@@ -816,6 +973,7 @@ class AppState extends ChangeNotifier {
       final success = removing
           ? await _favoriteRepository.removeFavorite(shopId)
           : await _favoriteRepository.addFavorite(shopId);
+      if (!_isAccountScopeActive(accountScope)) return false;
       if (!success) return false;
       if (removing) {
         _favoriteShopIds.remove(shopId);
@@ -824,11 +982,14 @@ class AppState extends ChangeNotifier {
       }
       return true;
     } catch (_) {
+      if (!_isAccountScopeActive(accountScope)) return false;
       favoritesLoadError = 'Não foi possível atualizar o favorito.';
       return false;
     } finally {
-      _favoriteUpdates.remove(shopId);
-      notifyListeners();
+      if (_isAccountScopeActive(accountScope)) {
+        _favoriteUpdates.remove(shopId);
+        notifyListeners();
+      }
     }
   }
 

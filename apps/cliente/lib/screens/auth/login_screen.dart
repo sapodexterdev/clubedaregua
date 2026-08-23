@@ -4,6 +4,7 @@ import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../core/app_constants.dart';
+import '../../core/auth_return_intent.dart';
 import '../../providers/app_mode_controller.dart';
 import '../../providers/app_state.dart';
 import '../../screens/client/home_screen.dart';
@@ -65,16 +66,24 @@ class _LoginScreenState extends State<LoginScreen> {
         );
         if (!mounted) return;
         final returnRoute = ModalRoute.of(context)?.settings.arguments;
+        if (returnRoute is AuthReturnIntent &&
+            returnRoute.onAuthenticated != null) {
+          Navigator.pop(context);
+          await returnRoute.onAuthenticated!();
+          return;
+        }
         Navigator.pushReplacementNamed(
           context,
-          returnRoute is String
-              ? returnRoute
-              : state.teamInvitationMessage != null ||
-                      state.teamInvitationError != null
-                  ? ModeSelectionScreen.route
-                  : ProfessionalModeScreen.routeFor(
-                      modeController.currentMode,
-                    ),
+          returnRoute is AuthReturnIntent
+              ? returnRoute.route
+              : returnRoute is String
+                  ? returnRoute
+                  : state.teamInvitationMessage != null ||
+                          state.teamInvitationError != null
+                      ? ModeSelectionScreen.route
+                      : ProfessionalModeScreen.routeFor(
+                          modeController.currentMode,
+                        ),
         );
       }
     } catch (error) {
@@ -207,8 +216,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: () => Navigator.pushNamed(
                         context,
                         RegisterScreen.route,
-                        arguments:
-                            ModalRoute.of(context)?.settings.arguments,
+                        arguments: ModalRoute.of(context)?.settings.arguments,
                       ),
                       child: const Text('Criar conta'),
                     ),

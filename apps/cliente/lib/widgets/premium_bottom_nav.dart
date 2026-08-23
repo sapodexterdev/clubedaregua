@@ -24,7 +24,7 @@ class PremiumBottomNav extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Container(
-        height: 76,
+        height: 72,
         decoration: const BoxDecoration(
           color: AppColors.background,
           border: Border(top: BorderSide(color: AppColors.stroke)),
