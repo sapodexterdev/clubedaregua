@@ -45,10 +45,7 @@ class ProfileScreen extends StatelessWidget {
             : null,
         title: Text(
           'Meu perfil',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-              ),
+          style: Theme.of(context).textTheme.headlineSmall,
         ),
       ),
       bottomNavigationBar: showBottomNavigation && onTabSelected == null
@@ -66,11 +63,16 @@ class ProfileScreen extends StatelessWidget {
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(
-                  maxWidth: CDRSizeTokens.contentMaxWidth,
+                  maxWidth: CDRSizeTokens.clientFrameMaxWidth,
                 ),
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 32),
+                  padding: const EdgeInsets.fromLTRB(
+                    CDRSpacingTokens.xxl,
+                    CDRSpacingTokens.sm,
+                    CDRSpacingTokens.xxl,
+                    CDRSpacingTokens.xxxl,
+                  ),
                   children: [
                     _IdentityCard(state: state),
                     if (state.clientProfileError != null) ...[
@@ -182,11 +184,12 @@ class ProfileScreen extends StatelessWidget {
                       icon: const Icon(Icons.logout_rounded),
                       label: const Text('Sair da conta'),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.text,
+                        foregroundColor: AppColors.error,
                         minimumSize: const Size.fromHeight(54),
-                        side: const BorderSide(color: AppColors.stroke),
+                        side: const BorderSide(color: AppColors.error),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius:
+                              BorderRadius.circular(CDRRadiusTokens.medium),
                         ),
                       ),
                     ),
@@ -252,16 +255,17 @@ class ProfileScreen extends StatelessWidget {
     final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: AppColors.card,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (sheetContext) => Padding(
+      builder: (sheetContext) => SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(
-          20,
-          10,
-          20,
-          MediaQuery.viewInsetsOf(sheetContext).bottom + 24,
+          CDRSpacingTokens.xl,
+          CDRSpacingTokens.sm,
+          CDRSpacingTokens.xl,
+          MediaQuery.viewInsetsOf(sheetContext).bottom + CDRSpacingTokens.xxl,
         ),
         child: Form(
           key: formKey,
@@ -282,10 +286,7 @@ class ProfileScreen extends StatelessWidget {
               const SizedBox(height: 22),
               Text(
                 'Editar dados pessoais',
-                style: Theme.of(sheetContext).textTheme.headlineSmall?.copyWith(
-                      fontSize: 23,
-                      fontWeight: FontWeight.w800,
-                    ),
+                style: Theme.of(sheetContext).textTheme.headlineSmall,
               ),
               const SizedBox(height: 18),
               TextFormField(
@@ -320,18 +321,21 @@ class ProfileScreen extends StatelessWidget {
                 },
               ),
               const SizedBox(height: 18),
-              FilledButton(
-                onPressed: () async {
-                  if (!(formKey.currentState?.validate() ?? false)) return;
-                  final success = await state.updateClientProfile(
-                    fullName: nameController.text,
-                    phone: phoneController.text,
-                  );
-                  if (sheetContext.mounted) {
-                    Navigator.pop(sheetContext, success);
-                  }
-                },
-                child: const Text('Salvar alterações'),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () async {
+                    if (!(formKey.currentState?.validate() ?? false)) return;
+                    final success = await state.updateClientProfile(
+                      fullName: nameController.text,
+                      phone: phoneController.text,
+                    );
+                    if (sheetContext.mounted) {
+                      Navigator.pop(sheetContext, success);
+                    }
+                  },
+                  child: const Text('Salvar alterações'),
+                ),
               ),
             ],
           ),
@@ -341,9 +345,7 @@ class ProfileScreen extends StatelessWidget {
     nameController.dispose();
     phoneController.dispose();
     if (saved == true && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Dados atualizados com sucesso.')),
-      );
+      CDRSnackbar.success(context, 'Dados atualizados com sucesso.');
     }
   }
 
@@ -356,20 +358,23 @@ class ProfileScreen extends StatelessWidget {
     try {
       await AuthService().recoverPassword(email);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Enviamos o link de segurança para $email.')),
+        CDRSnackbar.success(
+          context,
+          'Enviamos o link de segurança para $email.',
         );
       }
-    } on AuthException catch (error) {
+    } on AuthException {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message)),
+        CDRSnackbar.error(
+          context,
+          'Não foi possível enviar o link de segurança. Tente novamente.',
         );
       }
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Não foi possível enviar o link.')),
+        CDRSnackbar.error(
+          context,
+          'Não foi possível enviar o link de segurança. Tente novamente.',
         );
       }
     }
@@ -426,35 +431,16 @@ class _IdentityCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final name = state.currentUserName?.trim();
     final displayName = name == null || name.isEmpty ? 'Cliente' : name;
-    final initial = displayName.substring(0, 1).toUpperCase();
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.stroke),
-      ),
+    return CDRCard(
+      padding: const EdgeInsets.all(CDRSpacingTokens.lg),
       child: Row(
         children: [
-          Container(
-            width: 62,
-            height: 62,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppColors.orange.withOpacity(.12),
-              shape: BoxShape.circle,
-              border: Border.all(color: AppColors.orange),
-            ),
-            child: Text(
-              initial,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: AppColors.orange,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
+          CDRAvatar(
+            name: displayName,
+            size: 62,
+            excludeFromSemantics: true,
           ),
-          const SizedBox(width: 15),
+          const SizedBox(width: CDRSpacingTokens.lg),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -506,11 +492,8 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
         text,
-        style: const TextStyle(
+        style: CDRTypographyTokens.overline.copyWith(
           color: AppColors.orange,
-          fontSize: 12,
-          letterSpacing: 1.3,
-          fontWeight: FontWeight.w800,
         ),
       );
 }
@@ -521,11 +504,12 @@ class _ActionGroup extends StatelessWidget {
   final List<Widget> children;
 
   @override
-  Widget build(BuildContext context) => Container(
-        decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.stroke),
+  Widget build(BuildContext context) => Material(
+        color: AppColors.card,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(CDRRadiusTokens.large),
+          side: const BorderSide(color: AppColors.stroke),
         ),
         child: Column(
           children: [
@@ -560,32 +544,38 @@ class _ProfileAction extends StatelessWidget {
         child: ListTile(
           onTap: onTap,
           selected: selected,
-          selectedTileColor: AppColors.orange.withOpacity(.06),
-          minVerticalPadding: 13,
+          selectedTileColor: AppColors.orange,
+          minVerticalPadding: CDRSpacingTokens.md,
           leading: Container(
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.orange.withOpacity(.1),
-              borderRadius: BorderRadius.circular(12),
+              color: selected
+                  ? AppColors.onGold.withOpacity(.12)
+                  : AppColors.orange.withOpacity(.1),
+              borderRadius: BorderRadius.circular(CDRRadiusTokens.medium),
             ),
-            child: Icon(icon, color: AppColors.orange, size: 21),
+            child: Icon(
+              icon,
+              color: selected ? AppColors.onGold : AppColors.orange,
+              size: CDRSizeTokens.icon,
+            ),
           ),
           title: Text(
             title,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+            style: CDRTypographyTokens.label.copyWith(
+              color: selected ? AppColors.onGold : AppColors.text,
+            ),
           ),
           subtitle: Text(
             subtitle,
-            style: const TextStyle(
-              color: AppColors.muted,
-              fontSize: 13,
-              height: 1.4,
+            style: CDRTypographyTokens.bodySmall.copyWith(
+              color: selected ? AppColors.onGold : AppColors.muted,
             ),
           ),
           trailing: Icon(
             selected ? Icons.check_circle_rounded : Icons.chevron_right_rounded,
-            color: selected ? AppColors.orange : AppColors.muted,
+            color: selected ? AppColors.onGold : AppColors.muted,
           ),
         ),
       );
@@ -597,24 +587,15 @@ class _ErrorMessage extends StatelessWidget {
   final String message;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(13),
-        decoration: BoxDecoration(
-          color: AppColors.elevated,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.cloud_off_outlined, color: AppColors.orange),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(color: AppColors.muted, fontSize: 12),
-              ),
-            ),
-          ],
-        ),
+  Widget build(BuildContext context) => CDRStatePanel(
+        icon: Icons.error_outline_rounded,
+        iconColor: AppColors.error,
+        title: 'Dados temporariamente indisponíveis',
+        message: message,
+        layout: CDRStatePanelLayout.inline,
+        liveRegion: true,
+        backgroundColor: AppColors.elevated,
+        borderColor: AppColors.error.withOpacity(.45),
       );
 }
 
@@ -622,54 +603,15 @@ class _ProfileLoginRequired extends StatelessWidget {
   const _ProfileLoginRequired();
 
   @override
-  Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  color: AppColors.orange.withOpacity(.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.person_outline_rounded,
-                  color: AppColors.orange,
-                  size: 34,
-                ),
-              ),
-              const SizedBox(height: 18),
-              Text(
-                'Seu espaço no Clube',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
-              const SizedBox(height: 7),
-              const Text(
-                'Entre para acessar seus dados, agenda e favoritos.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppColors.muted,
-                  fontSize: 14,
-                  height: 1.45,
-                ),
-              ),
-              const SizedBox(height: 20),
-              FilledButton(
-                onPressed: () => Navigator.pushNamed(
-                  context,
-                  LoginScreen.route,
-                  arguments: ProfileScreen.route,
-                ),
-                child: const Text('Entrar na minha conta'),
-              ),
-            ],
-          ),
+  Widget build(BuildContext context) => CDREmptyState(
+        icon: Icons.person_outline_rounded,
+        title: 'Seu espaço no Clube',
+        message: 'Entre para acessar seus dados, agenda e favoritos.',
+        actionLabel: 'Entrar na minha conta',
+        onAction: () => Navigator.pushNamed(
+          context,
+          LoginScreen.route,
+          arguments: ProfileScreen.route,
         ),
       );
 }

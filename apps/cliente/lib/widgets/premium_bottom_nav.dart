@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 
 import '../theme/app_colors.dart';
 
@@ -20,11 +21,17 @@ class PremiumBottomNav extends StatelessWidget {
       _NavItem(Icons.calendar_month_outlined, 'Agenda'),
       _NavItem(Icons.person_outline_rounded, 'Perfil'),
     ];
+    final captionHeight = MediaQuery.textScalerOf(context).scale(
+          CDRTypographyTokens.caption.fontSize!,
+        ) *
+        CDRTypographyTokens.caption.height!;
+    final contentHeight = 44 + captionHeight;
+    final navigationHeight = contentHeight > 72 ? contentHeight : 72.0;
 
     return SafeArea(
       top: false,
       child: Container(
-        height: 72,
+        height: navigationHeight,
         decoration: const BoxDecoration(
           color: AppColors.background,
           border: Border(top: BorderSide(color: AppColors.stroke)),
@@ -41,37 +48,38 @@ class PremiumBottomNav extends StatelessWidget {
                 label: item.label,
                 child: InkWell(
                   onTap: () => onTap(index),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    padding: const EdgeInsets.only(top: 9, bottom: 7),
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? AppColors.orange.withOpacity(.08)
-                          : Colors.transparent,
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          item.icon,
-                          color: selected ? AppColors.orange : AppColors.muted,
-                          size: 24,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          item.label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
+                  child: ExcludeSemantics(
+                    child: AnimatedContainer(
+                      duration: CDRDurationTokens.fast,
+                      padding: const EdgeInsets.only(top: 9, bottom: 7),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? AppColors.orange.withOpacity(.08)
+                            : AppColors.background.withOpacity(0),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            item.icon,
                             color:
                                 selected ? AppColors.orange : AppColors.muted,
-                            fontSize: 12,
-                            height: 1.2,
-                            fontWeight:
-                                selected ? FontWeight.w900 : FontWeight.w700,
+                            size: 24,
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: CDRSpacingTokens.xs),
+                          Text(
+                            item.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: CDRTypographyTokens.caption.copyWith(
+                              color:
+                                  selected ? AppColors.orange : AppColors.muted,
+                              fontWeight:
+                                  selected ? FontWeight.w700 : FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

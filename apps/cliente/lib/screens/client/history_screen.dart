@@ -77,10 +77,7 @@ class _HistoryScreenState extends State<HistoryScreen>
             : null,
         title: Text(
           'Agenda',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-              ),
+          style: Theme.of(context).textTheme.headlineSmall,
         ),
       ),
       bottomNavigationBar: widget.onTabSelected == null
@@ -108,11 +105,16 @@ class _HistoryScreenState extends State<HistoryScreen>
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(
-                  maxWidth: CDRSizeTokens.contentMaxWidth,
+                  maxWidth: CDRSizeTokens.clientFrameMaxWidth,
                 ),
                 child: ListView.separated(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(18, 10, 18, 28),
+                  padding: const EdgeInsets.fromLTRB(
+                    CDRSpacingTokens.xxl,
+                    CDRSpacingTokens.sm,
+                    CDRSpacingTokens.xxl,
+                    CDRSpacingTokens.xxxl,
+                  ),
                   itemCount: state.appointments.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
@@ -139,7 +141,7 @@ class _HistoryScreenState extends State<HistoryScreen>
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.card,
-        title: const Text('Cancelar solicitação?'),
+        title: const Text('Cancelar agendamento?'),
         content: const Text(
           'O horário será liberado e esta ação não poderá ser desfeita.',
         ),
@@ -148,9 +150,10 @@ class _HistoryScreenState extends State<HistoryScreen>
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Manter'),
           ),
-          FilledButton(
+          TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Cancelar solicitação'),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Cancelar agendamento'),
           ),
         ],
       ),
@@ -160,15 +163,14 @@ class _HistoryScreenState extends State<HistoryScreen>
     final success = await state.cancelAppointment(appointment.id);
     if (!mounted) return;
     setState(() => _cancellingId = null);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success
-              ? 'Solicitação cancelada.'
-              : 'Não foi possível cancelar. Tente novamente.',
-        ),
-      ),
-    );
+    if (success) {
+      CDRSnackbar.success(context, 'Agendamento cancelado.');
+    } else {
+      CDRSnackbar.error(
+        context,
+        'Não foi possível cancelar o agendamento. Tente novamente.',
+      );
+    }
   }
 
   void _navigate(BuildContext context, int index) {
@@ -206,33 +208,23 @@ class _AppointmentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final status = _statusInfo(appointment.status);
-    return Container(
-      padding: const EdgeInsets.all(17),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.stroke),
-      ),
+    return CDRCard(
+      padding: const EdgeInsets.all(CDRSpacingTokens.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  appointment.shopName.isEmpty
-                      ? 'Barbearia'
-                      : appointment.shopName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-              ),
-              _StatusBadge(info: status),
-            ],
+          Text(
+            appointment.shopName.isEmpty ? 'Barbearia' : appointment.shopName,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: CDRSpacingTokens.md),
+          CDRStatusBadge(
+            label: status.label,
+            tone: status.tone,
+            icon: status.icon,
+            semanticLabel: status.semanticLabel,
           ),
           const SizedBox(height: 14),
           _DetailLine(
@@ -265,6 +257,7 @@ class _AppointmentCard extends StatelessWidget {
               if (onCancel != null)
                 TextButton(
                   onPressed: cancelling ? null : onCancel,
+                  style: TextButton.styleFrom(foregroundColor: AppColors.error),
                   child: cancelling
                       ? const CDRLoading.compact(size: 20)
                       : const Text('Cancelar'),
@@ -302,46 +295,48 @@ class _DetailLine extends StatelessWidget {
   }
 }
 
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.info});
-
-  final _StatusInfo info;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-      decoration: BoxDecoration(
-        color: info.color.withOpacity(.1),
-        borderRadius: BorderRadius.circular(99),
-        border: Border.all(color: info.color.withOpacity(.5)),
-      ),
-      child: Text(
-        info.label,
-        style: TextStyle(
-          color: info.color,
-          fontSize: 12,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
-    );
-  }
-}
-
 class _StatusInfo {
-  const _StatusInfo(this.label, this.color);
+  const _StatusInfo(
+    this.label,
+    this.tone,
+    this.icon, {
+    this.semanticLabel,
+  });
 
   final String label;
-  final Color color;
+  final CDRStatusTone tone;
+  final IconData icon;
+  final String? semanticLabel;
 }
 
 _StatusInfo _statusInfo(String status) {
   return switch (status) {
-    'new' => const _StatusInfo('SOLICITADO', AppColors.orange),
-    'contacted' => const _StatusInfo('EM CONTATO', Colors.lightBlueAccent),
-    'converted' => const _StatusInfo('CONFIRMADO', AppColors.success),
-    'cancelled' => const _StatusInfo('CANCELADO', AppColors.muted),
-    _ => const _StatusInfo('EM ANÁLISE', AppColors.muted),
+    'new' => const _StatusInfo(
+        'Processando',
+        CDRStatusTone.info,
+        Icons.schedule_rounded,
+        semanticLabel: 'Processando agendamento',
+      ),
+    'contacted' => const _StatusInfo(
+        'Ação necessária',
+        CDRStatusTone.warning,
+        Icons.notification_important_outlined,
+      ),
+    'converted' => const _StatusInfo(
+        'Confirmado',
+        CDRStatusTone.success,
+        Icons.check_circle_outline_rounded,
+      ),
+    'cancelled' => const _StatusInfo(
+        'Cancelado',
+        CDRStatusTone.neutral,
+        Icons.cancel_outlined,
+      ),
+    _ => const _StatusInfo(
+        'Em atualização',
+        CDRStatusTone.neutral,
+        Icons.info_outline_rounded,
+      ),
   };
 }
 
@@ -350,10 +345,10 @@ class _LoginRequired extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _CenteredState(
+    return CDREmptyState(
       icon: Icons.lock_outline_rounded,
       title: 'Entre para acessar sua agenda',
-      description: 'Suas solicitações ficam protegidas na sua conta.',
+      message: 'Seus agendamentos ficam protegidos na sua conta.',
       actionLabel: 'Entrar',
       onAction: () => Navigator.pushNamed(
         context,
@@ -371,10 +366,10 @@ class _EmptyAgenda extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _CenteredState(
+    return CDREmptyState(
       icon: Icons.calendar_month_outlined,
       title: 'Sua agenda está vazia',
-      description: 'Encontre uma barbearia e solicite seu primeiro horário.',
+      message: 'Encontre uma barbearia e agende seu primeiro horário.',
       actionLabel: 'Descobrir barbearias',
       onAction: onExplore,
     );
@@ -388,64 +383,10 @@ class _AgendaError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _CenteredState(
-      icon: Icons.cloud_off_outlined,
+    return CDRErrorState(
       title: 'Não foi possível carregar sua agenda',
-      description: 'Verifique a conexão e tente novamente.',
-      actionLabel: 'Tentar novamente',
-      onAction: onRetry,
-    );
-  }
-}
-
-class _CenteredState extends StatelessWidget {
-  const _CenteredState({
-    required this.icon,
-    required this.title,
-    required this.description,
-    required this.actionLabel,
-    required this.onAction,
-  });
-
-  final IconData icon;
-  final String title;
-  final String description;
-  final String actionLabel;
-  final VoidCallback onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: AppColors.orange, size: 40),
-            const SizedBox(height: 14),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontSize: 23,
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              description,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.muted,
-                fontSize: 14,
-                height: 1.45,
-              ),
-            ),
-            const SizedBox(height: 16),
-            FilledButton(onPressed: onAction, child: Text(actionLabel)),
-          ],
-        ),
-      ),
+      message: 'Verifique sua conexão e tente novamente.',
+      onRetry: onRetry,
     );
   }
 }
@@ -455,9 +396,35 @@ class _AgendaLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const CDRLoading.section(
-      height: 132,
-      message: 'Atualizando sua agenda...',
+    return ListView.separated(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(
+        CDRSpacingTokens.xxl,
+        CDRSpacingTokens.sm,
+        CDRSpacingTokens.xxl,
+        CDRSpacingTokens.xxxl,
+      ),
+      itemCount: 3,
+      separatorBuilder: (_, __) => const SizedBox(height: CDRSpacingTokens.md),
+      itemBuilder: (_, __) => const CDRCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(child: CDRSkeleton.line(width: 156, height: 20)),
+                CDRSkeleton(width: 84, height: 28),
+              ],
+            ),
+            SizedBox(height: CDRSpacingTokens.lg),
+            CDRSkeleton.line(width: 210),
+            SizedBox(height: CDRSpacingTokens.md),
+            CDRSkeleton.line(width: 170),
+            SizedBox(height: CDRSpacingTokens.md),
+            CDRSkeleton.line(width: 130),
+          ],
+        ),
+      ),
     );
   }
 }
