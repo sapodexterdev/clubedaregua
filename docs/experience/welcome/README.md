@@ -39,6 +39,11 @@ Isso inclui mudancas em:
 
 O arquivo `storyboard.png` nesta pasta representa o storyboard aprovado pelo Product Manager.
 
+O storyboard preserva a composição histórica da experiência. A Marca V3, seus
+ativos e seu sistema de movimento prevalecem sobre qualquer elemento visual V2
+presente na imagem, conforme
+`docs/brand/ADR-001-V3-AUTORIDADE-VISUAL.md`.
+
 Nao alterar a imagem diretamente. Quando houver nova aprovacao visual, substituir o arquivo mantendo o mesmo nome e atualizar os documentos desta pasta.
 
 ## Relacao Com Outras Documentacoes

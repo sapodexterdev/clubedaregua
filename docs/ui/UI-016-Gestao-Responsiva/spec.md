@@ -66,7 +66,7 @@ Cards brancos são proibidos no shell e nos módulos operacionais.
 - ações secundárias escuras com borda;
 - status em badges semânticos.
 
-### Seletor Barbeiro/Admin
+### Seletor Barbeiro/Dono
 
 - controle segmentado compacto;
 - selecionado em Amarelo Régua com texto Noite;

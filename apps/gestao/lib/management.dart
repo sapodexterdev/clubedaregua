@@ -163,7 +163,7 @@ ThemeData _buildManagementTheme() {
       surfaceTintColor: Colors.transparent,
       titleTextStyle: TextStyle(
         color: SharedAppColors.text,
-        fontFamily: 'Barlow Condensed',
+        fontFamily: CDRTypographyTokens.displayFontFamily,
         fontSize: 24,
         fontWeight: FontWeight.w700,
       ),
@@ -212,8 +212,10 @@ ThemeData _buildManagementTheme() {
     chipTheme: base.chipTheme.copyWith(
       backgroundColor: SharedAppColors.elevated,
       selectedColor: SharedAppColors.orange,
+      checkmarkColor: SharedAppColors.onGold,
       side: const BorderSide(color: SharedAppColors.stroke),
       labelStyle: const TextStyle(color: SharedAppColors.text),
+      secondaryLabelStyle: const TextStyle(color: SharedAppColors.onGold),
     ),
     snackBarTheme: const SnackBarThemeData(
       backgroundColor: SharedAppColors.elevated,

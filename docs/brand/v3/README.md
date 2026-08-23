@@ -1,5 +1,8 @@
 # Direção Criativa — Brand Kit V3
 
+> Esta é a identidade visual vigente e sua autoridade está formalizada em
+> `../ADR-001-V3-AUTORIDADE-VISUAL.md`.
+
 ## Objetivo
 
 Evoluir a identidade atual sem apagar sua origem: uma marca de barbearia que

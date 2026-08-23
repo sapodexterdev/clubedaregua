@@ -1,8 +1,11 @@
-# UI-010 — Solicitação Enviada
+# UI-010 — Agendamento confirmado
+
+> O diretório mantém o nome histórico para preservar referências existentes.
 
 ## Objetivo
 
-Confirmar que a solicitação foi recebida pelo sistema, apresentar seu resumo e explicar os próximos passos sem sugerir que o horário já está reservado.
+Confirmar que o agendamento foi validado e gravado, apresentar seu resumo e
+explicar os próximos passos.
 
 ## Status
 
@@ -15,7 +18,7 @@ Em validação no Preview.
 
 ## Princípios
 
-- diferenciar `enviada` de `confirmada`;
+- exibir confirmação apenas após retorno positivo da gravação;
 - manter comprovante legível dos dados solicitados;
-- orientar sobre retorno pelo WhatsApp;
+- orientar sobre contato com a barbearia quando necessário;
 - não direcionar para áreas que ainda utilizem dados simulados.

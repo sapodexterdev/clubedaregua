@@ -264,7 +264,8 @@ class _WelcomeSlide extends StatelessWidget {
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               color: AppColors.text,
-                              fontFamily: 'Barlow Condensed',
+                              fontFamily:
+                                  CDRTypographyTokens.displayFontFamily,
                               fontSize: 32,
                               height: 1.125,
                               fontWeight: FontWeight.w700,

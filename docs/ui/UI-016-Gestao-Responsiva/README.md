@@ -3,7 +3,7 @@
 Reformulação visual do App Gestão conforme o Brand Kit V3.
 
 Esta especificação cobre o shell, a navegação e os componentes operacionais
-compartilhados pelas visões Barbeiro e Administrador.
+compartilhados pelos modos Barbeiro e Dono.
 
 Documentos relacionados:
 

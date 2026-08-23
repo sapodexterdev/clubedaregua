@@ -171,7 +171,8 @@ class _ManagementLoginScreenState extends State<ManagementLoginScreen> {
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: SharedAppColors.text,
-                              fontFamily: 'Barlow Condensed',
+                              fontFamily:
+                                  CDRTypographyTokens.displayFontFamily,
                               fontSize: 27,
                               height: 1.05,
                               fontWeight: FontWeight.w800,
