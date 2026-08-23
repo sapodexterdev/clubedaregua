@@ -8,6 +8,10 @@ Toda implementação Flutter deve seguir a Marca V3 e a UI Specification V3
 aprovada para a tela correspondente. Specs anteriores à V3 permanecem como
 referência funcional até serem migradas.
 
+Os componentes equivalentes de Cliente e Gestão seguem obrigatoriamente o
+contrato `SHARED_COMPONENTS_V3.md`. A spec de tela seleciona as variantes
+permitidas e define a composição, sem criar um componente paralelo.
+
 ## Niveis de Documentacao
 
 Brand -> identidade visual
@@ -29,6 +33,10 @@ Experience
 ->
 
 UX
+
+->
+
+Contrato de componentes compartilhados
 
 ->
 
