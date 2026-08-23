@@ -26,10 +26,15 @@ class AppointmentConfirmationScreen extends StatelessWidget {
                 ? Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(
-                        maxWidth: CDRSizeTokens.contentMaxWidth,
+                        maxWidth: CDRSizeTokens.clientFrameMaxWidth,
                       ),
                       child: ListView(
-                        padding: const EdgeInsets.fromLTRB(18, 36, 18, 28),
+                        padding: const EdgeInsets.fromLTRB(
+                          CDRSpacingTokens.xxl,
+                          CDRSpacingTokens.xxxl,
+                          CDRSpacingTokens.xxl,
+                          CDRSpacingTokens.xxxl,
+                        ),
                         children: [
                           const _SuccessMark(),
                           const SizedBox(height: 24),
@@ -76,7 +81,7 @@ class AppointmentConfirmationScreen extends StatelessWidget {
                               ),
                               icon: const Icon(Icons.person_add_alt_1_rounded),
                               label: const Text(
-                                'CRIAR MINHA CONTA',
+                                'Criar minha conta',
                               ),
                               style: OutlinedButton.styleFrom(
                                 minimumSize: const Size.fromHeight(52),
@@ -91,7 +96,7 @@ class AppointmentConfirmationScreen extends StatelessWidget {
                               backgroundColor: AppColors.orange,
                               foregroundColor: AppColors.onGold,
                             ),
-                            child: const Text('VOLTAR PARA DESCOBRIR'),
+                            child: const Text('Voltar para Descobrir'),
                           ),
                         ],
                       ),
@@ -123,14 +128,14 @@ class _SuccessMark extends StatelessWidget {
         width: 84,
         height: 84,
         decoration: BoxDecoration(
-          color: AppColors.orange.withOpacity(.1),
+          color: AppColors.success.withOpacity(.12),
           shape: BoxShape.circle,
-          border: Border.all(color: AppColors.orange, width: 2),
+          border: Border.all(color: AppColors.success, width: 2),
         ),
         child: const Icon(
           Icons.check_rounded,
           size: 46,
-          color: AppColors.orange,
+          color: AppColors.success,
         ),
       ),
     );
@@ -142,29 +147,10 @@ class _ConfirmedBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: AppColors.success.withOpacity(.1),
-        borderRadius: BorderRadius.circular(99),
-        border: Border.all(color: AppColors.success.withOpacity(.55)),
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.event_available_rounded,
-              color: AppColors.success, size: 16),
-          SizedBox(width: 6),
-          Text(
-            'HORÁRIO CONFIRMADO',
-            style: TextStyle(
-              color: AppColors.success,
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ],
-      ),
+    return const CDRStatusBadge(
+      label: 'Horário confirmado',
+      tone: CDRStatusTone.success,
+      icon: Icons.event_available_rounded,
     );
   }
 }
@@ -189,10 +175,10 @@ class _ReceiptCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(CDRSpacingTokens.lg),
       decoration: BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(CDRRadiusTokens.large),
         border: Border.all(color: AppColors.stroke),
       ),
       child: Column(
@@ -296,7 +282,7 @@ class _ReceiptRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   value,
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: AppColors.text,
@@ -370,7 +356,7 @@ class _TimelineItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? AppColors.orange : AppColors.muted;
+    final color = active ? AppColors.success : AppColors.muted;
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -384,7 +370,7 @@ class _TimelineItem extends StatelessWidget {
                   height: 28,
                   decoration: BoxDecoration(
                     color: active
-                        ? AppColors.orange.withOpacity(.12)
+                        ? AppColors.success.withOpacity(.12)
                         : AppColors.card,
                     shape: BoxShape.circle,
                     border: Border.all(color: color),
@@ -439,34 +425,12 @@ class _NoReceipt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.receipt_long_outlined,
-              color: AppColors.muted,
-              size: 44,
-            ),
-            const SizedBox(height: 14),
-            const Text(
-              'Nenhuma solicitação recente.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.text,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: onHome,
-              child: const Text('Descobrir barbearias'),
-            ),
-          ],
-        ),
-      ),
+    return CDREmptyState(
+      icon: Icons.receipt_long_outlined,
+      title: 'Nenhum agendamento recente',
+      message: 'Encontre uma barbearia e escolha seu próximo horário.',
+      actionLabel: 'Descobrir barbearias',
+      onAction: onHome,
     );
   }
 }

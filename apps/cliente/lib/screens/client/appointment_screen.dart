@@ -86,12 +86,17 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
               ? Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(
-                      maxWidth: CDRSizeTokens.contentMaxWidth,
+                      maxWidth: CDRSizeTokens.clientFrameMaxWidth,
                     ),
                     child: Form(
                       key: _formKey,
                       child: ListView(
-                        padding: const EdgeInsets.fromLTRB(18, 8, 18, 32),
+                        padding: const EdgeInsets.fromLTRB(
+                          CDRSpacingTokens.xxl,
+                          CDRSpacingTokens.sm,
+                          CDRSpacingTokens.xxl,
+                          CDRSpacingTokens.xxxl,
+                        ),
                         children: [
                           const _Intro(),
                           const SizedBox(height: 20),
@@ -204,7 +209,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                             ),
                           ),
                           const SizedBox(height: 22),
-                          const _RequestNotice(),
+                          const _AutomaticConfirmationNotice(),
                         ],
                       ),
                     ),
@@ -271,9 +276,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    CDRSnackbar.error(context, message);
   }
 
   static String _digitsOnly(String value) {
@@ -298,7 +301,7 @@ class _Intro extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Revise os detalhes antes de enviar sua solicitação.',
+          'Revise os detalhes antes de confirmar seu agendamento.',
           style: TextStyle(
             color: AppColors.muted,
             fontSize: 14,
@@ -332,10 +335,10 @@ class _AppointmentSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(CDRSpacingTokens.lg),
       decoration: BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(CDRRadiusTokens.large),
         border: Border.all(color: AppColors.stroke),
       ),
       child: Column(
@@ -475,7 +478,7 @@ class _SummaryLine extends StatelessWidget {
         Expanded(
           child: Text(
             value,
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.end,
             style: const TextStyle(
@@ -486,72 +489,6 @@ class _SummaryLine extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _AuthRequired extends StatelessWidget {
-  const _AuthRequired({required this.onLogin, required this.onRegister});
-
-  final VoidCallback onLogin;
-  final VoidCallback onRegister;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.stroke),
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: AppColors.orange.withOpacity(.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.lock_outline_rounded,
-              color: AppColors.orange,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Entre para enviar a solicitação',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Suas escolhas serão mantidas após o acesso.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.muted,
-              fontSize: 14,
-              height: 1.45,
-            ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: onRegister,
-              child: const Text('Criar uma conta'),
-            ),
-          ),
-          TextButton(
-            onPressed: onLogin,
-            child: const Text('Já tenho uma conta'),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -637,8 +574,8 @@ enum PaymentMethod {
   final IconData icon;
 }
 
-class _RequestNotice extends StatelessWidget {
-  const _RequestNotice();
+class _AutomaticConfirmationNotice extends StatelessWidget {
+  const _AutomaticConfirmationNotice();
 
   @override
   Widget build(BuildContext context) {
@@ -678,7 +615,12 @@ class _SubmitBar extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
+        padding: const EdgeInsets.fromLTRB(
+          CDRSpacingTokens.xxl,
+          CDRSpacingTokens.md,
+          CDRSpacingTokens.xxl,
+          CDRSpacingTokens.md,
+        ),
         decoration: const BoxDecoration(
           color: AppColors.background,
           border: Border(top: BorderSide(color: AppColors.stroke)),
@@ -693,7 +635,7 @@ class _SubmitBar extends StatelessWidget {
           child: submitting
               ? const CDRLoading.compact(size: 24)
               : Text(
-                  'CONFIRMAR AGENDAMENTO',
+                  'Confirmar agendamento',
                 ),
         ),
       ),
@@ -706,39 +648,12 @@ class _MissingAppointment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.event_busy_outlined,
-              color: AppColors.muted,
-              size: 42,
-            ),
-            const SizedBox(height: 14),
-            const Text(
-              'Seleção incompleta.',
-              style: TextStyle(
-                color: AppColors.text,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Volte e escolha serviço, profissional, data e horário.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.muted, fontSize: 12),
-            ),
-            const SizedBox(height: 14),
-            OutlinedButton(
-              onPressed: () => Navigator.maybePop(context),
-              child: const Text('Voltar'),
-            ),
-          ],
-        ),
-      ),
+    return CDREmptyState(
+      icon: Icons.event_busy_outlined,
+      title: 'Seleção incompleta',
+      message: 'Volte e escolha serviço, profissional, data e horário.',
+      actionLabel: 'Voltar',
+      onAction: () => Navigator.maybePop(context),
     );
   }
 }
