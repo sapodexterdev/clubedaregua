@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 
 import '../core/app_constants.dart';
 import '../core/app_mode.dart';
@@ -248,11 +249,10 @@ class _WelcomeSlide extends StatelessWidget {
                         size: data.discoverV3 || data.scheduleV3 ? 40 : 52,
                       ),
                     SizedBox(
-                      height: data.showLogo ||
-                              data.discoverV3 ||
-                              data.scheduleV3
-                          ? 20
-                          : 24,
+                      height:
+                          data.showLogo || data.discoverV3 || data.scheduleV3
+                              ? 20
+                              : 24,
                     ),
                     AnimatedOpacity(
                       opacity: selected ? 1 : .55,
@@ -264,8 +264,7 @@ class _WelcomeSlide extends StatelessWidget {
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               color: AppColors.text,
-                              fontFamily:
-                                  CDRTypographyTokens.displayFontFamily,
+                              fontFamily: CDRTypographyTokens.displayFontFamily,
                               fontSize: 32,
                               height: 1.125,
                               fontWeight: FontWeight.w700,
@@ -408,9 +407,7 @@ class _WelcomeFooter extends StatelessWidget {
                 child: FilledButton(
                   onPressed: onTap,
                   child: Text(
-                    page == pageCount - 1
-                        ? 'EXPLORAR BARBEARIAS'
-                        : 'CONTINUAR',
+                    page == pageCount - 1 ? 'EXPLORAR BARBEARIAS' : 'CONTINUAR',
                   ),
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.orange,
