@@ -543,6 +543,20 @@ class AppState extends ChangeNotifier {
     return (generation: _accountGeneration, userId: userId);
   }
 
+  ({int generation, String? userId}) _captureBookingScope() {
+    return (generation: _accountGeneration, userId: _accountUserId);
+  }
+
+  bool _isBookingScopeActive(
+    ({int generation, String? userId}) scope,
+  ) {
+    final currentUserId = _authService.currentUser?.id;
+    return scope.generation == _accountGeneration &&
+        scope.userId == _accountUserId &&
+        scope.userId == currentUserId &&
+        isSignedIn == (scope.userId != null);
+  }
+
   bool _isAccountScopeActive(
     ({int generation, String userId}) scope,
   ) {
@@ -702,8 +716,7 @@ class AppState extends ChangeNotifier {
     required String customerPhone,
     required String paymentMethodLabel,
   }) async {
-    final accountScope = _captureAccountScope();
-    if (accountScope == null) return false;
+    final bookingScope = _captureBookingScope();
     final barber = selectedBarber;
     final service = selectedService;
     final shop = selectedBarbershop;
@@ -717,7 +730,7 @@ class AppState extends ChangeNotifier {
       preserveSelectedTime: true,
       selectFirstAvailable: false,
     );
-    if (!_isAccountScopeActive(accountScope)) return false;
+    if (!_isBookingScopeActive(bookingScope)) return false;
     if (availabilityError != null) {
       lastBookingErrorMessage =
           'Não foi possível confirmar a disponibilidade agora. Tente atualizar os horários.';
@@ -751,10 +764,10 @@ class AppState extends ChangeNotifier {
         customerPhone: customerPhone,
         paymentMethodLabel: paymentMethodLabel,
       );
-      if (!_isAccountScopeActive(accountScope)) return false;
+      if (!_isBookingScopeActive(bookingScope)) return false;
       lastBookingRequestCreated = created;
     } catch (error) {
-      if (!_isAccountScopeActive(accountScope)) return false;
+      if (!_isBookingScopeActive(bookingScope)) return false;
       lastBookingRequestCreated = false;
       final message = error.toString().toLowerCase();
       if (message.contains('cliente bloqueado para agendamentos')) {
@@ -780,15 +793,17 @@ class AppState extends ChangeNotifier {
         time: requestedTime,
         total: service.price,
       );
-      try {
-        final fetchedAppointments =
-            await _appointmentRepository.fetchAppointments();
-        if (!_isAccountScopeActive(accountScope)) return false;
-        appointments = fetchedAppointments;
-        appointmentsLoadError = null;
-      } catch (_) {
-        if (!_isAccountScopeActive(accountScope)) return false;
-        appointmentsLoadError = 'Não foi possível atualizar sua agenda.';
+      if (bookingScope.userId != null) {
+        try {
+          final fetchedAppointments =
+              await _appointmentRepository.fetchAppointments();
+          if (!_isBookingScopeActive(bookingScope)) return false;
+          appointments = fetchedAppointments;
+          appointmentsLoadError = null;
+        } catch (_) {
+          if (!_isBookingScopeActive(bookingScope)) return false;
+          appointmentsLoadError = 'Não foi possível atualizar sua agenda.';
+        }
       }
     }
     notifyListeners();

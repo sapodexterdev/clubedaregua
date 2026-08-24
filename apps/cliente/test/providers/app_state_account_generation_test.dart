@@ -1,9 +1,12 @@
 import 'dart:async';
 
 import 'package:clubedaregua/models/appointment.dart';
+import 'package:clubedaregua/models/barber.dart';
 import 'package:clubedaregua/models/notification_item.dart';
+import 'package:clubedaregua/models/service_item.dart';
 import 'package:clubedaregua/providers/app_state.dart';
 import 'package:clubedaregua/repositories/appointment_repository.dart';
+import 'package:clubedaregua/repositories/barber_repository.dart';
 import 'package:clubedaregua/repositories/client_profile_repository.dart';
 import 'package:clubedaregua/repositories/favorite_repository.dart';
 import 'package:clubedaregua/repositories/notification_repository.dart';
@@ -160,6 +163,34 @@ void main() {
     expect(state.isSignedIn, isTrue);
     expect(state.currentUserName, 'user-b');
   });
+
+  test('guest can create an appointment without an account scope', () async {
+    final repository = _SuccessfulBookingRepository();
+    final state = AppState(
+      authService: _MutableAuthService(),
+      appointmentRepository: repository,
+    );
+    addTearDown(state.dispose);
+    state
+      ..selectedBarbershop = _testShop
+      ..selectedBarber = _testBarber
+      ..selectedService = _testService
+      ..selectedDate = DateTime.now().add(const Duration(days: 1))
+      ..selectedTime = '10:30'
+      ..availableTimes = const ['10:30'];
+
+    final created = await state.createSelectedAppointment(
+      customerName: 'Cliente Visitante',
+      customerPhone: '(34)99999-9999',
+      paymentMethodLabel: 'Pix',
+    );
+
+    expect(created, isTrue);
+    expect(repository.createCalls, 1);
+    expect(repository.fetchAppointmentsCalls, 0);
+    expect(state.lastBookingRequestCreated, isTrue);
+    expect(state.lastBookingReceipt?.time, '10:30');
+  });
 }
 
 class _PendingFirstInvitationRepository extends TeamInvitationRepository {
@@ -187,6 +218,43 @@ class _PendingAppointmentRepository extends AppointmentRepository {
   Future<List<Appointment>> fetchAppointments() {
     if (!requestStarted.isCompleted) requestStarted.complete();
     return response.future;
+  }
+}
+
+class _SuccessfulBookingRepository extends AppointmentRepository {
+  var createCalls = 0;
+  var fetchAppointmentsCalls = 0;
+
+  @override
+  Future<List<String>> fetchAvailableTimes({
+    required String barberId,
+    required String barberShopId,
+    required DateTime date,
+    required int durationMinutes,
+  }) async {
+    return const ['10:30'];
+  }
+
+  @override
+  Future<bool> createAppointment({
+    required String barberId,
+    required String serviceId,
+    required DateTime date,
+    required String time,
+    required double total,
+    required String barberShopId,
+    required String customerName,
+    required String customerPhone,
+    required String paymentMethodLabel,
+  }) async {
+    createCalls++;
+    return true;
+  }
+
+  @override
+  Future<List<Appointment>> fetchAppointments() async {
+    fetchAppointmentsCalls++;
+    return const [];
   }
 }
 
@@ -254,3 +322,53 @@ AuthSession _sessionFor(String userId) => AuthSession(
         name: userId,
       ),
     );
+
+const _testBarber = Barber(
+  id: 'barber-1',
+  name: 'Barbeiro Teste',
+  barberShopId: 'shop-1',
+  shopName: 'Barbearia Teste',
+  imageUrl: '',
+  rating: 5,
+  startingPrice: 50,
+  bio: '',
+  serviceIds: ['service-1'],
+);
+
+const _testService = ServiceItem(
+  id: 'service-1',
+  name: 'Corte',
+  durationMinutes: 30,
+  price: 50,
+  barberShopId: 'shop-1',
+);
+
+const _testShop = PublicBarbershop(
+  identity: ShopIdentity(
+    id: 'shop-1',
+    name: 'Barbearia Teste',
+    logoUrl: '',
+    coverUrl: '',
+    phone: '',
+    whatsapp: '',
+    email: '',
+    instagram: '',
+    address: '',
+    city: 'Uberlândia',
+    state: 'MG',
+    secondaryColor: '',
+    bookingIntervalMinutes: 30,
+    bookingDaysAhead: 30,
+    minNoticeMinutes: 0,
+    maxDelayMinutes: 10,
+    minCancelHours: 2,
+  ),
+  barbers: [_testBarber],
+  services: [_testService],
+  rating: 5,
+  reviewCount: 0,
+  distanceKm: 1,
+  nextSlot: '10:30',
+  isOpen: true,
+  neighborhood: 'Centro',
+);
