@@ -143,21 +143,24 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
                   child: _ManagementPageContent(
                     horizontalPadding: horizontalPadding,
                     children: [
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: _AvailabilityStatus(
-                          label: isAdmin ? 'MODO DONO' : 'MODO BARBEIRO',
-                          color: SharedAppColors.orange,
+                      if (useSideNavigation) ...[
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: _AvailabilityStatus(
+                            label: isAdmin ? 'MODO DONO' : 'MODO BARBEIRO',
+                            color: SharedAppColors.orange,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
+                        const SizedBox(height: 16),
+                      ],
                       _Header(
                         isAdmin: isAdmin,
                         title: isAdmin
                             ? session.barberShopName ?? 'Barbearia'
                             : session.barberHeaderName,
+                        dense: !useSideNavigation,
                       ),
-                      const SizedBox(height: 24),
+                      SizedBox(height: useSideNavigation ? 24 : 20),
                       page.child,
                     ],
                   ),
@@ -256,20 +259,20 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onSignedOut;
 
   @override
-  Size get preferredSize => const Size.fromHeight(68);
+  Size get preferredSize => const Size.fromHeight(72);
 
   @override
   Widget build(BuildContext context) {
     final compact = MediaQuery.sizeOf(context).width < 700;
     return AppBar(
-      toolbarHeight: 68,
+      toolbarHeight: 72,
       titleSpacing: compact ? 16 : 22,
       backgroundColor: SharedAppColors.background,
       title: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 48,
+            height: 48,
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
               color: SharedAppColors.card,
@@ -284,43 +287,51 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
           ),
           const SizedBox(width: 11),
           Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'CLUBE DA RÉGUA • GESTÃO',
-                  style: TextStyle(
-                    color: SharedAppColors.orange,
-                    fontSize: 9,
-                    letterSpacing: 1,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Semantics(
-                  header: true,
-                  child: Focus(
-                    focusNode: titleFocusNode,
-                    child: Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium,
+            child: compact
+                ? Semantics(
+                    header: true,
+                    child: Focus(
+                      focusNode: titleFocusNode,
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                     ),
+                  )
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'CLUBE DA RÉGUA • GESTÃO',
+                        style: TextStyle(
+                          color: SharedAppColors.orange,
+                          fontSize: 9,
+                          letterSpacing: 1,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Semantics(
+                        header: true,
+                        child: Focus(
+                          focusNode: titleFocusNode,
+                          child: Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
           ),
         ],
       ),
       actions: [
-        _TopBarAction(
-          tooltip: 'Notificações',
-          onPressed: () {},
-          icon: Icons.notifications_none_rounded,
-        ),
         if (compact)
           PopupMenuButton<String>(
             tooltip: 'Mais opções',
@@ -402,7 +413,7 @@ class _TopBarAction extends StatelessWidget {
           backgroundColor: SharedAppColors.card,
           foregroundColor: SharedAppColors.muted,
           side: const BorderSide(color: SharedAppColors.stroke),
-          minimumSize: const Size(40, 40),
+          minimumSize: const Size(44, 44),
         ),
       ),
     );
@@ -478,8 +489,8 @@ class _ManagementSideNavigation extends StatelessWidget {
                 child: NavigationRail(
                   selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
                   extended: extended,
-                  minWidth: 82,
-                  minExtendedWidth: 220,
+                  minWidth: 88,
+                  minExtendedWidth: 240,
                   groupAlignment: -1,
                   backgroundColor: SharedAppColors.card,
                   indicatorColor: SharedAppColors.orange.withOpacity(.14),
@@ -721,7 +732,7 @@ const _adminTabs = [
   _ManagementTab(
     id: ManagementDestinationId.dashboard,
     label: 'Painel',
-    title: 'Painel administrativo',
+    title: 'Painel da barbearia',
     description: 'Visão geral da operação da barbearia.',
     icon: Icons.dashboard_outlined,
     selectedIcon: Icons.dashboard_rounded,
@@ -822,10 +833,12 @@ class _Header extends StatelessWidget {
   const _Header({
     required this.isAdmin,
     required this.title,
+    this.dense = false,
   });
 
   final bool isAdmin;
   final String title;
+  final bool dense;
 
   @override
   Widget build(BuildContext context) {
@@ -834,20 +847,20 @@ class _Header extends StatelessWidget {
             '';
     return LayoutBuilder(
       builder: (context, constraints) {
-        final compact = constraints.maxWidth < 520;
+        final compact = dense || constraints.maxWidth < 520;
         return Container(
-          padding: EdgeInsets.all(compact ? 18 : 22),
+          padding: EdgeInsets.all(dense ? 12 : 22),
           decoration: BoxDecoration(
             color: SharedAppColors.card,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(dense ? 14 : 22),
             border: Border.all(color: SharedAppColors.stroke),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                width: compact ? 50 : 58,
-                height: compact ? 50 : 58,
+                width: dense ? 44 : 58,
+                height: dense ? 44 : 58,
                 decoration: BoxDecoration(
                   color: SharedAppColors.elevated,
                   borderRadius: BorderRadius.circular(16),
@@ -874,7 +887,13 @@ class _Header extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isAdmin ? 'VISÃO DA BARBEARIA' : 'MINHA OPERAÇÃO',
+                      dense
+                          ? isAdmin
+                              ? 'MODO DONO'
+                              : 'MODO BARBEIRO'
+                          : isAdmin
+                              ? 'VISÃO DA BARBEARIA'
+                              : 'MINHA OPERAÇÃO',
                       style: const TextStyle(
                         color: SharedAppColors.orange,
                         fontSize: 9,
@@ -882,24 +901,28 @@ class _Header extends StatelessWidget {
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    const SizedBox(height: 5),
+                    SizedBox(height: dense ? 3 : 5),
                     Text(
                       title,
-                      maxLines: compact ? 2 : 1,
+                      maxLines: dense ? 1 : 2,
                       overflow: TextOverflow.ellipsis,
-                      style: compact
-                          ? Theme.of(context).textTheme.headlineSmall
-                          : Theme.of(context).textTheme.headlineMedium,
+                      style: dense
+                          ? Theme.of(context).textTheme.titleMedium
+                          : compact
+                              ? Theme.of(context).textTheme.headlineSmall
+                              : Theme.of(context).textTheme.headlineMedium,
                     ),
-                    const SizedBox(height: 5),
-                    Text(
-                      isAdmin
-                          ? 'Equipe, serviços, caixa e desempenho em um só lugar.'
-                          : 'Pedidos, agenda, horários e comissão do seu dia.',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
+                    if (!dense) ...[
+                      const SizedBox(height: 5),
+                      Text(
+                        isAdmin
+                            ? 'Equipe, serviços, caixa e desempenho em um só lugar.'
+                            : 'Pedidos, agenda, horários e comissão do seu dia.',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
                   ],
                 ),
               ),

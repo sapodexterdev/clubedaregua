@@ -143,6 +143,7 @@ class _ServiceFilters extends StatelessWidget {
           const SizedBox(height: 10),
           DropdownButtonFormField<String>(
             value: _validCategoryFilterValue(session),
+            isExpanded: true,
             decoration: const InputDecoration(
               labelText: 'Categoria',
               prefixIcon: Icon(Icons.category_outlined),
@@ -309,6 +310,7 @@ class _ServiceFormState extends State<_ServiceForm> {
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               value: _validFormCategoryValue(categories),
+              isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'Categoria',
                 prefixIcon: Icon(Icons.category_outlined),

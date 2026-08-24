@@ -8,7 +8,8 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
-  test('barber startup loads only the professional landing data', () async {
+  test('barber startup loads only the professional agenda landing data',
+      () async {
     final requests = <Uri>[];
     final client = MockClient((request) async {
       requests.add(request.url);
@@ -28,7 +29,7 @@ void main() {
     expect(loadedTables, contains('booking_requests'));
     expect(loadedTables, isNot(contains('management_clients')));
     expect(loadedTables, isNot(contains('management_client_appointments')));
-    expect(loadedTables, isNot(contains('appointments')));
+    expect(loadedTables, contains('appointments'));
     expect(loadedTables, isNot(contains('service_categories')));
     expect(loadedTables, isNot(contains('services')));
     expect(loadedTables, isNot(contains('shop_settings')));
@@ -40,6 +41,11 @@ void main() {
     );
     expect(barberRequests.queryParameters['barber_id'], 'eq.barber-1');
     expect(barberRequests.queryParameters['limit'], '50');
+
+    final barberAppointments = requests.singleWhere(
+      (uri) => _tableName(uri) == 'appointments',
+    );
+    expect(barberAppointments.queryParameters['barber_id'], 'eq.barber-1');
   });
 
   test('owner data is loaded lazily by the selected destination', () async {
