@@ -39,8 +39,7 @@ class BarberDetailsScreen extends StatelessWidget {
         final services = state.servicesForSelectedBarber;
         final canContinue = state.selectedService != null &&
             state.selectedBarber != null &&
-            state.selectedTime.isNotEmpty &&
-            !state.isLoadingAvailability;
+            state.hasValidSelectedTime;
 
         return Scaffold(
           backgroundColor: AppColors.background,
@@ -140,7 +139,7 @@ class BarberDetailsScreen extends StatelessWidget {
                   _StepHeader(
                     number: 4,
                     title: 'Escolha o horário',
-                    caption: state.selectedTime.isEmpty
+                    caption: !state.hasValidSelectedTime
                         ? 'Horários livres para a data selecionada'
                         : 'Selecionado às ${state.selectedTime}',
                   ),

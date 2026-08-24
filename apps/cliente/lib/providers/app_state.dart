@@ -117,6 +117,12 @@ class AppState extends ChangeNotifier {
 
   bool get hasProfessionalAccess => hasBarberAccess || hasOwnerAccess;
 
+  bool get hasValidSelectedTime =>
+      selectedTime.isNotEmpty &&
+      !isLoadingAvailability &&
+      availabilityError == null &&
+      availableTimes.contains(selectedTime);
+
   int get unreadNotificationCount =>
       notifications.where((item) => !item.isRead).length;
 
@@ -705,11 +711,34 @@ class AppState extends ChangeNotifier {
     if (!_selectedDateIsAllowed()) return false;
     final requestedDate = selectedDate;
     final requestedTime = selectedTime;
-    await refreshAvailableTimes(preserveSelectedTime: true);
-    if (!_isAccountScopeActive(accountScope)) return false;
-    if (!availableTimes.contains(requestedTime)) return false;
-
+    lastBookingRequestCreated = false;
     lastBookingErrorMessage = null;
+    await refreshAvailableTimes(
+      preserveSelectedTime: true,
+      selectFirstAvailable: false,
+    );
+    if (!_isAccountScopeActive(accountScope)) return false;
+    if (availabilityError != null) {
+      lastBookingErrorMessage =
+          'Não foi possível confirmar a disponibilidade agora. Tente atualizar os horários.';
+      notifyListeners();
+      return false;
+    }
+    if (!_bookingSelectionStillMatches(
+          barberId: barber.id,
+          serviceId: service.id,
+          shopId: shop.identity.id,
+          date: requestedDate,
+          time: requestedTime,
+        ) ||
+        !availableTimes.contains(requestedTime)) {
+      selectedTime = '';
+      lastBookingErrorMessage =
+          'Esse horário acabou de ser reservado. Escolha outro horário disponível.';
+      notifyListeners();
+      return false;
+    }
+
     try {
       final created = await _appointmentRepository.createAppointment(
         barberId: barber.id,
@@ -731,6 +760,14 @@ class AppState extends ChangeNotifier {
       if (message.contains('cliente bloqueado para agendamentos')) {
         lastBookingErrorMessage =
             'Esta barbearia não está aceitando novos agendamentos para este contato.';
+      } else if (_isBookingConflictMessage(message)) {
+        selectedTime = '';
+        lastBookingErrorMessage =
+            'Esse horário acabou de ser reservado. Escolha outro horário disponível.';
+        await refreshAvailableTimes(selectFirstAvailable: false);
+      } else {
+        lastBookingErrorMessage =
+            'Não foi possível concluir o agendamento agora. Tente novamente.';
       }
     }
 
@@ -1023,12 +1060,19 @@ class AppState extends ChangeNotifier {
   }
 
   void selectTime(String time) {
+    if (isLoadingAvailability ||
+        availabilityError != null ||
+        !availableTimes.contains(time)) {
+      return;
+    }
     selectedTime = time;
     notifyListeners();
   }
 
-  Future<void> refreshAvailableTimes(
-      {bool preserveSelectedTime = false}) async {
+  Future<void> refreshAvailableTimes({
+    bool preserveSelectedTime = false,
+    bool selectFirstAvailable = true,
+  }) async {
     final requestId = ++_availabilityRequestId;
     final barber = selectedBarber;
     final service = selectedService;
@@ -1054,14 +1098,18 @@ class AppState extends ChangeNotifier {
       );
       if (requestId != _availabilityRequestId) return;
       availableTimes = _filterTimesBySettings(times);
-      selectedTime = preserveSelectedTime
-          ? previousSelectedTime
-          : availableTimes.isEmpty
-              ? ''
-              : availableTimes.first;
+      if (preserveSelectedTime &&
+          availableTimes.contains(previousSelectedTime)) {
+        selectedTime = previousSelectedTime;
+      } else if (selectFirstAvailable && availableTimes.isNotEmpty) {
+        selectedTime = availableTimes.first;
+      } else {
+        selectedTime = '';
+      }
     } catch (_) {
       if (requestId != _availabilityRequestId) return;
       availableTimes = const [];
+      selectedTime = '';
       availabilityError = 'Não foi possível consultar os horários.';
     } finally {
       if (requestId == _availabilityRequestId) {
@@ -1069,6 +1117,34 @@ class AppState extends ChangeNotifier {
         notifyListeners();
       }
     }
+  }
+
+  bool _bookingSelectionStillMatches({
+    required String barberId,
+    required String serviceId,
+    required String shopId,
+    required DateTime date,
+    required String time,
+  }) {
+    final currentDate = selectedDate;
+    return selectedBarber?.id == barberId &&
+        selectedService?.id == serviceId &&
+        selectedBarbershop?.identity.id == shopId &&
+        currentDate.year == date.year &&
+        currentDate.month == date.month &&
+        currentDate.day == date.day &&
+        selectedTime == time;
+  }
+
+  bool _isBookingConflictMessage(String message) {
+    return message.contains('horario escolhido ja esta ocupado') ||
+        message.contains('horário escolhido já está ocupado') ||
+        message.contains('solicitacao ativa') ||
+        message.contains('solicitação ativa') ||
+        message.contains('horario escolhido esta bloqueado') ||
+        message.contains('horário escolhido está bloqueado') ||
+        message.contains('23505') ||
+        message.contains('409');
   }
 
   bool _selectedDateIsAllowed() {

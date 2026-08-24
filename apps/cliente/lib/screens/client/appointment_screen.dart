@@ -24,6 +24,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
   final _guestIdentityRepository = const GuestIdentityRepository();
   var _selectedPaymentMethod = PaymentMethod.pix;
   var _isSubmitting = false;
+  String? _submittedTime;
   var _seededName = false;
   var _seededPhone = false;
   var _rememberData = true;
@@ -43,10 +44,14 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
         final shop = state.selectedBarbershop;
         final barber = state.selectedBarber;
         final service = state.selectedService;
-        final hasSelection = shop != null &&
+        final hasReviewSelection = shop != null &&
             barber != null &&
             service != null &&
-            state.selectedTime.isNotEmpty;
+            (state.hasValidSelectedTime ||
+                (_isSubmitting && _submittedTime != null));
+        final reviewTime = _isSubmitting && _submittedTime != null
+            ? _submittedTime!
+            : state.selectedTime;
 
         if (!_seededName) {
           _seededName = true;
@@ -78,11 +83,11 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
             ),
           ),
           bottomNavigationBar: _SubmitBar(
-            enabled: hasSelection && !_isSubmitting,
+            enabled: state.hasValidSelectedTime && !_isSubmitting,
             submitting: _isSubmitting,
             onPressed: () => _handlePrimaryAction(state),
           ),
-          body: hasSelection
+          body: hasReviewSelection
               ? Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(
@@ -105,7 +110,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                             serviceName: service.name,
                             barberName: barber.name,
                             date: state.selectedDate,
-                            time: state.selectedTime,
+                            time: reviewTime,
                             durationMinutes: service.durationMinutes,
                             total: service.price,
                           ),
@@ -222,13 +227,17 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
   }
 
   Future<void> _handlePrimaryAction(AppState state) async {
+    if (_isSubmitting) return;
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    if (state.selectedTime.isEmpty) {
+    if (!state.hasValidSelectedTime) {
       _showMessage('O horário selecionado não está mais disponível.');
       return;
     }
 
-    setState(() => _isSubmitting = true);
+    setState(() {
+      _isSubmitting = true;
+      _submittedTime = state.selectedTime;
+    });
     final created = await state.createSelectedAppointment(
       customerName: _nameController.text.trim(),
       customerPhone: _phoneController.text.trim(),
@@ -236,7 +245,10 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
     );
 
     if (!mounted) return;
-    setState(() => _isSubmitting = false);
+    setState(() {
+      _isSubmitting = false;
+      _submittedTime = null;
+    });
     if (created) {
       if (!state.isSignedIn) {
         await _guestIdentityRepository.save(
@@ -251,10 +263,14 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
         AppointmentConfirmationScreen.route,
       );
     } else {
+      final message = state.lastBookingErrorMessage ??
+          'Não foi possível agendar. Confira o horário e tente novamente.';
       _showMessage(
-        state.lastBookingErrorMessage ??
-            'Não foi possível agendar. Confira o horário e tente novamente.',
+        message,
       );
+      if (!state.hasValidSelectedTime && mounted) {
+        Navigator.pop(context);
+      }
     }
   }
 
