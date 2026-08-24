@@ -5,11 +5,11 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="Clube da Regua - app premium de barbearia e agendamento.">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#000000">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#050505">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="Clube da Regua">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/svg+xml" href="icon.svg">
@@ -17,11 +17,19 @@
   <link rel="preload" href="boot-logo.svg" as="image" type="image/svg+xml">
   <title>Clube da Regua</title>
   <style>
+    @font-face {
+      font-family: 'Inter';
+      font-style: normal;
+      font-weight: 100 900;
+      font-display: swap;
+      src: url('boot-inter.ttf') format('truetype');
+    }
+
     html,
     body {
-      background: #000000;
+      background: #050505;
       color: #FFFFFF;
-      font-family: Arial, Helvetica, sans-serif;
+      font-family: 'Inter', Arial, Helvetica, sans-serif;
       height: 100%;
       margin: 0;
       overflow: hidden;
@@ -30,7 +38,7 @@
 
     #boot-splash {
       align-items: center;
-      background: #18181B;
+      background: #050505;
       display: flex;
       height: 100%;
       justify-content: center;
@@ -39,9 +47,15 @@
       position: fixed;
       text-align: center;
       top: 0;
-      transition: opacity .2s ease, visibility .2s ease;
+      transition: opacity 240ms ease, visibility 240ms ease;
       width: 100%;
       z-index: 1;
+    }
+
+    @supports (height: 100dvh) {
+      #boot-splash {
+        height: 100dvh;
+      }
     }
 
     #boot-phone {
@@ -53,30 +67,21 @@
       height: min(calc(100% - 36px), 900px);
       justify-content: center;
       overflow: hidden;
+      padding:
+        max(24px, env(safe-area-inset-top))
+        max(24px, env(safe-area-inset-right))
+        max(24px, env(safe-area-inset-bottom))
+        max(24px, env(safe-area-inset-left));
       position: relative;
       width: 430px;
+      box-sizing: border-box;
     }
 
-    #boot-phone::after {
-      background: linear-gradient(
-        180deg,
-        rgba(0, 0, 0, .50),
-        rgba(0, 0, 0, .24) 45%,
-        rgba(5, 5, 5, .78)
-      );
-      content: '';
-      inset: 0;
-      pointer-events: none;
-      position: absolute;
-      z-index: 1;
-    }
-
-    #boot-background {
-      height: 100%;
-      inset: 0;
-      object-fit: cover;
-      object-position: center;
-      position: absolute;
+    #boot-brand {
+      align-items: center;
+      display: flex;
+      flex-direction: column;
+      max-width: 480px;
       width: 100%;
     }
 
@@ -86,12 +91,83 @@
     }
 
     #boot-logo {
-      animation: loading-pulse 1800ms ease-in-out infinite;
-      filter: drop-shadow(0 0 12px rgba(243, 178, 0, .24));
-      opacity: .28;
-      position: relative;
-      width: clamp(76px, 22vw, 108px);
-      z-index: 2;
+      animation: brand-enter 480ms cubic-bezier(.16, 1, .3, 1) 120ms both;
+      max-width: 100%;
+      width: clamp(260px, 76%, 420px);
+    }
+
+    #boot-slogan {
+      animation: slogan-enter 400ms cubic-bezier(.16, 1, .3, 1) 1120ms both;
+      color: #FFFFFF;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2.2px;
+      line-height: 1.4;
+      margin: 24px 0 0;
+    }
+
+    #boot-slogan strong {
+      color: #F3B200;
+    }
+
+    #boot-progress {
+      align-items: center;
+      color: #A1A1AA;
+      display: flex;
+      font-size: 11px;
+      font-weight: 600;
+      gap: 12px;
+      letter-spacing: 1.4px;
+      margin-top: 32px;
+      opacity: 0;
+      transition: opacity 250ms ease;
+    }
+
+    #boot-progress::before {
+      background: #F3B200;
+      border-radius: 999px;
+      content: '';
+      height: 6px;
+      width: 6px;
+    }
+
+    #boot-splash.is-waiting #boot-progress {
+      opacity: 1;
+    }
+
+    #boot-error {
+      color: #A1A1AA;
+      display: none;
+      font-size: 14px;
+      line-height: 20px;
+      margin-top: 32px;
+      max-width: 320px;
+    }
+
+    #boot-retry {
+      background: #F3B200;
+      border: 0;
+      border-radius: 14px;
+      color: #09090B;
+      cursor: pointer;
+      display: block;
+      font: inherit;
+      font-weight: 700;
+      margin: 20px auto 0;
+      min-height: 48px;
+      padding: 12px 24px;
+    }
+
+    #boot-splash.is-error {
+      pointer-events: auto;
+    }
+
+    #boot-splash.is-error #boot-progress {
+      display: none;
+    }
+
+    #boot-splash.is-error #boot-error {
+      display: block;
     }
 
     @media (max-width: 520px) {
@@ -103,54 +179,84 @@
       }
     }
 
-    @keyframes loading-pulse {
-      0%, 100% {
-        opacity: .28;
+    @keyframes brand-enter {
+      from {
+        opacity: 0;
         transform: scale(.96);
       }
-      50% {
+      to {
         opacity: 1;
         transform: scale(1);
       }
+    }
+
+    @keyframes slogan-enter {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #boot-logo,
+      #boot-slogan {
+        animation: reduced-fade 200ms ease-out both;
+        transform: none;
+      }
+
+      #boot-progress {
+        transition-duration: 150ms;
+      }
+
+      #boot-splash {
+        transition-duration: 150ms;
+      }
+    }
+
+    @keyframes reduced-fade {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
   </style>
 </head>
 <body>
   <div id="boot-splash">
-    <div id="boot-phone">
-      <img id="boot-background" src="__BOOT_SPLASH_DATA__" alt="">
-      <img id="boot-logo" src="boot-logo.svg" alt="">
+    <div id="boot-phone" role="status" aria-label="Clube da Régua carregando">
+      <div id="boot-brand">
+        <img id="boot-logo" src="boot-logo.svg" alt="" aria-hidden="true">
+        <p id="boot-slogan">O SISTEMA FEITO PARA <strong>BARBEARIAS.</strong></p>
+        <div id="boot-progress" aria-hidden="true">CARREGANDO...</div>
+        <div id="boot-error" role="alert">
+          Não foi possível iniciar o aplicativo. Verifique sua conexão e tente novamente.
+          <button id="boot-retry" type="button" onclick="window.location.reload()">
+            TENTAR NOVAMENTE
+          </button>
+        </div>
+      </div>
     </div>
   </div>
   <script>
+    let bootHidden = false;
+    const slowBootTimer = window.setTimeout(() => {
+      document.getElementById('boot-splash')?.classList.add('is-waiting');
+    }, 2000);
+    const bootFailSafeTimer = window.setTimeout(() => {
+      const splash = document.getElementById('boot-splash');
+      if (!splash || bootHidden) return;
+      splash.classList.remove('is-waiting');
+      splash.classList.add('is-error');
+      splash.setAttribute('aria-label', 'Não foi possível iniciar o Clube da Régua');
+    }, 30000);
+
     function hideBootStatus() {
+      if (bootHidden) return;
+      bootHidden = true;
+      window.clearTimeout(slowBootTimer);
+      window.clearTimeout(bootFailSafeTimer);
       const splash = document.getElementById('boot-splash');
       if (!splash) return;
       splash.classList.add('is-hidden');
       window.setTimeout(() => splash.remove(), 250);
     }
-
-    window.addEventListener('hashchange', () => {
-      if (window.location.hash && window.location.hash !== '#/') {
-        hideBootStatus();
-      }
-    });
-
-    const observer = new MutationObserver(() => {
-      const flutterReady = document.querySelector('flutter-view, flt-glass-pane, flt-scene-host');
-      if (flutterReady) {
-        observer.disconnect();
-        const openedOnDirectRoute = window.location.hash && window.location.hash !== '#/';
-        if (openedOnDirectRoute) {
-          setTimeout(hideBootStatus, 500);
-        }
-      }
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    // Segurança: nunca mantém o usuário preso no loading em caso de falha.
-    window.setTimeout(hideBootStatus, 30000);
 
   </script>
   <script src="flutter_bootstrap.js" defer></script>
