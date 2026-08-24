@@ -1,41 +1,12 @@
-# Spec - UI-005 Onboarding 04
+# Spec — UI-005 Onboarding 04
 
-## Titulo
+## Status
 
-Onboarding 04
+Documento histórico arquivado e não implementável.
 
-## Tipografia
+## Decisão vigente
 
-Definir fonte, peso, tamanho, altura de linha e letter spacing.
-
-## Espacamentos
-
-Definir margens, padding, alinhamento central e areas de protecao.
-
-## Paleta
-
-Definir cores oficiais aplicadas: fundo, texto, destaque e estados.
-
-## Botoes
-
-Definir CTA principal, estados e comportamento ao toque.
-
-## Icones
-
-Definir icones e estilo visual.
-
-## Layout
-
-Definir composicao, hierarquia e posicionamento dos elementos.
-
-## Comportamentos
-
-Definir swipe, pular, CTA e permanencia no fluxo.
-
-## Animacoes
-
-Definir entrada, transicao e indicador de pagina.
-
-## Responsividade
-
-Definir comportamento em mobile, tablet e web frame.
+O onboarding V3 possui somente três etapas: Descobrir, Agendar e Explorar.
+UI-004 é a etapa final. Não criar quarto slide, quarto indicador, fotografia
+remota ou conteúdo “Pronto para renovar” sem uma nova decisão de produto e uma
+UI Specification aprovada.

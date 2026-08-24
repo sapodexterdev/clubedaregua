@@ -6,12 +6,11 @@ Documentar a especificacao visual final da terceira tela de onboarding.
 
 ## Status
 
-Documento histórico em especificação. Esta tela não integra o fluxo vigente
-até receber uma UI Specification V3 aprovada.
+Aprovada para implementação V3 como terceira e última etapa do onboarding.
 
 ## Tela Relacionada
 
-Onboarding 03 - Agendamento rapido.
+Onboarding 03 — Explorar barbearias.
 
 ## Dependencias
 
@@ -22,4 +21,5 @@ Onboarding 03 - Agendamento rapido.
 
 ## Observacoes
 
-Esta tela deve demonstrar praticidade e rapidez no agendamento.
+Esta tela comunica que explorar é livre e conduz para a Home Pública. A Splash
+não integra o indicador. Não existe quarta etapa vigente.

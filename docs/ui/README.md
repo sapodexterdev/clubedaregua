@@ -62,8 +62,8 @@ Implementacao
 - `UI-001-Splash`
 - `UI-002-Onboarding-01`
 - `UI-003-Onboarding-02`
-- `UI-004-Onboarding-03`
-- `UI-005-Onboarding-04`
+- `UI-004-Onboarding-03` — etapa 3 Explorar, aprovada V3
+- `UI-005-Onboarding-04` — histórico arquivado; não há quarta etapa
 - `UI-006-Home-Publica`
 - `UI-007-Perfil-Barbearia`
 - `UI-008-Ver-Horarios`

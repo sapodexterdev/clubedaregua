@@ -6,8 +6,7 @@ Documentar a especificacao visual final da quarta tela de onboarding.
 
 ## Status
 
-Documento histórico em especificação. Esta tela não integra o fluxo vigente
-até receber uma UI Specification V3 aprovada.
+Arquivada. Não existe quarta etapa no onboarding V3 vigente.
 
 ## Tela Relacionada
 
@@ -22,4 +21,6 @@ Onboarding 04 - Pronto para renovar.
 
 ## Observacoes
 
-Esta tela deve fechar a experiencia inicial e conduzir para a Home Publica.
+O conceito histórico “Pronto para renovar” não deve orientar implementação.
+A terceira etapa aprovada em UI-004 encerra a experiência e conduz à Home
+Pública.
