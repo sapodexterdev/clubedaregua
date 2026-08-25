@@ -243,7 +243,11 @@ class _AppointmentCard extends StatelessWidget {
             value: appointment.barberName,
           ),
           const Divider(height: 28, color: AppColors.stroke),
-          Row(
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Text(
                 'R\$ ${appointment.total.toStringAsFixed(2).replaceAll('.', ',')}',
@@ -253,7 +257,6 @@ class _AppointmentCard extends StatelessWidget {
                   fontWeight: FontWeight.w900,
                 ),
               ),
-              const Spacer(),
               if (onCancel != null)
                 TextButton(
                   onPressed: cancelling ? null : onCancel,

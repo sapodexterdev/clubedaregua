@@ -42,13 +42,17 @@ class CDRStatusBadge extends StatelessWidget {
                 Icon(icon, color: color, size: 16),
                 const SizedBox(width: CDRSpacingTokens.sm),
               ],
-              Text(
-                label,
-                style: CDRTypographyTokens.caption.copyWith(
-                  // A cor semântica permanece no ícone, borda e fundo. Texto
-                  // branco garante contraste AA também para o tom de erro.
-                  color: CDRColorTokens.white,
-                  fontWeight: FontWeight.w700,
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: CDRTypographyTokens.caption.copyWith(
+                    // A cor semântica permanece no ícone, borda e fundo. Texto
+                    // branco garante contraste AA também para o tom de erro.
+                    color: CDRColorTokens.white,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],

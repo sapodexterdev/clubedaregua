@@ -11,8 +11,10 @@ void main() {
     tester.view.physicalSize = const Size(360, 640);
     addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(tester.view.resetPhysicalSize);
+    final semanticsHandle = tester.ensureSemantics();
 
     await tester.pumpWidget(_app());
+    await tester.pump(const Duration(milliseconds: 200));
     expect(find.bySemanticsLabel('Clube da Régua'), findsOneWidget);
     expect(
       find.textContaining('O SISTEMA FEITO PARA', findRichText: true),
@@ -20,13 +22,14 @@ void main() {
     );
     expect(find.text('CARREGANDO...'), findsNothing);
 
-    await tester.pump(const Duration(milliseconds: 1999));
+    await tester.pump(const Duration(milliseconds: 1799));
     expect(find.text('CARREGANDO...'), findsNothing);
     await tester.pump(const Duration(milliseconds: 1));
     expect(find.text('CARREGANDO...'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(const SizedBox.shrink());
+    semanticsHandle.dispose();
   });
 
   testWidgets('reduced motion uses only a finite 200ms fade', (tester) async {

@@ -1327,7 +1327,7 @@ class _DiscoveryLoading extends StatelessWidget {
         const SizedBox(height: 12),
         const CDRCard(
           padding: EdgeInsets.all(CDRSpacingTokens.md),
-          child: const Column(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               AspectRatio(

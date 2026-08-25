@@ -66,7 +66,9 @@ class _ClientShellState extends State<ClientShell> with RouteAware {
 
   @override
   void didPopNext() {
-    _syncRoute(_currentIndex);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _syncRoute(_currentIndex);
+    });
   }
 
   @override
@@ -158,7 +160,7 @@ class _ClientShellState extends State<ClientShell> with RouteAware {
     }
     final shell = PopScope(
       canPop: visibleIndex == ClientRootTab.discover.index,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, _) {
         if (!didPop && visibleIndex != ClientRootTab.discover.index) {
           _selectTab(ClientRootTab.discover.index);
         }

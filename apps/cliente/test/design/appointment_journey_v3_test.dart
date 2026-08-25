@@ -45,6 +45,12 @@ void main() {
       ),
     );
 
+    await tester.scrollUntilVisible(
+      find.byType(CDRStatusBadge),
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+
     final badge = tester.widget<CDRStatusBadge>(find.byType(CDRStatusBadge));
     expect(badge.tone, CDRStatusTone.success);
     expect(find.text('Seu horário já entrou na agenda do profissional.'),
@@ -57,7 +63,6 @@ void main() {
   testWidgets('selected service remains readable and selected at 200 percent',
       (tester) async {
     final semanticsHandle = tester.ensureSemantics();
-    addTearDown(semanticsHandle.dispose);
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(360, 640);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -102,6 +107,7 @@ void main() {
     expect(semanticsData.hasAction(SemanticsAction.tap), isTrue);
     expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
     expect(tester.takeException(), isNull);
+    semanticsHandle.dispose();
   });
 }
 

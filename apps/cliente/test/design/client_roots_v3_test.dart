@@ -11,6 +11,7 @@ import 'package:clubedaregua/theme/app_theme.dart';
 import 'package:clubedaregua/widgets/premium_bottom_nav.dart';
 import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
@@ -116,8 +117,11 @@ void main() {
         textScale: 2,
       ),
     );
-    await tester.ensureVisible(find.text('Editar dados pessoais'));
-    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Editar dados pessoais'),
+      160,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('Editar dados pessoais'));
     await tester.pumpAndSettle();
 
@@ -168,7 +172,29 @@ void main() {
         textScale: 2,
       ),
     );
-    expect(find.text('Descobrir'), findsOneWidget);
+    for (final label in ['Descobrir', 'Favoritos', 'Agenda', 'Perfil']) {
+      final finder = find.byWidgetPredicate(
+        (widget) =>
+            widget is Text && widget.data?.replaceAll('\n', '') == label,
+        description: 'legenda visual de navegação $label',
+      );
+      final semanticFinder = find.byWidgetPredicate(
+        (widget) => widget is Semantics && widget.properties.label == label,
+        description: 'rótulo semântico de navegação $label',
+      );
+      expect(finder, findsOneWidget);
+      expect(semanticFinder, findsOneWidget);
+      final text = tester.widget<Text>(finder);
+      expect(text.maxLines, 3);
+      expect(text.textAlign, TextAlign.center);
+      final paragraph = tester.renderObject<RenderParagraph>(finder);
+      expect(
+        paragraph.didExceedMaxLines,
+        isFalse,
+        reason: 'A legenda $label (${paragraph.text.toPlainText()}) deve '
+            'permanecer totalmente visível em ${paragraph.size}.',
+      );
+    }
     expect(tester.takeException(), isNull);
   });
 }

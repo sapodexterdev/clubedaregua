@@ -63,7 +63,7 @@ class AppointmentConfirmationScreen extends StatelessWidget {
                           const Center(child: _ConfirmedBadge()),
                           const SizedBox(height: 26),
                           _ReceiptCard(
-                            shopName: receipt!.shopName,
+                            shopName: receipt.shopName,
                             serviceName: receipt.serviceName,
                             barberName: receipt.barberName,
                             date: receipt.date,

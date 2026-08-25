@@ -26,8 +26,18 @@ void main() {
     for (var index = 0; index < screens.length; index++) {
       await tester.pumpWidget(_app(screens[index], textScale: 2));
       await tester.pump();
-      await tester.ensureVisible(find.text(actions[index]));
-      await tester.pump();
+      await tester.scrollUntilVisible(
+        find.byType(CDRButton),
+        160,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(CDRButton),
+          matching: find.text(actions[index]),
+        ),
+        findsOneWidget,
+      );
 
       final clientFrames = tester
           .widgetList<ConstrainedBox>(find.byType(ConstrainedBox))
@@ -43,11 +53,21 @@ void main() {
   testWidgets('login and registration use shared fields and actions',
       (tester) async {
     await tester.pumpWidget(_app(const LoginScreen()));
+    await tester.scrollUntilVisible(
+      find.byType(CDRButton),
+      160,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.byType(AutofillGroup), findsOneWidget);
     expect(find.byType(CDRTextField), findsNWidgets(2));
     expect(find.byType(CDRButton), findsOneWidget);
 
     await tester.pumpWidget(_app(const RegisterScreen()));
+    await tester.scrollUntilVisible(
+      find.byType(CDRButton),
+      160,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.byType(AutofillGroup), findsOneWidget);
     expect(find.byType(CDRTextField), findsNWidgets(3));
     expect(find.byType(CDRButton), findsOneWidget);

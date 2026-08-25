@@ -75,7 +75,7 @@ void main() {
 
     expect(find.text('Agenda'), findsWidgets);
     await tester.binding.handlePopRoute();
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(
       tester

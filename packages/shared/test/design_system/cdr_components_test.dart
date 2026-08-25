@@ -14,8 +14,6 @@ void main() {
   }
 
   testWidgets('CDRCard expõe ação e respeita o toque', (tester) async {
-    final semantics = tester.ensureSemantics();
-    addTearDown(semantics.dispose);
     var taps = 0;
     await tester.pumpWidget(
       app(
@@ -27,15 +25,22 @@ void main() {
       ),
     );
 
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics &&
+            widget.properties.label == 'Abrir barbearia' &&
+            widget.properties.button == true,
+      ),
+      findsOneWidget,
+    );
     await tester.tap(find.text('Sapão Barber'));
     expect(taps, 1);
-    expect(find.bySemanticsLabel('Abrir barbearia'), findsOneWidget);
   });
 
   testWidgets('badge de status oferece um único rótulo semântico',
       (tester) async {
     final semantics = tester.ensureSemantics();
-    addTearDown(semantics.dispose);
     await tester.pumpWidget(
       app(
         const CDRStatusBadge(
@@ -51,6 +56,7 @@ void main() {
     expect(find.text('Confirmado'), findsOneWidget);
     final label = tester.widget<Text>(find.text('Confirmado'));
     expect(label.style?.color, CDRColorTokens.white);
+    semantics.dispose();
   });
 
   testWidgets('todos os badges usam texto com contraste AA', (tester) async {
@@ -148,7 +154,7 @@ void main() {
     );
 
     await tester.tap(find.text('Mostrar'));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.text('Não foi possível salvar.'), findsOneWidget);
     final snackbar = tester.widget<SnackBar>(find.byType(SnackBar));
     expect(snackbar.action?.textColor, CDRColorTokens.white);
@@ -158,19 +164,18 @@ void main() {
 
   testWidgets('avatar usa iniciais como fallback local', (tester) async {
     final semantics = tester.ensureSemantics();
-    addTearDown(semantics.dispose);
     await tester.pumpWidget(
       app(const CDRAvatar(name: 'Rafael Luz', semanticLabel: 'Rafael')),
     );
 
     expect(find.text('RL'), findsOneWidget);
     expect(find.bySemanticsLabel('Rafael'), findsOneWidget);
+    semantics.dispose();
   });
 
   testWidgets('avatar decorativo não duplica o nome na árvore semântica',
       (tester) async {
     final semantics = tester.ensureSemantics();
-    addTearDown(semantics.dispose);
     await tester.pumpWidget(
       app(
         const CDRAvatar(
@@ -183,6 +188,7 @@ void main() {
 
     expect(find.text('RL'), findsOneWidget);
     expect(find.bySemanticsLabel('Rafael'), findsNothing);
+    semantics.dispose();
   });
 
   testWidgets('skeleton elimina movimento quando solicitado', (tester) async {
