@@ -564,98 +564,130 @@ class _AppointmentTile extends StatelessWidget {
                 ? CDRColorTokens.info
                 : SharedAppColors.orange;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: SharedAppColors.card,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: SharedAppColors.stroke),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
+    final details = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          entry.client,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: CDRSpacingTokens.xs),
+        Text(entry.service, style: Theme.of(context).textTheme.bodySmall),
+        if (showBarber) ...[
+          const SizedBox(height: CDRSpacingTokens.xs),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _TimeBadge(entry.time),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      entry.client,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      entry.service,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    if (showBarber) ...[
-                      const SizedBox(height: 3),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.badge_outlined,
-                            size: 14,
-                            color: SharedAppColors.muted,
-                          ),
-                          const SizedBox(width: 5),
-                          Expanded(
-                            child: Text(
-                              entry.barber,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
+              const ExcludeSemantics(
+                child: Icon(
+                  Icons.badge_outlined,
+                  size: 14,
+                  color: SharedAppColors.muted,
                 ),
               ),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Container(
-                    constraints: const BoxConstraints(maxWidth: 104),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 9,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(.1),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      entry.status.toUpperCase(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: statusColor,
-                        fontSize: 9,
-                        letterSpacing: .3,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    color: SharedAppColors.muted,
-                  ),
-                ],
+              const SizedBox(width: CDRSpacingTokens.xs),
+              Expanded(
+                child: Text(
+                  entry.barber,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ),
             ],
           ),
+        ],
+      ],
+    );
+    final status = _AppointmentStatusBadge(
+      label: entry.status,
+      color: statusColor,
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 520 ||
+            MediaQuery.textScalerOf(context).scale(1) > 1.5;
+        final content = compact
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _TimeBadge(entry.time),
+                      const SizedBox(width: CDRSpacingTokens.md),
+                      Expanded(child: details),
+                    ],
+                  ),
+                  const SizedBox(height: CDRSpacingTokens.lg),
+                  Row(
+                    children: [
+                      Flexible(child: status),
+                      const Spacer(),
+                      const Icon(
+                        Icons.chevron_right_rounded,
+                        color: SharedAppColors.muted,
+                      ),
+                    ],
+                  ),
+                ],
+              )
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _TimeBadge(entry.time),
+                  const SizedBox(width: CDRSpacingTokens.md),
+                  Expanded(child: details),
+                  const SizedBox(width: CDRSpacingTokens.md),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      status,
+                      const SizedBox(height: CDRSpacingTokens.sm),
+                      const Icon(
+                        Icons.chevron_right_rounded,
+                        color: SharedAppColors.muted,
+                      ),
+                    ],
+                  ),
+                ],
+              );
+        return CDRCard(
+          margin: const EdgeInsets.only(bottom: CDRSpacingTokens.md),
+          onTap: onTap,
+          child: content,
+        );
+      },
+    );
+  }
+}
+
+class _AppointmentStatusBadge extends StatelessWidget {
+  const _AppointmentStatusBadge({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 160),
+      padding: const EdgeInsets.symmetric(
+        horizontal: CDRSpacingTokens.sm,
+        vertical: CDRSpacingTokens.xs,
+      ),
+      decoration: BoxDecoration(
+        color: color.withOpacity(.1),
+        borderRadius: BorderRadius.circular(CDRRadiusTokens.pill),
+      ),
+      child: Text(
+        label.toUpperCase(),
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          height: 1.3,
+          letterSpacing: .3,
+          fontWeight: FontWeight.w900,
         ),
       ),
     );
@@ -932,8 +964,11 @@ class _TimeBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 54,
-      height: 54,
+      constraints: const BoxConstraints(minWidth: 54, minHeight: 54),
+      padding: const EdgeInsets.symmetric(
+        horizontal: CDRSpacingTokens.sm,
+        vertical: CDRSpacingTokens.md,
+      ),
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: SharedAppColors.orange.withOpacity(0.12),
@@ -944,6 +979,7 @@ class _TimeBadge extends StatelessWidget {
       ),
       child: Text(
         time,
+        softWrap: false,
         style: const TextStyle(
           color: SharedAppColors.orange,
           fontWeight: FontWeight.w900,

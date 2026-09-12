@@ -17,42 +17,34 @@ class _BarberAgendaPage extends StatelessWidget {
             .where((entry) =>
                 entry.status == 'Aceito' || entry.status == 'Confirmado')
             .length;
+        final isInitialLoading = session.isScheduleLoading && entries.isEmpty;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _MetricsGrid(
-              cards: [
-                _MetricData(
-                  'Agendamentos',
-                  '${entries.length}',
-                  Icons.calendar_today_rounded,
-                ),
-                _MetricData(
-                  'Confirmados',
-                  '$confirmedCount',
-                  Icons.event_available_rounded,
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
+            if (!isInitialLoading) ...[
+              _AgendaMetricsGrid(
+                appointments: entries.length,
+                confirmed: confirmedCount,
+              ),
+              const SizedBox(height: 18),
+            ],
             _ScheduleFilters(adminView: adminView),
             const SizedBox(height: 28),
-            _SectionTitle(
-              'Horários do dia',
-              eyebrow: 'AGENDA',
-              trailing: _selectedDateLabel(session.selectedScheduleDate),
+            _AgendaDayHeader(
+              dateLabel: _selectedDateLabel(session.selectedScheduleDate),
             ),
             const SizedBox(height: 12),
-            if (session.isScheduleLoading) ...[
-              const CDRLoading.section(height: 88),
-              const SizedBox(height: 12),
-            ],
-            if (session.scheduleError != null)
+            if (isInitialLoading)
+              const CDRLoading.section(
+                key: ValueKey('agenda-initial-loading'),
+                height: 88,
+              )
+            else if (session.scheduleError != null)
               _InlineNotice(
                 icon: Icons.warning_amber_rounded,
                 title: 'Não foi possível carregar a agenda',
-                subtitle: session.scheduleError!,
+                subtitle: 'Tente novamente em instantes.',
                 actionLabel: 'TENTAR NOVAMENTE',
                 onAction: session.fetchScheduleEntries,
               )
@@ -62,13 +54,21 @@ class _BarberAgendaPage extends StatelessWidget {
                 title: 'Agenda vazia',
                 subtitle: 'Nenhum agendamento encontrado para esta data.',
               )
-            else
+            else ...[
+              if (session.isScheduleLoading) ...[
+                const CDRLoading.section(
+                  key: ValueKey('agenda-refresh-loading'),
+                  height: 88,
+                ),
+                const SizedBox(height: 12),
+              ],
               for (final entry in entries)
                 _AppointmentTile(
                   entry: entry,
                   showBarber: adminView,
                   onTap: () => _showScheduleDetails(context, entry),
                 ),
+            ],
           ],
         );
       },
@@ -85,9 +85,15 @@ class _BarberAgendaPage extends StatelessWidget {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
+      useSafeArea: true,
+      isScrollControlled: true,
       builder: (context) {
-        return SafeArea(
-          child: Padding(
+        return ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * .9,
+          ),
+          child: SingleChildScrollView(
+            key: const ValueKey('agenda-details-scroll'),
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -176,6 +182,158 @@ class _BarberAgendaPage extends StatelessWidget {
   }
 }
 
+class _AgendaMetricsGrid extends StatelessWidget {
+  const _AgendaMetricsGrid({
+    required this.appointments,
+    required this.confirmed,
+  });
+
+  final int appointments;
+  final int confirmed;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 600 ? 2 : 1;
+        final width =
+            (constraints.maxWidth - ((columns - 1) * CDRSpacingTokens.md)) /
+                columns;
+        return Wrap(
+          key: const ValueKey('agenda-metrics'),
+          spacing: CDRSpacingTokens.md,
+          runSpacing: CDRSpacingTokens.md,
+          children: [
+            SizedBox(
+              width: width,
+              child: _AgendaMetricCard(
+                key: const ValueKey('agenda-metric-appointments'),
+                icon: Icons.calendar_today_rounded,
+                value: '$appointments',
+                label: 'Agendamentos no dia',
+              ),
+            ),
+            SizedBox(
+              width: width,
+              child: _AgendaMetricCard(
+                key: const ValueKey('agenda-metric-confirmed'),
+                icon: Icons.event_available_rounded,
+                value: '$confirmed',
+                label: 'Confirmados no dia',
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _AgendaMetricCard extends StatelessWidget {
+  const _AgendaMetricCard({
+    required this.icon,
+    required this.value,
+    required this.label,
+    super.key,
+  });
+
+  final IconData icon;
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return CDRCard(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          ExcludeSemantics(child: _IconBadge(icon)),
+          const SizedBox(width: CDRSpacingTokens.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: CDRSpacingTokens.xs),
+                Text(label, style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AgendaDayHeader extends StatelessWidget {
+  const _AgendaDayHeader({required this.dateLabel});
+
+  final String dateLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 520 || textScale > 1.5;
+        final title = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'AGENDA',
+              style: CDRTypographyTokens.overline,
+            ),
+            const SizedBox(height: CDRSpacingTokens.xs),
+            Text(
+              'Horários do dia',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+          ],
+        );
+        final date = Semantics(
+          label: 'Data selecionada: $dateLabel',
+          child: ExcludeSemantics(
+            child: Container(
+              key: const ValueKey('agenda-selected-date'),
+              padding: const EdgeInsets.symmetric(
+                horizontal: CDRSpacingTokens.md,
+                vertical: CDRSpacingTokens.sm,
+              ),
+              decoration: BoxDecoration(
+                color: CDRColorTokens.graphite,
+                borderRadius: BorderRadius.circular(CDRRadiusTokens.pill),
+                border: Border.all(color: CDRColorTokens.border),
+              ),
+              child: Text(dateLabel, style: CDRTypographyTokens.label),
+            ),
+          ),
+        );
+
+        if (compact) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              title,
+              const SizedBox(height: CDRSpacingTokens.md),
+              date,
+            ],
+          );
+        }
+        return Row(
+          children: [
+            Expanded(child: title),
+            const SizedBox(width: CDRSpacingTokens.md),
+            date,
+          ],
+        );
+      },
+    );
+  }
+}
+
 class _ScheduleFilters extends StatelessWidget {
   const _ScheduleFilters({required this.adminView});
 
@@ -186,6 +344,9 @@ class _ScheduleFilters extends StatelessWidget {
     return Consumer<ManagementSession>(
       builder: (context, session, _) {
         final date = session.selectedScheduleDate;
+        final textScale = MediaQuery.textScalerOf(context).scale(1);
+        final selectorHeight =
+            58.0 + (28.0 * (textScale - 1).clamp(0.0, 2.0)).toDouble();
         final days = List.generate(7, (index) {
           final now = DateTime.now();
           return DateTime(now.year, now.month, now.day + index);
@@ -204,6 +365,7 @@ class _ScheduleFilters extends StatelessWidget {
               if (adminView) ...[
                 DropdownButtonFormField<String>(
                   value: _validBarberDropdownValue(session),
+                  isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Barbeiro',
                     prefixIcon: Icon(Icons.badge_outlined),
@@ -213,12 +375,20 @@ class _ScheduleFilters extends StatelessWidget {
                   items: [
                     const DropdownMenuItem<String>(
                       value: _allBarbersDropdownValue,
-                      child: Text('Todos os barbeiros'),
+                      child: Text(
+                        'Todos os barbeiros',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     for (final barber in _uniqueBarbers(session.teamBarbers))
                       DropdownMenuItem<String>(
                         value: barber.id,
-                        child: Text(barber.name),
+                        child: Text(
+                          barber.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                   ],
                   onChanged: (value) => session.selectScheduleBarber(
@@ -228,7 +398,7 @@ class _ScheduleFilters extends StatelessWidget {
                 const SizedBox(height: 12),
               ],
               SizedBox(
-                height: 58,
+                height: selectorHeight,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: days.length,
@@ -236,29 +406,42 @@ class _ScheduleFilters extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final day = days[index];
                     final selected = DateUtils.isSameDay(day, date);
-                    return ChoiceChip(
-                      label: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            _weekdayLabel(day),
-                            style: const TextStyle(fontSize: 10),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(_dayLabel(day)),
-                        ],
-                      ),
+                    final semanticLabel = '${_fullWeekdayLabel(day)}, '
+                        '${_fullDateLabel(day)}';
+                    return Semantics(
+                      key: ValueKey('schedule-day-${_dateKey(day)}'),
+                      label: semanticLabel,
+                      button: true,
                       selected: selected,
-                      onSelected: (_) => session.selectScheduleDate(day),
-                      selectedColor: SharedAppColors.orange,
-                      backgroundColor: SharedAppColors.elevated,
-                      side: const BorderSide(color: SharedAppColors.stroke),
-                      labelStyle: TextStyle(
-                        color: selected
-                            ? SharedAppColors.onGold
-                            : SharedAppColors.text,
-                        fontWeight: FontWeight.w800,
+                      onTap: () => session.selectScheduleDate(day),
+                      child: ExcludeSemantics(
+                        child: ChoiceChip(
+                          label: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                _weekdayLabel(day),
+                                style: const TextStyle(fontSize: 10),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(_dayLabel(day)),
+                            ],
+                          ),
+                          selected: selected,
+                          onSelected: (_) => session.selectScheduleDate(day),
+                          selectedColor: SharedAppColors.orange,
+                          backgroundColor: SharedAppColors.elevated,
+                          side: const BorderSide(
+                            color: SharedAppColors.stroke,
+                          ),
+                          labelStyle: TextStyle(
+                            color: selected
+                                ? SharedAppColors.onGold
+                                : SharedAppColors.text,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
                       ),
                     );
                   },
@@ -280,6 +463,31 @@ class _ScheduleFilters extends StatelessWidget {
   String _weekdayLabel(DateTime date) {
     const labels = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'];
     return labels[date.weekday - 1];
+  }
+
+  String _fullWeekdayLabel(DateTime date) {
+    const labels = [
+      'segunda-feira',
+      'terça-feira',
+      'quarta-feira',
+      'quinta-feira',
+      'sexta-feira',
+      'sábado',
+      'domingo',
+    ];
+    return labels[date.weekday - 1];
+  }
+
+  String _fullDateLabel(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return '$day/$month/${date.year}';
+  }
+
+  String _dateKey(DateTime date) {
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '${date.year}-$month-$day';
   }
 
   String _validBarberDropdownValue(ManagementSession session) {
