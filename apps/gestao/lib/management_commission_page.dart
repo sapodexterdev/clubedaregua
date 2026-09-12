@@ -6,125 +6,210 @@ class _CommissionPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Column(
+      key: ValueKey('commission-page-v3'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _MetricsGrid(
-          cards: [
-            _MetricData(
-              'Produção na semana',
-              'R\$ 1.780',
-              Icons.trending_up_rounded,
-            ),
-            _MetricData(
-              'Comissão estimada',
-              'R\$ 712',
-              Icons.account_balance_wallet_rounded,
-            ),
-          ],
-        ),
-        SizedBox(height: 14),
-        _InlineNotice(
-          icon: Icons.science_outlined,
-          title: 'Prévia financeira',
-          subtitle:
-              'Valores ilustrativos enquanto a movimentação financeira real não está ativa.',
-        ),
-        SizedBox(height: 24),
+        _CommissionIntro(),
+        SizedBox(height: CDRSpacingTokens.xxl),
         _SectionTitle(
-          'Desempenho da semana',
+          'Indicadores planejados',
           eyebrow: 'COMISSÃO',
-          trailing: 'Período atual',
         ),
-        SizedBox(height: 12),
-        _InsightTile(
-          title: 'Atendimentos concluídos',
-          value: '31',
-          subtitle: 'Ticket médio de R\$ 57',
-        ),
-        _InsightTile(
-          title: 'Serviço mais feito',
-          value: 'Corte + barba',
-          subtitle: '14 atendimentos no período',
-        ),
-        SizedBox(height: 28),
-        _SectionTitle(
-          'Resumo financeiro',
-          eyebrow: 'FATURAMENTO',
-          trailing: 'Estimativa',
-        ),
-        SizedBox(height: 12),
-        _CommissionBreakdown(),
+        SizedBox(height: CDRSpacingTokens.md),
+        _CommissionIndicatorGrid(),
       ],
     );
   }
 }
 
-class _CommissionBreakdown extends StatelessWidget {
-  const _CommissionBreakdown();
+class _CommissionIntro extends StatelessWidget {
+  const _CommissionIntro();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: SharedAppColors.card,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: SharedAppColors.stroke),
-      ),
-      child: const Column(
-        children: [
-          _FinancialLine(label: 'Produção bruta', value: 'R\$ 1.780,00'),
-          Divider(height: 28),
-          _FinancialLine(
-            label: 'Comissão estimada (40%)',
-            value: 'R\$ 712,00',
-            emphasized: true,
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 760),
+        child: CDRCard(
+          key: const ValueKey('commission-intro'),
+          padding: const EdgeInsets.all(CDRSpacingTokens.xxl),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: CDRSizeTokens.touchTarget,
+                height: CDRSizeTokens.touchTarget,
+                decoration: BoxDecoration(
+                  color: const Color(0x1FF3B200),
+                  borderRadius: BorderRadius.circular(CDRRadiusTokens.medium),
+                ),
+                child: const Icon(
+                  Icons.account_balance_wallet_outlined,
+                  color: CDRColorTokens.brandYellow,
+                  semanticLabel: 'Comissão',
+                ),
+              ),
+              const SizedBox(height: CDRSpacingTokens.lg),
+              Text(
+                'Sua comissão, sem estimativas',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: CDRSpacingTokens.sm),
+              Text(
+                'Estamos preparando o cálculo com base nos atendimentos '
+                'concluídos e no percentual definido pela barbearia. Até a '
+                'integração ser concluída, nenhum valor estimado será exibido aqui.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: CDRColorTokens.textSecondary,
+                    ),
+              ),
+              const SizedBox(height: CDRSpacingTokens.lg),
+              const _CommissionStatus(),
+            ],
           ),
-          Divider(height: 28),
-          _FinancialLine(
-            label: 'Repasse da barbearia',
-            value: 'R\$ 1.068,00',
+        ),
+      ),
+    );
+  }
+}
+
+class _CommissionStatus extends StatelessWidget {
+  const _CommissionStatus();
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      key: const ValueKey('commission-status'),
+      label: 'Status: dados de comissão em preparação',
+      child: ExcludeSemantics(
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: CDRSpacingTokens.md,
+            vertical: CDRSpacingTokens.sm,
+          ),
+          decoration: BoxDecoration(
+            color: CDRColorTokens.graphiteLight,
+            borderRadius: BorderRadius.circular(CDRRadiusTokens.pill),
+            border: Border.all(color: CDRColorTokens.border),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.schedule_rounded,
+                size: CDRSizeTokens.icon,
+                color: CDRColorTokens.brandYellow,
+              ),
+              SizedBox(width: CDRSpacingTokens.sm),
+              Flexible(
+                child: Text(
+                  'Dados de comissão em preparação',
+                  style: CDRTypographyTokens.label,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CommissionIndicatorData {
+  const _CommissionIndicatorData({
+    required this.icon,
+    required this.title,
+    required this.description,
+  });
+
+  final IconData icon;
+  final String title;
+  final String description;
+}
+
+class _CommissionIndicatorGrid extends StatelessWidget {
+  const _CommissionIndicatorGrid();
+
+  static const _indicators = [
+    _CommissionIndicatorData(
+      icon: Icons.payments_outlined,
+      title: 'Produção do período',
+      description: 'Total dos atendimentos elegíveis no período selecionado.',
+    ),
+    _CommissionIndicatorData(
+      icon: Icons.percent_rounded,
+      title: 'Percentual aplicado',
+      description: 'Taxa de comissão registrada para cada atendimento.',
+    ),
+    _CommissionIndicatorData(
+      icon: Icons.event_available_outlined,
+      title: 'Repasse previsto',
+      description: 'Valor devido e situação do próximo repasse.',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 900 && textScale <= 1.5
+            ? 3
+            : constraints.maxWidth >= 600
+                ? 2
+                : 1;
+        final width =
+            (constraints.maxWidth - ((columns - 1) * CDRSpacingTokens.md)) /
+                columns;
+        return Wrap(
+          key: const ValueKey('commission-indicators'),
+          spacing: CDRSpacingTokens.md,
+          runSpacing: CDRSpacingTokens.md,
+          children: [
+            for (final indicator in _indicators)
+              SizedBox(
+                width: width,
+                child: _CommissionIndicatorCard(data: indicator),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _CommissionIndicatorCard extends StatelessWidget {
+  const _CommissionIndicatorCard({required this.data});
+
+  final _CommissionIndicatorData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return CDRCard(
+      key: ValueKey('commission-indicator-${data.title}'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ExcludeSemantics(child: _IconBadge(data.icon)),
+          const SizedBox(height: CDRSpacingTokens.lg),
+          Text(data.title, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: CDRSpacingTokens.sm),
+          Text(
+            data.description,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: CDRColorTokens.textSecondary,
+                ),
+          ),
+          const SizedBox(height: CDRSpacingTokens.lg),
+          Text(
+            'INDISPONÍVEL POR ENQUANTO',
+            style: CDRTypographyTokens.overline.copyWith(
+              color: CDRColorTokens.brandYellow,
+            ),
           ),
         ],
       ),
-    );
-  }
-}
-
-class _FinancialLine extends StatelessWidget {
-  const _FinancialLine({
-    required this.label,
-    required this.value,
-    this.emphasized = false,
-  });
-
-  final String label;
-  final String value;
-  final bool emphasized;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: emphasized ? SharedAppColors.text : SharedAppColors.muted,
-              fontWeight: emphasized ? FontWeight.w800 : FontWeight.w600,
-            ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Text(
-          value,
-          style: TextStyle(
-            color: emphasized ? SharedAppColors.orange : SharedAppColors.text,
-            fontSize: emphasized ? 18 : 15,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-      ],
     );
   }
 }

@@ -1311,27 +1311,6 @@ class _StockTile extends StatelessWidget {
   }
 }
 
-class _InsightTile extends StatelessWidget {
-  const _InsightTile({
-    required this.title,
-    required this.value,
-    required this.subtitle,
-  });
-
-  final String title;
-  final String value;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return _SurfaceTile(
-      leading: const _IconBadge(Icons.insights_rounded),
-      title: value,
-      subtitle: '$title · $subtitle',
-    );
-  }
-}
-
 class _ActionPanel extends StatelessWidget {
   const _ActionPanel({
     required this.title,
