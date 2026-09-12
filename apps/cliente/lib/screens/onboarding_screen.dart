@@ -1,15 +1,14 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 
 import '../core/app_constants.dart';
-import '../providers/app_state.dart';
+import '../core/app_mode.dart';
+import '../providers/app_mode_controller.dart';
 import '../theme/app_colors.dart';
 import 'client/home_screen.dart';
-import 'mode_selection_screen.dart';
 import 'splash_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -24,8 +23,8 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   static const _pageCount = 3;
   final _controller = PageController();
-  Timer? _timer;
   int _page = 0;
+  bool _isFinishing = false;
 
   final _slides = const [
     _WelcomeSlideData(
@@ -46,58 +45,49 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       showSlots: true,
     ),
     _WelcomeSlideData(
-      icon: Icons.workspace_premium_outlined,
-      title: 'Pronto para renovar\nseu visual?',
+      icon: Icons.storefront_outlined,
+      title: 'Explore barbearias\nno seu ritmo.',
       subtitle:
-          'O Clube da Régua conecta você às melhores barbearias da cidade.',
-      imageUrl: AppConstants.promoBarber,
+          'Conheça serviços, profissionais e avaliações antes de criar sua conta.',
       showLogo: true,
     ),
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(const Duration(milliseconds: 3500), (_) {
-      if (!mounted || !_controller.hasClients) return;
-      final nextPage = (_page + 1) % _pageCount;
-      _controller.animateToPage(
-        nextPage,
-        duration: const Duration(milliseconds: 420),
-        curve: Curves.easeOutCubic,
-      );
-    });
-  }
-
   Future<void> _finish() async {
-    _timer?.cancel();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(SplashScreen.onboardingSeenKey, true);
-    if (!mounted) return;
-    final state = context.read<AppState>();
-    final route = state.isSignedIn && state.hasProfessionalAccess
-        ? ModeSelectionScreen.route
-        : HomeScreen.route;
-    Navigator.pushReplacementNamed(context, route);
+    if (_isFinishing) return;
+    setState(() => _isFinishing = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(SplashScreen.onboardingSeenKey, true);
+      if (!mounted) return;
+      await context.read<AppModeController>().selectMode(AppMode.client);
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, HomeScreen.route);
+    } catch (_) {
+      if (mounted) setState(() => _isFinishing = false);
+    }
   }
 
   void _skipToExplore() {
-    _timer?.cancel();
-    _controller.animateToPage(
-      _pageCount - 1,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOutCubic,
-    );
+    _goToPage(_pageCount - 1);
   }
 
   void _continue() {
-    _timer?.cancel();
+    if (_isFinishing) return;
     if (_page == _pageCount - 1) {
       _finish();
       return;
     }
+    _goToPage(_page + 1);
+  }
+
+  void _goToPage(int page) {
+    if (MediaQuery.of(context).disableAnimations) {
+      _controller.jumpToPage(page);
+      return;
+    }
     _controller.animateToPage(
-      _page + 1,
+      page,
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOutCubic,
     );
@@ -105,7 +95,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   void dispose() {
-    _timer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -152,7 +141,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           _WelcomeFooter(
             page: _page,
             pageCount: _pageCount,
-            onTap: _continue,
+            onTap: _isFinishing ? null : _continue,
+            isLoading: _isFinishing,
           ),
         ],
       ),
@@ -165,11 +155,9 @@ class _WelcomeSlideData {
     required this.icon,
     required this.title,
     required this.subtitle,
-    this.imageUrl,
     this.imageAsset,
     this.discoverV3 = false,
     this.scheduleV3 = false,
-    this.showBarbers = false,
     this.showSlots = false,
     this.showLogo = false,
   });
@@ -177,11 +165,9 @@ class _WelcomeSlideData {
   final IconData icon;
   final String title;
   final String subtitle;
-  final String? imageUrl;
   final String? imageAsset;
   final bool discoverV3;
   final bool scheduleV3;
-  final bool showBarbers;
   final bool showSlots;
   final bool showLogo;
 }
@@ -197,107 +183,110 @@ class _WelcomeSlide extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: selected ? .98 : 1, end: selected ? 1 : .98),
-      duration: const Duration(milliseconds: 420),
-      curve: Curves.easeOutCubic,
-      builder: (context, scale, child) {
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            Transform.scale(scale: scale, child: _background()),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: data.discoverV3 || data.scheduleV3
-                      ? const [
-                          Color(0x5C050505),
-                          Color(0x7A09090B),
-                          Color(0xF009090B),
-                        ]
-                      : const [
-                          Color(0x880D0D0D),
-                          Color(0xAA0D0D0D),
-                          AppColors.background,
-                        ],
-                ),
-              ),
+    final reduceMotion = MediaQuery.of(context).disableAnimations;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        _background(),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: data.discoverV3 || data.scheduleV3
+                  ? const [
+                      Color(0x5C050505),
+                      Color(0x7A09090B),
+                      Color(0xF009090B),
+                    ]
+                  : const [
+                      Color(0x0009090B),
+                      Color(0xB809090B),
+                      AppColors.background,
+                    ],
             ),
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 28, 24, 168),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 42),
-                    const Spacer(),
-                    if (data.showLogo)
-                      Semantics(
-                        image: true,
-                        label: 'Clube da Régua',
-                        child: SvgPicture.asset(
-                          AppConstants.brandV3LogoPrincipal,
-                          width: 180,
-                          fit: BoxFit.contain,
-                          excludeFromSemantics: true,
+          ),
+        ),
+        SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final minimumHeight = (constraints.maxHeight - 270)
+                  .clamp(0.0, double.infinity)
+                  .toDouble();
+              return SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(
+                  CDRSpacingTokens.xxl,
+                  80,
+                  CDRSpacingTokens.xxl,
+                  176,
+                ),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: minimumHeight),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (data.showLogo)
+                        Semantics(
+                          image: true,
+                          label: 'Clube da Régua',
+                          child: SvgPicture.asset(
+                            AppConstants.brandV3LogoPrincipal,
+                            width: 180,
+                            fit: BoxFit.contain,
+                            excludeFromSemantics: true,
+                          ),
+                        )
+                      else
+                        Icon(
+                          data.icon,
+                          color: AppColors.orange,
+                          size: 40,
                         ),
-                      )
-                    else
-                      Icon(
-                        data.icon,
-                        color: AppColors.orange,
-                        size: data.discoverV3 || data.scheduleV3 ? 40 : 52,
-                      ),
-                    SizedBox(
-                      height: data.showLogo ||
-                              data.discoverV3 ||
-                              data.scheduleV3
-                          ? 20
-                          : 24,
-                    ),
-                    AnimatedOpacity(
-                      opacity: selected ? 1 : .55,
-                      duration: const Duration(milliseconds: 250),
-                      child: Column(
-                        children: [
-                          Text(
-                            data.title,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: AppColors.text,
-                              fontFamily: 'Barlow Condensed',
-                              fontSize: 32,
-                              height: 1.125,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0,
+                      const SizedBox(height: CDRSpacingTokens.xl),
+                      AnimatedOpacity(
+                        opacity: selected ? 1 : .55,
+                        duration: reduceMotion
+                            ? Duration.zero
+                            : CDRDurationTokens.fast,
+                        child: Column(
+                          children: [
+                            Text(
+                              data.title,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: AppColors.text,
+                                fontFamily:
+                                    CDRTypographyTokens.displayFontFamily,
+                                fontSize: 32,
+                                height: 1.125,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            data.subtitle,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: AppColors.muted,
-                              fontSize: 14,
-                              height: 1.43,
-                              fontWeight: FontWeight.w400,
+                            const SizedBox(height: CDRSpacingTokens.md),
+                            Text(
+                              data.subtitle,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: AppColors.muted,
+                                fontSize: 14,
+                                height: 1.43,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    if (data.showBarbers) const _BarberPreview(),
-                    if (data.showSlots) const _SlotPreview(),
-                    const Spacer(),
-                  ],
+                      if (data.showSlots) ...[
+                        const SizedBox(height: CDRSpacingTokens.xxl),
+                        const _SlotPreview(),
+                      ],
+                    ],
+                  ),
                 ),
-              ),
-            ),
-          ],
-        );
-      },
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -309,39 +298,9 @@ class _WelcomeSlide extends StatelessWidget {
         alignment: Alignment.topCenter,
       );
     }
-    return Image.network(
-      data.imageUrl!,
-      fit: BoxFit.cover,
-      color: Colors.black.withOpacity(.66),
-      colorBlendMode: BlendMode.darken,
-    );
-  }
-}
-
-class _BarberPreview extends StatelessWidget {
-  const _BarberPreview();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: AppColors.card.withOpacity(.82),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.stroke),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: List.generate(3, (index) {
-          return Padding(
-            padding: EdgeInsets.only(left: index == 0 ? 0 : 8),
-            child: const CircleAvatar(
-              radius: 23,
-              backgroundImage: NetworkImage(AppConstants.defaultAvatar),
-            ),
-          );
-        }),
-      ),
+    return const ColoredBox(
+      color: AppColors.background,
+      child: SizedBox.expand(),
     );
   }
 }
@@ -352,28 +311,33 @@ class _SlotPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const slots = ['09:00', '10:30', '15:00'];
-    return Wrap(
-      spacing: 8,
+    return Row(
       children: slots.map((slot) {
         final selected = slot == '15:00';
-        return Container(
-          constraints: const BoxConstraints(minHeight: 40),
-          alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(
-            color: selected ? AppColors.orange : AppColors.card,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: selected ? AppColors.orange : AppColors.stroke,
-            ),
-          ),
-          child: Text(
-            slot,
-            style: TextStyle(
-              color: selected ? AppColors.onGold : AppColors.text,
-              fontSize: 13,
-              height: 1.38,
-              fontWeight: FontWeight.w600,
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(left: slot == slots.first ? 0 : 8),
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 40),
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                color: selected ? AppColors.orange : AppColors.card,
+                borderRadius: BorderRadius.circular(CDRRadiusTokens.small),
+                border: Border.all(
+                  color: selected ? AppColors.orange : AppColors.stroke,
+                ),
+              ),
+              child: Text(
+                slot,
+                maxLines: 1,
+                style: TextStyle(
+                  color: selected ? AppColors.onGold : AppColors.text,
+                  fontSize: 13,
+                  height: 1.38,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ),
         );
@@ -387,19 +351,28 @@ class _WelcomeFooter extends StatelessWidget {
     required this.page,
     required this.pageCount,
     required this.onTap,
+    required this.isLoading,
   });
 
   final int page;
   final int pageCount;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
+    final reduceMotion = MediaQuery.of(context).disableAnimations;
     return SafeArea(
+      top: false,
       child: Align(
         alignment: Alignment.bottomCenter,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(30, 0, 30, 34),
+          padding: const EdgeInsets.fromLTRB(
+            CDRSpacingTokens.xxl,
+            0,
+            CDRSpacingTokens.xxl,
+            CDRSpacingTokens.xxl,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -408,11 +381,13 @@ class _WelcomeFooter extends StatelessWidget {
                 height: 56,
                 child: FilledButton(
                   onPressed: onTap,
-                  child: Text(
-                    page == pageCount - 1
-                        ? 'EXPLORAR BARBEARIAS'
-                        : 'CONTINUAR',
-                  ),
+                  child: isLoading
+                      ? const CDRLoading.compact(size: 20)
+                      : Text(
+                          page == pageCount - 1
+                              ? 'EXPLORAR BARBEARIAS'
+                              : 'CONTINUAR',
+                        ),
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.orange,
                     foregroundColor: AppColors.onGold,
@@ -422,12 +397,13 @@ class _WelcomeFooter extends StatelessWidget {
                       letterSpacing: .2,
                     ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius:
+                          BorderRadius.circular(CDRRadiusTokens.medium),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: CDRSpacingTokens.xl),
               Semantics(
                 label: 'Etapa ${page + 1} de $pageCount',
                 child: Row(
@@ -435,13 +411,16 @@ class _WelcomeFooter extends StatelessWidget {
                   children: List.generate(pageCount, (index) {
                     final selected = index == page;
                     return AnimatedContainer(
-                      duration: const Duration(milliseconds: 250),
+                      duration: reduceMotion
+                          ? Duration.zero
+                          : CDRDurationTokens.standard,
                       width: selected ? 24 : 9,
                       height: 9,
                       margin: const EdgeInsets.symmetric(horizontal: 5),
                       decoration: BoxDecoration(
                         color: selected ? AppColors.orange : AppColors.stroke,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius:
+                            BorderRadius.circular(CDRRadiusTokens.pill),
                       ),
                     );
                   }),

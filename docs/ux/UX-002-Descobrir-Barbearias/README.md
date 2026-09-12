@@ -52,4 +52,7 @@ Esta jornada aplica o visual urbano premium da marca: dark first, preto e grafit
 
 ## Fonte Visual Oficial
 
-`board.png` e a fonte visual oficial desta jornada.
+`board.png` é a fonte oficial da jornada e da arquitetura da informação. Para
+identidade visual, ativos e componentes, prevalecem a Marca V3 e a UI
+Specification V3 aprovada, conforme
+`docs/brand/ADR-001-V3-AUTORIDADE-VISUAL.md`.

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 
 import '../models/service_item.dart';
 import '../theme/app_colors.dart';
@@ -17,73 +18,89 @@ class ServiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label:
+          '${service.name}, ${service.durationMinutes} minutos, R\$ ${service.price.toStringAsFixed(0)}',
       onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.orange.withOpacity(.09)
-              : AppColors.card,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: isSelected ? AppColors.orange : AppColors.stroke,
-            width: isSelected ? 1.5 : 1,
+      child: ExcludeSemantics(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(CDRRadiusTokens.large),
+          child: AnimatedContainer(
+            duration: CDRDurationTokens.fast,
+            padding: const EdgeInsets.all(CDRSpacingTokens.lg),
+            decoration: BoxDecoration(
+              color: isSelected ? AppColors.orange : AppColors.card,
+              borderRadius: BorderRadius.circular(CDRRadiusTokens.large),
+              border: Border.all(
+                color: isSelected ? AppColors.orange : AppColors.stroke,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.onGold.withOpacity(.12)
+                        : AppColors.elevated,
+                    borderRadius: BorderRadius.circular(CDRRadiusTokens.medium),
+                  ),
+                  child: Icon(
+                    Icons.content_cut_rounded,
+                    color: isSelected ? AppColors.onGold : AppColors.orange,
+                  ),
+                ),
+                const SizedBox(width: CDRSpacingTokens.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        service.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: CDRTypographyTokens.label.copyWith(
+                          color: isSelected ? AppColors.onGold : AppColors.text,
+                        ),
+                      ),
+                      const SizedBox(height: CDRSpacingTokens.xs),
+                      Text(
+                        '${service.durationMinutes} min',
+                        style: CDRTypographyTokens.bodySmall.copyWith(
+                          color:
+                              isSelected ? AppColors.onGold : AppColors.muted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: CDRSpacingTokens.sm),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'R\$ ${service.price.toStringAsFixed(0)}',
+                      style: CDRTypographyTokens.label.copyWith(
+                        color: isSelected ? AppColors.onGold : AppColors.text,
+                      ),
+                    ),
+                    if (isSelected) ...[
+                      const SizedBox(height: CDRSpacingTokens.xs),
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        color: AppColors.onGold,
+                        size: CDRSizeTokens.icon,
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.orange.withOpacity(.16)
-                    : AppColors.elevated,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(
-                Icons.content_cut_rounded,
-                color: AppColors.orange,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    service.name,
-                    style: TextStyle(
-                      color: AppColors.text,
-                      fontSize: 15,
-                      height: 1.3,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${service.durationMinutes} min',
-                    style: TextStyle(
-                      color: AppColors.muted,
-                      fontSize: 13,
-                      height: 1.35,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Text(
-              'R\$ ${service.price.toStringAsFixed(0)}',
-              style: TextStyle(
-                color: isSelected ? AppColors.orange : AppColors.text,
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
         ),
       ),
     );

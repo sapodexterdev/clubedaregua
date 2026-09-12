@@ -39,8 +39,7 @@ class BarberDetailsScreen extends StatelessWidget {
         final services = state.servicesForSelectedBarber;
         final canContinue = state.selectedService != null &&
             state.selectedBarber != null &&
-            state.selectedTime.isNotEmpty &&
-            !state.isLoadingAvailability;
+            state.hasValidSelectedTime;
 
         return Scaffold(
           backgroundColor: AppColors.background,
@@ -71,91 +70,97 @@ class BarberDetailsScreen extends StatelessWidget {
           body: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(
-                maxWidth: CDRSizeTokens.contentMaxWidth,
+                maxWidth: CDRSizeTokens.clientFrameMaxWidth,
               ),
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(18, 8, 18, 32),
+                padding: const EdgeInsets.fromLTRB(
+                  CDRSpacingTokens.xxl,
+                  CDRSpacingTokens.sm,
+                  CDRSpacingTokens.xxl,
+                  CDRSpacingTokens.xxxl,
+                ),
                 children: [
-              _ShopContext(
-                name: shop.identity.name,
-                location: shop.identity.locationLabel,
-              ),
-              const SizedBox(height: 28),
-              _StepHeader(
-                number: 1,
-                title: 'Escolha o serviço',
-                caption: state.selectedService == null
-                    ? 'Selecione uma opção para continuar'
-                    : _serviceCaption(state.selectedService!),
-              ),
-              const SizedBox(height: 12),
-              if (services.isEmpty)
-                const _EmptyBlock('Nenhum serviço disponível para a equipe.')
-              else
-                ...services.map(
-                  (service) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: ServiceCard(
-                      service: service,
-                      isSelected: state.selectedService?.id == service.id,
-                      onTap: () => state.selectService(service),
-                    ),
+                  _ShopContext(
+                    name: shop.identity.name,
+                    location: shop.identity.locationLabel,
                   ),
-                ),
-              const SizedBox(height: 22),
-              _StepHeader(
-                number: 2,
-                title: 'Escolha o profissional',
-                caption: state.selectedBarber?.name ??
-                    'Selecione quem fará o atendimento',
-              ),
-              const SizedBox(height: 12),
-              if (shop.barbers.isEmpty)
-                const _EmptyBlock('Nenhum profissional disponível.')
-              else
-                _BarberStrip(
-                  barbers: shop.barbers,
-                  selected: state.selectedBarber,
-                  onSelected: state.selectBarber,
-                ),
-              const SizedBox(height: 28),
-              _StepHeader(
-                number: 3,
-                title: 'Escolha a data',
-                caption: _longDate(state.selectedDate),
-              ),
-              const SizedBox(height: 12),
-              _DateStrip(
-                selectedDate: state.selectedDate,
-                daysAhead: shop.identity.bookingDaysAhead,
-                onSelected: state.selectDate,
-              ),
-              const SizedBox(height: 28),
-              _StepHeader(
-                number: 4,
-                title: 'Escolha o horário',
-                caption: state.selectedTime.isEmpty
-                    ? 'Horários livres para a data selecionada'
-                    : 'Selecionado às ${state.selectedTime}',
-              ),
-              const SizedBox(height: 14),
-              _Availability(
-                loading: state.isLoadingAvailability,
-                error: state.availabilityError,
-                times: state.availableTimes,
-                selectedTime: state.selectedTime,
-                onSelected: state.selectTime,
-                onRetry: state.refreshAvailableTimes,
-              ),
-              if (canContinue) ...[
-                const SizedBox(height: 26),
-                _BookingSummary(
-                  service: state.selectedService!,
-                  barber: state.selectedBarber!,
-                  date: state.selectedDate,
-                  time: state.selectedTime,
-                ),
-              ],
+                  const SizedBox(height: 28),
+                  _StepHeader(
+                    number: 1,
+                    title: 'Escolha o serviço',
+                    caption: state.selectedService == null
+                        ? 'Selecione uma opção para continuar'
+                        : _serviceCaption(state.selectedService!),
+                  ),
+                  const SizedBox(height: 12),
+                  if (services.isEmpty)
+                    const _EmptyBlock(
+                        'Nenhum serviço disponível para a equipe.')
+                  else
+                    ...services.map(
+                      (service) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: ServiceCard(
+                          service: service,
+                          isSelected: state.selectedService?.id == service.id,
+                          onTap: () => state.selectService(service),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 22),
+                  _StepHeader(
+                    number: 2,
+                    title: 'Escolha o profissional',
+                    caption: state.selectedBarber?.name ??
+                        'Selecione quem fará o atendimento',
+                  ),
+                  const SizedBox(height: 12),
+                  if (shop.barbers.isEmpty)
+                    const _EmptyBlock('Nenhum profissional disponível.')
+                  else
+                    _BarberStrip(
+                      barbers: shop.barbers,
+                      selected: state.selectedBarber,
+                      onSelected: state.selectBarber,
+                    ),
+                  const SizedBox(height: 28),
+                  _StepHeader(
+                    number: 3,
+                    title: 'Escolha a data',
+                    caption: _longDate(state.selectedDate),
+                  ),
+                  const SizedBox(height: 12),
+                  _DateStrip(
+                    selectedDate: state.selectedDate,
+                    daysAhead: shop.identity.bookingDaysAhead,
+                    onSelected: state.selectDate,
+                  ),
+                  const SizedBox(height: 28),
+                  _StepHeader(
+                    number: 4,
+                    title: 'Escolha o horário',
+                    caption: !state.hasValidSelectedTime
+                        ? 'Horários livres para a data selecionada'
+                        : 'Selecionado às ${state.selectedTime}',
+                  ),
+                  const SizedBox(height: 14),
+                  _Availability(
+                    loading: state.isLoadingAvailability,
+                    error: state.availabilityError,
+                    times: state.availableTimes,
+                    selectedTime: state.selectedTime,
+                    onSelected: state.selectTime,
+                    onRetry: state.refreshAvailableTimes,
+                  ),
+                  if (canContinue) ...[
+                    const SizedBox(height: 26),
+                    _BookingSummary(
+                      service: state.selectedService!,
+                      barber: state.selectedBarber!,
+                      date: state.selectedDate,
+                      time: state.selectedTime,
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -179,10 +184,10 @@ class _ShopContext extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(CDRSpacingTokens.lg),
       decoration: BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(CDRRadiusTokens.large),
         border: Border.all(color: AppColors.stroke),
       ),
       child: Row(
@@ -308,7 +313,8 @@ class _BarberStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 122,
+      height: 122.0 +
+          (MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0) - 1) * 24,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: barbers.length,
@@ -316,49 +322,44 @@ class _BarberStrip extends StatelessWidget {
         itemBuilder: (context, index) {
           final barber = barbers[index];
           final isSelected = selected?.id == barber.id;
-          return InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () => onSelected(barber),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              width: 112,
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.orange.withOpacity(.1)
-                    : AppColors.card,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isSelected ? AppColors.orange : AppColors.stroke,
+          return Semantics(
+            button: true,
+            selected: isSelected,
+            label: 'Profissional ${barber.name}',
+            child: InkWell(
+              borderRadius: BorderRadius.circular(CDRRadiusTokens.large),
+              onTap: () => onSelected(barber),
+              child: AnimatedContainer(
+                duration: CDRDurationTokens.fast,
+                width: 112,
+                padding: const EdgeInsets.all(CDRSpacingTokens.sm),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.orange : AppColors.card,
+                  borderRadius: BorderRadius.circular(CDRRadiusTokens.large),
+                  border: Border.all(
+                    color: isSelected ? AppColors.orange : AppColors.stroke,
+                  ),
                 ),
-              ),
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 27,
-                    backgroundColor: AppColors.elevated,
-                    backgroundImage: barber.imageUrl.isEmpty
-                        ? null
-                        : NetworkImage(barber.imageUrl),
-                    child: barber.imageUrl.isEmpty
-                        ? const Icon(
-                            Icons.person_outline_rounded,
-                            color: AppColors.orange,
-                          )
-                        : null,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    barber.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.text,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
+                child: Column(
+                  children: [
+                    CDRAvatar(
+                      name: barber.name,
+                      imageUrl: barber.imageUrl,
+                      size: 54,
+                      excludeFromSemantics: true,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: CDRSpacingTokens.sm),
+                    Text(
+                      barber.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: CDRTypographyTokens.caption.copyWith(
+                        color: isSelected ? AppColors.onGold : AppColors.text,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -460,21 +461,31 @@ class _Availability extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const CDRLoading.section(
-        height: 90,
+      return const Wrap(
+        spacing: CDRSpacingTokens.sm,
+        runSpacing: CDRSpacingTokens.sm,
+        children: [
+          CDRSkeleton(width: 76, height: 42),
+          CDRSkeleton(width: 76, height: 42),
+          CDRSkeleton(width: 76, height: 42),
+          CDRSkeleton(width: 76, height: 42),
+        ],
       );
     }
     if (error != null) {
-      return _StateBlock(
+      return CDRErrorState(
+        title: 'Não foi possível carregar os horários',
         icon: Icons.cloud_off_outlined,
         message: error!,
-        actionLabel: 'Tentar novamente',
-        onAction: onRetry,
+        onRetry: () {
+          onRetry();
+        },
       );
     }
     if (times.isEmpty) {
-      return const _StateBlock(
+      return const CDREmptyState(
         icon: Icons.event_busy_outlined,
+        title: 'Sem horários nesta data',
         message: 'Nenhum horário disponível para esta data.',
       );
     }
@@ -490,9 +501,7 @@ class _Availability extends StatelessWidget {
             selectedColor: AppColors.orange,
             backgroundColor: AppColors.card,
             side: BorderSide(
-              color: time == selectedTime
-                  ? AppColors.orange
-                  : AppColors.stroke,
+              color: time == selectedTime ? AppColors.orange : AppColors.stroke,
             ),
             labelStyle: TextStyle(
               color: time == selectedTime ? AppColors.onGold : AppColors.text,
@@ -520,10 +529,10 @@ class _BookingSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(CDRSpacingTokens.lg),
       decoration: BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(CDRRadiusTokens.large),
         border: Border.all(color: AppColors.stroke),
       ),
       child: Column(
@@ -540,6 +549,7 @@ class _BookingSummary extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             '${service.name} com ${barber.name}',
+            maxLines: 2,
             style: const TextStyle(
               color: AppColors.text,
               fontWeight: FontWeight.w800,
@@ -571,7 +581,12 @@ class _ContinueBar extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
+        padding: const EdgeInsets.fromLTRB(
+          CDRSpacingTokens.xxl,
+          CDRSpacingTokens.md,
+          CDRSpacingTokens.xxl,
+          CDRSpacingTokens.md,
+        ),
         decoration: const BoxDecoration(
           color: AppColors.background,
           border: Border(top: BorderSide(color: AppColors.stroke)),
@@ -583,54 +598,8 @@ class _ContinueBar extends StatelessWidget {
             backgroundColor: AppColors.orange,
             foregroundColor: AppColors.onGold,
           ),
-          child: const Text('CONTINUAR'),
+          child: const Text('Continuar'),
         ),
-      ),
-    );
-  }
-}
-
-class _StateBlock extends StatelessWidget {
-  const _StateBlock({
-    required this.icon,
-    required this.message,
-    this.actionLabel,
-    this.onAction,
-  });
-
-  final IconData icon;
-  final String message;
-  final String? actionLabel;
-  final Future<void> Function()? onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.stroke),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: AppColors.muted, size: 28),
-          const SizedBox(height: 9),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.muted,
-              fontSize: 14,
-              height: 1.45,
-            ),
-          ),
-          if (onAction != null && actionLabel != null) ...[
-            const SizedBox(height: 10),
-            TextButton(onPressed: onAction, child: Text(actionLabel!)),
-          ],
-        ],
       ),
     );
   }
@@ -643,7 +612,15 @@ class _EmptyBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _StateBlock(icon: Icons.info_outline_rounded, message: message);
+    return CDRStatePanel(
+      icon: Icons.info_outline_rounded,
+      iconColor: AppColors.muted,
+      title: 'Ainda não há opções',
+      message: message,
+      layout: CDRStatePanelLayout.inline,
+      backgroundColor: AppColors.card,
+      borderColor: AppColors.stroke,
+    );
   }
 }
 
@@ -654,14 +631,12 @@ class _MissingSelection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: _StateBlock(
-          icon: Icons.calendar_month_outlined,
-          message: message,
-        ),
-      ),
+    return CDREmptyState(
+      icon: Icons.calendar_month_outlined,
+      title: 'Barbearia não selecionada',
+      message: message,
+      actionLabel: 'Voltar',
+      onAction: () => Navigator.maybePop(context),
     );
   }
 }

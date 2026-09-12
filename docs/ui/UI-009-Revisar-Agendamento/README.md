@@ -2,7 +2,8 @@
 
 ## Objetivo
 
-Revisar as escolhas, identificar o cliente e enviar uma solicitação de horário para a barbearia.
+Revisar as escolhas, identificar o cliente e confirmar o agendamento após a
+validação automática da disponibilidade.
 
 ## Status
 
@@ -11,12 +12,12 @@ Em validação no Preview.
 ## Origem
 
 - Entrada: `UI-008 — Ver Horários`.
-- Próxima etapa: confirmação de solicitação enviada.
+- Próxima etapa: confirmação do agendamento.
 
 ## Princípios
 
 - não repetir seletores da etapa anterior;
 - manter o resumo visível antes da autenticação;
 - preservar escolhas após login ou cadastro;
-- explicar que o horário depende do retorno da barbearia;
+- explicar que o horário será confirmado automaticamente após a validação;
 - não representar pagamento como processado pelo aplicativo.

@@ -1,5 +1,8 @@
 # Direção Criativa — Brand Kit V3
 
+> Esta é a identidade visual vigente e sua autoridade está formalizada em
+> `../ADR-001-V3-AUTORIDADE-VISUAL.md`.
+
 ## Objetivo
 
 Evoluir a identidade atual sem apagar sua origem: uma marca de barbearia que
@@ -39,6 +42,9 @@ Os arquivos mestres de produção estão em `assets/brand/v3/`.
 - `tokens.json` e `tokens.css`.
 
 As regras de aplicação estão em `BRAND_FOUNDATIONS.md`.
+
+O contrato verificável dos componentes do produto está em
+`../../ui/SHARED_COMPONENTS_V3.md`.
 
 ## Conceito-mãe
 

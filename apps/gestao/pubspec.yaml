@@ -26,3 +26,15 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: packages/clubedaregua_shared/fonts/Inter-Variable.ttf
+    - family: Barlow Condensed
+      fonts:
+        - asset: packages/clubedaregua_shared/fonts/BarlowCondensed-SemiBold.ttf
+          weight: 600
+        - asset: packages/clubedaregua_shared/fonts/BarlowCondensed-Bold.ttf
+          weight: 700
+        - asset: packages/clubedaregua_shared/fonts/BarlowCondensed-ExtraBold.ttf
+          weight: 800

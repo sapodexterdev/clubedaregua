@@ -14,9 +14,10 @@ import 'home_screen.dart';
 import 'profile_screen.dart';
 
 class FavoritesScreen extends StatelessWidget {
-  const FavoritesScreen({super.key});
+  const FavoritesScreen({this.onTabSelected, super.key});
 
   static const route = '/favorites';
+  final ValueChanged<int>? onTabSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -29,39 +30,34 @@ class FavoritesScreen extends StatelessWidget {
         automaticallyImplyLeading: false,
         title: Text(
           'Favoritos',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-              ),
+          style: Theme.of(context).textTheme.headlineSmall,
         ),
       ),
-      bottomNavigationBar: PremiumBottomNav(
-        currentIndex: 1,
-        onTap: (index) => _navigate(context, index),
-      ),
+      bottomNavigationBar: onTabSelected == null
+          ? PremiumBottomNav(
+              currentIndex: 1,
+              onTap: (index) => _navigate(context, index),
+            )
+          : null,
       body: Consumer<AppState>(
         builder: (context, state, _) {
           if (!state.isSignedIn) return const _LoginRequired();
           final shops = state.favoriteBarbershops;
           if (state.isLoadingFavorites && shops.isEmpty) {
-            return const CDRLoading.fullScreen(
-              message: 'Carregando seus favoritos...',
-            );
+            return const _FavoritesLoading();
           }
           if (state.favoritesLoadError != null && shops.isEmpty) {
-            return _FavoriteState(
-              icon: Icons.cloud_off_outlined,
+            return CDRErrorState(
               title: 'Não foi possível carregar seus favoritos',
-              description: 'Verifique a conexão e tente novamente.',
-              actionLabel: 'Tentar novamente',
-              onAction: state.refreshFavorites,
+              message: 'Verifique sua conexão e tente novamente.',
+              onRetry: state.refreshFavorites,
             );
           }
           if (shops.isEmpty) {
-            return _FavoriteState(
+            return CDREmptyState(
               icon: Icons.favorite_border_rounded,
               title: 'Nenhuma barbearia favorita',
-              description:
+              message:
                   'Toque no coração do perfil para guardar suas preferidas.',
               actionLabel: 'Explorar barbearias',
               onAction: () => _navigate(context, 0),
@@ -73,11 +69,16 @@ class FavoritesScreen extends StatelessWidget {
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(
-                  maxWidth: CDRSizeTokens.contentMaxWidth,
+                  maxWidth: CDRSizeTokens.clientFrameMaxWidth,
                 ),
                 child: ListView.separated(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 28),
+                  padding: const EdgeInsets.fromLTRB(
+                    CDRSpacingTokens.xxl,
+                    CDRSpacingTokens.sm,
+                    CDRSpacingTokens.xxl,
+                    CDRSpacingTokens.xxxl,
+                  ),
                   itemCount: shops.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, index) => _FavoriteCard(
@@ -101,7 +102,12 @@ class FavoritesScreen extends StatelessWidget {
     Navigator.pushNamed(context, BarbershopProfileScreen.route);
   }
 
-  static void _navigate(BuildContext context, int index) {
+  void _navigate(BuildContext context, int index) {
+    final shellSelection = onTabSelected;
+    if (shellSelection != null) {
+      shellSelection(index);
+      return;
+    }
     final route = switch (index) {
       0 => HomeScreen.route,
       1 => FavoritesScreen.route,
@@ -132,19 +138,19 @@ class _FavoriteCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cover = shop.identity.coverUrl;
     return InkWell(
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(CDRRadiusTokens.large),
       onTap: onOpen,
       child: Container(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(CDRSpacingTokens.md),
         decoration: BoxDecoration(
           color: AppColors.card,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(CDRRadiusTokens.large),
           border: Border.all(color: AppColors.stroke),
         ),
         child: Row(
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(13),
+              borderRadius: BorderRadius.circular(CDRRadiusTokens.medium),
               child: SizedBox(
                 width: 92,
                 height: 98,
@@ -163,7 +169,7 @@ class _FavoriteCard extends StatelessWidget {
                       ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: CDRSpacingTokens.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -193,8 +199,7 @@ class _FavoriteCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color:
-                          shop.isOpen ? AppColors.success : AppColors.muted,
+                      color: shop.isOpen ? AppColors.success : AppColors.muted,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),
@@ -224,10 +229,10 @@ class _LoginRequired extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _FavoriteState(
+    return CDREmptyState(
       icon: Icons.lock_outline_rounded,
       title: 'Entre para acessar seus favoritos',
-      description: 'Suas barbearias preferidas ficam salvas na sua conta.',
+      message: 'Suas barbearias preferidas ficam salvas na sua conta.',
       actionLabel: 'Entrar',
       onAction: () => Navigator.pushNamed(
         context,
@@ -238,51 +243,43 @@ class _LoginRequired extends StatelessWidget {
   }
 }
 
-class _FavoriteState extends StatelessWidget {
-  const _FavoriteState({
-    required this.icon,
-    required this.title,
-    required this.description,
-    required this.actionLabel,
-    required this.onAction,
-  });
-
-  final IconData icon;
-  final String title;
-  final String description;
-  final String actionLabel;
-  final VoidCallback onAction;
+class _FavoritesLoading extends StatelessWidget {
+  const _FavoritesLoading();
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+    return ListView.separated(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(
+        CDRSpacingTokens.xxl,
+        CDRSpacingTokens.sm,
+        CDRSpacingTokens.xxl,
+        CDRSpacingTokens.xxxl,
+      ),
+      itemCount: 3,
+      separatorBuilder: (_, __) => const SizedBox(height: CDRSpacingTokens.md),
+      itemBuilder: (_, __) => const CDRCard(
+        padding: EdgeInsets.all(CDRSpacingTokens.md),
+        child: Row(
           children: [
-            Icon(icon, color: AppColors.orange, size: 42),
-            const SizedBox(height: 14),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontSize: 23,
-                    fontWeight: FontWeight.w800,
-                  ),
+            CDRSkeleton(
+              width: 92,
+              height: 98,
+              borderRadius: CDRRadiusTokens.medium,
             ),
-            const SizedBox(height: 7),
-            Text(
-              description,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.muted,
-                fontSize: 14,
-                height: 1.45,
+            SizedBox(width: CDRSpacingTokens.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CDRSkeleton.line(width: 150, height: 18),
+                  SizedBox(height: CDRSpacingTokens.md),
+                  CDRSkeleton.line(width: 112),
+                  SizedBox(height: CDRSpacingTokens.md),
+                  CDRSkeleton.line(width: 88),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            FilledButton(onPressed: onAction, child: Text(actionLabel)),
           ],
         ),
       ),

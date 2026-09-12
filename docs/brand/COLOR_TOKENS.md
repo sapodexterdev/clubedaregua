@@ -2,13 +2,15 @@
 
 ## Fonte Oficial
 
-Os tokens abaixo derivam do `docs/brand/Brand_Kit_v2.png` e da identidade validada nos UX Boards aprovados.
+Os valores abaixo permanecem compatíveis com a paleta aprovada, mas a fonte
+canônica vigente é `assets/brand/v3/tokens.json`, conforme
+`ADR-001-V3-AUTORIDADE-VISUAL.md`. Brand Kit V2 e boards antigos são históricos.
 
 ## Paleta Oficial
 
 | Token | Hex | Uso |
 | --- | --- | --- |
-| `black` | `#000000` | Marca, impressão e contraste máximo |
+| `black` | `#050505` | Preto Marca, ícone e superfícies institucionais |
 | `night` | `#09090B` | Fundo principal dark first |
 | `graphite` | `#18181B` | Cards, barras e blocos principais |
 | `graphiteLight` | `#27272A` | Superfícies elevadas e campos |

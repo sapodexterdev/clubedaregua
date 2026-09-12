@@ -18,9 +18,15 @@ import 'notifications_screen.dart';
 import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({
+    this.onTabSelected,
+    this.isActive = true,
+    super.key,
+  });
 
   static const route = '/home';
+  final ValueChanged<int>? onTabSelected;
+  final bool isActive;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -50,12 +56,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   @override
+  void didUpdateWidget(covariant HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.isActive && widget.isActive) {
+      _refreshNotificationCount();
+    }
+  }
+
+  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _refreshNotificationCount();
+    if (state == AppLifecycleState.resumed && widget.isActive) {
+      _refreshNotificationCount();
+    }
   }
 
   void _refreshNotificationCount() {
-    if (!mounted) return;
+    if (!mounted || !widget.isActive) return;
     context.read<AppState>().refreshNotifications();
   }
 
@@ -63,28 +79,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      bottomNavigationBar: PremiumBottomNav(
-        currentIndex: 0,
-        onTap: (index) {
-          final state = context.read<AppState>();
-          if (index == 0) return;
-          final destination = switch (index) {
-            1 => FavoritesScreen.route,
-            2 => HistoryScreen.route,
-            3 => ProfileScreen.route,
-            _ => HomeScreen.route,
-          };
-          if (!state.isSignedIn) {
-            Navigator.pushNamed(
-              context,
-              LoginScreen.route,
-              arguments: destination,
-            );
-            return;
-          }
-          Navigator.pushNamed(context, destination);
-        },
-      ),
+      bottomNavigationBar: widget.onTabSelected == null
+          ? PremiumBottomNav(
+              currentIndex: 0,
+              onTap: (index) {
+                _selectTab(context, index);
+              },
+            )
+          : null,
       body: SafeArea(
         child: Consumer<AppState>(
           builder: (context, state, _) {
@@ -109,9 +111,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 .toList();
 
             return LayoutBuilder(
-              builder: (context, constraints) {
-                final horizontalPadding =
-                    constraints.maxWidth < 380 ? 16.0 : 20.0;
+              builder: (context, _) {
                 return RefreshIndicator(
                   color: AppColors.orange,
                   backgroundColor: AppColors.card,
@@ -119,92 +119,94 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   child: Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(
-                        maxWidth: CDRSizeTokens.contentMaxWidth,
+                        maxWidth: CDRSizeTokens.clientFrameMaxWidth,
                       ),
                       child: ListView(
-                        padding: EdgeInsets.fromLTRB(
-                          horizontalPadding,
-                          18,
-                          horizontalPadding,
-                          32,
+                        padding: const EdgeInsets.fromLTRB(
+                          CDRSpacingTokens.xxl,
+                          CDRSpacingTokens.lg,
+                          CDRSpacingTokens.xxl,
+                          CDRSpacingTokens.xxxl,
                         ),
                         children: [
-                  _DiscoveryHeader(
-                    greeting: state.discoveryGreeting,
-                    unreadCount: state.unreadNotificationCount,
-                    onNotificationsTap: () async {
-                      if (!state.isSignedIn) {
-                        Navigator.pushNamed(
-                          context,
-                          LoginScreen.route,
-                          arguments: NotificationsScreen.route,
-                        );
-                        return;
-                      }
-                      await state.refreshNotifications();
-                      if (!context.mounted) return;
-                      Navigator.pushNamed(context, NotificationsScreen.route);
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  _SearchAndFilter(
-                    value: state.discoveryQuery,
-                    onChanged: state.updateDiscoveryQuery,
-                    onFilterTap: () => _showFilters(context),
-                  ),
-                  const SizedBox(height: 12),
-                  _LocationPill(
-                    label: state.discoveryLocationLabel,
-                    locations: state.availableDiscoveryLocations,
-                    onSelected: state.selectDiscoveryLocation,
-                    isLocating: state.isLocating,
-                    onUseCurrentLocation: state.locateDevice,
-                  ),
-                  const SizedBox(height: 12),
-                  _DiscoveryCategories(
-                    categories: state.discoveryCategories,
-                    selectedId: state.discoveryCategoryId,
-                    onSelected: state.toggleDiscoveryCategory,
-                  ),
-                  const SizedBox(height: 20),
-                  if (state.isLoading && shops.isEmpty)
-                    const _DiscoveryLoading()
-                  else if (state.discoveryLoadError != null && shops.isEmpty)
-                    _DiscoveryError(onRetry: state.loadInitialData)
-                  else if (shops.isEmpty)
-                    _EmptyDiscovery(
-                      isSearch: state.hasDiscoveryQuery,
-                      onClear: state.clearDiscoveryFilters,
-                    )
-                  else if (state.hasDiscoveryQuery)
-                    _SearchResults(shops: shops)
-                  else ...[
-                    if (featured != null)
-                      _DiscoverySection(
-                        title: 'Destaque para você',
-                        shops: [featured],
-                        viewAllTitle: 'Todas as barbearias',
-                        viewAllShops: shops,
-                      ),
-                    if (openShops.isNotEmpty)
-                      _DiscoverySection(
-                        title: 'Abertas agora',
-                        shops: openShops,
-                        compact: true,
-                      ),
-                    if (nearbyShops.isNotEmpty)
-                      _DiscoverySection(
-                        title: 'Perto de você',
-                        shops: nearbyShops,
-                        compact: true,
-                      ),
-                    if (otherShops.isNotEmpty)
-                      _DiscoverySection(
-                        title: 'Outras barbearias',
-                        shops: otherShops,
-                        compact: true,
-                      ),
-                  ],
+                          _DiscoveryHeader(
+                            greeting: state.discoveryGreeting,
+                            unreadCount: state.unreadNotificationCount,
+                            onNotificationsTap: () async {
+                              if (!state.isSignedIn) {
+                                Navigator.pushNamed(
+                                  context,
+                                  LoginScreen.route,
+                                  arguments: NotificationsScreen.route,
+                                );
+                                return;
+                              }
+                              await state.refreshNotifications();
+                              if (!context.mounted) return;
+                              Navigator.pushNamed(
+                                  context, NotificationsScreen.route);
+                            },
+                          ),
+                          const SizedBox(height: 24),
+                          _SearchAndFilter(
+                            value: state.discoveryQuery,
+                            onChanged: state.updateDiscoveryQuery,
+                            onFilterTap: () => _showFilters(context),
+                          ),
+                          const SizedBox(height: 12),
+                          _LocationPill(
+                            label: state.discoveryLocationLabel,
+                            locations: state.availableDiscoveryLocations,
+                            onSelected: state.selectDiscoveryLocation,
+                            isLocating: state.isLocating,
+                            onUseCurrentLocation: state.locateDevice,
+                          ),
+                          const SizedBox(height: 12),
+                          _DiscoveryCategories(
+                            categories: state.discoveryCategories,
+                            selectedId: state.discoveryCategoryId,
+                            onSelected: state.toggleDiscoveryCategory,
+                          ),
+                          const SizedBox(height: 20),
+                          if (state.isLoading && shops.isEmpty)
+                            const _DiscoveryLoading()
+                          else if (state.discoveryLoadError != null &&
+                              shops.isEmpty)
+                            _DiscoveryError(onRetry: state.loadInitialData)
+                          else if (shops.isEmpty)
+                            _EmptyDiscovery(
+                              isSearch: state.hasDiscoveryQuery,
+                              onClear: state.clearDiscoveryFilters,
+                            )
+                          else if (state.hasDiscoveryQuery)
+                            _SearchResults(shops: shops)
+                          else ...[
+                            if (featured != null)
+                              _DiscoverySection(
+                                title: 'Destaque para você',
+                                shops: [featured],
+                                viewAllTitle: 'Todas as barbearias',
+                                viewAllShops: shops,
+                              ),
+                            if (openShops.isNotEmpty)
+                              _DiscoverySection(
+                                title: 'Abertas agora',
+                                shops: openShops,
+                                compact: true,
+                              ),
+                            if (nearbyShops.isNotEmpty)
+                              _DiscoverySection(
+                                title: 'Perto de você',
+                                shops: nearbyShops,
+                                compact: true,
+                              ),
+                            if (otherShops.isNotEmpty)
+                              _DiscoverySection(
+                                title: 'Outras barbearias',
+                                shops: otherShops,
+                                compact: true,
+                              ),
+                          ],
                         ],
                       ),
                     ),
@@ -216,6 +218,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
       ),
     );
+  }
+
+  void _selectTab(BuildContext context, int index) {
+    final shellSelection = widget.onTabSelected;
+    if (shellSelection != null) {
+      shellSelection(index);
+      return;
+    }
+    final state = context.read<AppState>();
+    if (index == 0) return;
+    final destination = switch (index) {
+      1 => FavoritesScreen.route,
+      2 => HistoryScreen.route,
+      3 => ProfileScreen.route,
+      _ => HomeScreen.route,
+    };
+    if (!state.isSignedIn) {
+      Navigator.pushNamed(
+        context,
+        LoginScreen.route,
+        arguments: destination,
+      );
+      return;
+    }
+    Navigator.pushNamed(context, destination);
   }
 
   void _showFilters(BuildContext context) {
@@ -309,10 +336,9 @@ class _DiscoveryHeader extends StatelessWidget {
               const SizedBox(height: 10),
               Text(
                 'Onde você quer dar aquela renovada hoje?',
-                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w800,
-                    ),
+                style: CDRTypographyTokens.title1.copyWith(
+                  color: AppColors.text,
+                ),
               ),
             ],
           ),
@@ -537,18 +563,14 @@ class _LocationPill extends StatelessWidget {
                   subtitle: const Text('Mostrar barbearias em até 10 km'),
                   onTap: () async {
                     final navigator = Navigator.of(context);
-                    final messenger = ScaffoldMessenger.of(context);
                     final success = await onUseCurrentLocation();
                     if (!context.mounted) return;
                     if (success) {
                       navigator.pop();
                     } else {
-                      messenger.showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Não foi possível acessar sua localização. Você pode escolher uma cidade abaixo.',
-                          ),
-                        ),
+                      CDRSnackbar.warning(
+                        context,
+                        'Não foi possível acessar sua localização. Escolha uma cidade abaixo.',
                       );
                     }
                   },
@@ -675,7 +697,7 @@ class _DiscoverySection extends StatelessWidget {
 
     if (!compact) {
       return Padding(
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: const EdgeInsets.only(bottom: CDRSpacingTokens.xxxl),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -697,7 +719,7 @@ class _DiscoverySection extends StatelessWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 26),
+      padding: const EdgeInsets.only(bottom: CDRSpacingTokens.xxxl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -805,7 +827,7 @@ class _AllBarbershopsSheet extends StatelessWidget {
                 margin: const EdgeInsets.only(top: 10, bottom: 18),
                 decoration: BoxDecoration(
                   color: AppColors.stroke,
-                  borderRadius: BorderRadius.circular(99),
+                  borderRadius: BorderRadius.circular(CDRRadiusTokens.pill),
                 ),
               ),
               Padding(
@@ -883,16 +905,14 @@ class _BarbershopCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final coverUrl = shop.identity.coverUrl.isEmpty
-        ? AppConstants.heroBarbershop
-        : shop.identity.coverUrl;
+    final coverUrl = shop.identity.coverUrl;
 
     return InkWell(
       borderRadius: BorderRadius.circular(CDRRadiusTokens.large),
       onTap: () => _openProfile(context),
       child: Container(
         width: fullWidth ? double.infinity : (compact ? 282 : 300),
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(CDRSpacingTokens.md),
         decoration: BoxDecoration(
           color: AppColors.card,
           borderRadius: BorderRadius.circular(CDRRadiusTokens.large),
@@ -934,25 +954,30 @@ class _LargeCardContent extends StatelessWidget {
         Stack(
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(11),
+              borderRadius: BorderRadius.circular(CDRRadiusTokens.medium),
               child: AspectRatio(
                 aspectRatio: 16 / 9,
-                child: Image.network(
-                  coverUrl,
-                  fit: BoxFit.cover,
-                  loadingBuilder: (context, child, progress) {
-                    if (progress == null) return child;
-                    return Container(
-                      color: AppColors.elevated,
-                      alignment: Alignment.center,
-                      child: const CDRLoading.compact(size: 34),
-                    );
-                  },
-                  errorBuilder: (_, __, ___) => Image.asset(
-                    AppConstants.splashBarberReference,
-                    fit: BoxFit.cover,
-                  ),
-                ),
+                child: coverUrl.isEmpty
+                    ? Image.asset(
+                        AppConstants.splashBarberReference,
+                        fit: BoxFit.cover,
+                      )
+                    : Image.network(
+                        coverUrl,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, progress) {
+                          if (progress == null) return child;
+                          return const CDRSkeleton(
+                            width: double.infinity,
+                            height: double.infinity,
+                            borderRadius: 0,
+                          );
+                        },
+                        errorBuilder: (_, __, ___) => Image.asset(
+                          AppConstants.splashBarberReference,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
               ),
             ),
             if (shop.reviewCount >= 5)
@@ -979,7 +1004,7 @@ class _LargeCardContent extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: AppColors.elevated,
-                    borderRadius: BorderRadius.circular(99),
+                    borderRadius: BorderRadius.circular(CDRRadiusTokens.pill),
                   ),
                   child: Text(
                     service.name,
@@ -1017,7 +1042,7 @@ class _LargeCardContent extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 textStyle: const TextStyle(fontWeight: FontWeight.w900),
               ),
-              child: const Text('Agendar'),
+              child: const Text('Ver horários'),
             ),
           ],
         ),
@@ -1044,16 +1069,15 @@ class _SectionHeader extends StatelessWidget {
         Icon(
           icon,
           color: AppColors.orange,
-          size: 15,
+          size: CDRSizeTokens.icon,
         ),
-        const SizedBox(width: 6),
+        const SizedBox(width: CDRSpacingTokens.sm),
         Expanded(
           child: Text(
             title,
-            style: const TextStyle(
+            style: CDRTypographyTokens.title2.copyWith(
               color: AppColors.text,
-              fontSize: 14,
-              fontWeight: FontWeight.w900,
+              fontSize: 22,
             ),
           ),
         ),
@@ -1081,24 +1105,27 @@ class _CompactCardContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final coverUrl = shop.identity.coverUrl.isEmpty
-        ? AppConstants.heroBarbershop
-        : shop.identity.coverUrl;
+    final coverUrl = shop.identity.coverUrl;
     return Row(
       children: [
         ClipRRect(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(CDRRadiusTokens.medium),
           child: SizedBox(
             width: 72,
             height: 104,
-            child: Image.network(
-              coverUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Image.asset(
-                AppConstants.splashBarberReference,
-                fit: BoxFit.cover,
-              ),
-            ),
+            child: coverUrl.isEmpty
+                ? Image.asset(
+                    AppConstants.splashBarberReference,
+                    fit: BoxFit.cover,
+                  )
+                : Image.network(
+                    coverUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Image.asset(
+                      AppConstants.splashBarberReference,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
           ),
         ),
         const SizedBox(width: 12),
@@ -1255,12 +1282,12 @@ class _RatingBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 54,
-      height: 54,
+      width: 52,
+      height: 52,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: AppColors.background.withOpacity(.9),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(CDRRadiusTokens.medium),
         border: Border.all(color: AppColors.orange),
       ),
       child: Column(
@@ -1268,18 +1295,18 @@ class _RatingBadge extends StatelessWidget {
         children: [
           Text(
             rating.toStringAsFixed(1),
-            style: const TextStyle(
+            style: CDRTypographyTokens.title3.copyWith(
               color: AppColors.text,
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
+              fontFamily: CDRTypographyTokens.displayFontFamily,
             ),
           ),
           const Text(
-            'CDR',
+            'CDR SCORE',
             style: TextStyle(
               color: AppColors.orange,
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
+              fontSize: 8,
+              height: 1.25,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -1296,64 +1323,43 @@ class _DiscoveryLoading extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SkeletonBox(width: 156, height: 18),
+        const CDRSkeleton.line(width: 156, height: 18),
         const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: AppColors.card,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.stroke),
-          ),
-          child: const Column(
+        const CDRCard(
+          padding: EdgeInsets.all(CDRSpacingTokens.md),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               AspectRatio(
                 aspectRatio: 16 / 9,
-                child: _SkeletonBox(width: double.infinity, height: 180),
+                child: CDRSkeleton(
+                  width: double.infinity,
+                  height: 180,
+                ),
               ),
               SizedBox(height: 12),
-              _SkeletonBox(width: 210, height: 18),
+              CDRSkeleton.line(width: 210, height: 18),
               SizedBox(height: 10),
-              _SkeletonBox(width: 150, height: 12),
+              CDRSkeleton.line(width: 150, height: 12),
               SizedBox(height: 14),
-              _SkeletonBox(width: double.infinity, height: 40),
+              CDRSkeleton(width: double.infinity, height: 40),
             ],
           ),
         ),
         const SizedBox(height: 24),
-        const _SkeletonBox(width: 130, height: 18),
+        const CDRSkeleton.line(width: 130, height: 18),
         const SizedBox(height: 12),
         const Row(
           children: [
-            Expanded(child: _SkeletonBox(width: 280, height: 138)),
+            Expanded(child: CDRSkeleton(width: 280, height: 138)),
             SizedBox(width: 12),
             SizedBox(
               width: 44,
-              child: _SkeletonBox(width: 44, height: 138),
+              child: CDRSkeleton(width: 44, height: 138),
             ),
           ],
         ),
       ],
-    );
-  }
-}
-
-class _SkeletonBox extends StatelessWidget {
-  const _SkeletonBox({required this.width, required this.height});
-
-  final double width;
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: AppColors.elevated,
-        borderRadius: BorderRadius.circular(10),
-      ),
     );
   }
 }
@@ -1369,43 +1375,16 @@ class _EmptyDiscovery extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.stroke),
-      ),
-      child: Column(
-        children: [
-          const Icon(
-            Icons.search_off_rounded,
-            color: AppColors.muted,
-            size: 34,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            isSearch
-                ? 'Nenhuma barbearia corresponde à sua busca.'
-                : 'Nenhuma barbearia encontrada nesta localização.',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.text,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Tente alterar a busca, os filtros ou a localização.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.muted, fontSize: 14, height: 1.45),
-          ),
-          const SizedBox(height: 14),
-          OutlinedButton(
-            onPressed: onClear,
-            child: const Text('Limpar filtros'),
-          ),
-        ],
+    return CDRCard(
+      padding: EdgeInsets.zero,
+      child: CDREmptyState(
+        icon: Icons.search_off_rounded,
+        title: isSearch
+            ? 'Nenhuma barbearia corresponde à sua busca.'
+            : 'Nenhuma barbearia encontrada nesta localização.',
+        message: 'Tente alterar a busca, os filtros ou a localização.',
+        actionLabel: 'Limpar filtros',
+        onAction: onClear,
       ),
     );
   }
@@ -1418,42 +1397,12 @@ class _DiscoveryError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.stroke),
-      ),
-      child: Column(
-        children: [
-          const Icon(
-            Icons.cloud_off_outlined,
-            color: AppColors.muted,
-            size: 36,
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Não foi possível carregar as barbearias.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.text,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Verifique sua conexão e tente novamente.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.muted, fontSize: 14, height: 1.45),
-          ),
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: onRetry,
-            icon: const Icon(Icons.refresh_rounded),
-            label: const Text('Tentar novamente'),
-          ),
-        ],
+    return CDRCard(
+      padding: EdgeInsets.zero,
+      child: CDRErrorState(
+        title: 'Não foi possível carregar as barbearias.',
+        message: 'Verifique sua conexão e tente novamente.',
+        onRetry: onRetry,
       ),
     );
   }

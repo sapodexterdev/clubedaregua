@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 
 import '../models/appointment.dart';
 import '../services/auth_service.dart';
-import '../services/mock_data.dart';
 import '../services/supabase_rest_service.dart';
 
 class AppointmentRepository {
@@ -42,30 +41,26 @@ class AppointmentRepository {
 
     try {
       final session = await _authenticatedSession();
-      final hasConflict = await hasBookingConflict(
-        barberId: barberId,
-        date: date,
-        time: time,
-      );
-      if (hasConflict) return false;
-
-      return await _rest.insertRow('booking_requests', {
-        'barber_shop_id': barberShopId,
-        if (session != null) 'client_id': session.user.id,
-        'barber_id': barberId,
-        'service_id': serviceId,
-        'requested_date': _dateOnly(date),
-        'requested_time': time,
-        'customer_name': customerName.trim(),
-        'customer_phone': customerPhone.trim(),
-        'total_price': total,
-        'notes':
-            'Solicitacao criada pelo PWA Cliente. Pagamento: $paymentMethodLabel',
-      }, accessToken: session?.accessToken);
+      return await _rest.insertRow(
+          'booking_requests',
+          {
+            'barber_shop_id': barberShopId,
+            if (session != null) 'client_id': session.user.id,
+            'barber_id': barberId,
+            'service_id': serviceId,
+            'requested_date': _dateOnly(date),
+            'requested_time': time,
+            'customer_name': customerName.trim(),
+            'customer_phone': customerPhone.trim(),
+            'total_price': total,
+            'notes':
+                'Solicitacao criada pelo PWA Cliente. Pagamento: $paymentMethodLabel',
+          },
+          accessToken: session?.accessToken);
     } catch (error, stackTrace) {
       debugPrint('Falha ao criar solicitação: $error');
       debugPrintStack(stackTrace: stackTrace);
-      return false;
+      rethrow;
     }
   }
 
@@ -76,7 +71,9 @@ class AppointmentRepository {
     required int durationMinutes,
   }) async {
     if (!_rest.isConfigured || barberId.isEmpty || barberShopId.isEmpty) {
-      return MockData.times;
+      throw StateError(
+        'A agenda online não está configurada para esta barbearia.',
+      );
     }
 
     try {
@@ -94,21 +91,10 @@ class AppointmentRepository {
 
       if (schedules.isEmpty) return const [];
 
-      final blockedTimes = await _blockedIntervals(
-        table: 'blocked_times',
+      final unavailableIntervals = await _unavailableIntervals(
         barberId: barberId,
+        barberShopId: barberShopId,
         date: date,
-        startsColumn: 'starts_at',
-        endsColumn: 'ends_at',
-        extraFilters: const {},
-      );
-      final appointments = await _blockedIntervals(
-        table: 'appointment_availability',
-        barberId: barberId,
-        date: date,
-        startsColumn: 'starts_at',
-        endsColumn: 'ends_at',
-        extraFilters: const {},
       );
       final requests = await _bookingRequestIntervals(
         barberId: barberId,
@@ -116,7 +102,7 @@ class AppointmentRepository {
         durationMinutes: durationMinutes,
       );
 
-      final blocked = [...blockedTimes, ...appointments, ...requests];
+      final blocked = [...unavailableIntervals, ...requests];
       final times = <String>[];
       final now = DateTime.now();
       final selectedDay = DateTime(date.year, date.month, date.day);
@@ -125,8 +111,7 @@ class AppointmentRepository {
       for (final schedule in schedules) {
         final start = _timeOfDay(schedule['start_time']?.toString());
         final end = _timeOfDay(schedule['end_time']?.toString());
-        final slotMinutes =
-            (schedule['slot_minutes'] as num?)?.toInt() ?? 30;
+        final slotMinutes = (schedule['slot_minutes'] as num?)?.toInt() ?? 30;
         if (start == null ||
             end == null ||
             slotMinutes <= 0 ||
@@ -148,8 +133,8 @@ class AppointmentRepository {
             minute % 60,
           );
           final slotEnd = slotStart.add(Duration(minutes: durationMinutes));
-          final isPast = selectedDay.isAtSameMomentAs(today) &&
-              !slotStart.isAfter(now);
+          final isPast =
+              selectedDay.isAtSameMomentAs(today) && !slotStart.isAfter(now);
           final conflicts = blocked.any(
             (interval) => _overlaps(
               slotStart,
@@ -166,28 +151,6 @@ class AppointmentRepository {
       return times.toSet().toList()..sort();
     } catch (_) {
       rethrow;
-    }
-  }
-
-  Future<bool> hasBookingConflict({
-    required String barberId,
-    required DateTime date,
-    required String time,
-  }) async {
-    if (!_rest.isConfigured) return false;
-
-    try {
-      return await _rest.exists(
-        'booking_request_availability',
-        filters: {
-          'barber_id': 'eq.$barberId',
-          'requested_date': 'eq.${_dateOnly(date)}',
-          'requested_time': 'eq.$time',
-          'status': 'in.(new,contacted)',
-        },
-      );
-    } catch (_) {
-      return false;
     }
   }
 
@@ -218,39 +181,32 @@ class AppointmentRepository {
     return auth.getValidSession();
   }
 
-  Future<List<_Interval>> _blockedIntervals({
-    required String table,
+  Future<List<_Interval>> _unavailableIntervals({
     required String barberId,
+    required String barberShopId,
     required DateTime date,
-    required String startsColumn,
-    required String endsColumn,
-    required Map<String, String> extraFilters,
   }) async {
-    try {
-      final start = DateTime(date.year, date.month, date.day);
-      final end = start.add(const Duration(days: 1));
-      final rows = await _rest.getRows(
-        table,
-        select: '$startsColumn,$endsColumn',
-        filters: {
-          'barber_id': 'eq.$barberId',
-          startsColumn: 'lt.${end.toIso8601String()}',
-          endsColumn: 'gt.${start.toIso8601String()}',
-          ...extraFilters,
-        },
-      );
+    final start = DateTime(date.year, date.month, date.day);
+    final end = start.add(const Duration(days: 1));
+    final rows = await _rest.getRows(
+      'booking_interval_availability',
+      select: 'starts_at,ends_at',
+      filters: {
+        'barber_shop_id': 'eq.$barberShopId',
+        'or': '(barber_id.eq.$barberId,barber_id.is.null)',
+        'starts_at': 'lt.${end.toIso8601String()}',
+        'ends_at': 'gt.${start.toIso8601String()}',
+      },
+    );
 
-      return rows
-          .map(
-            (row) => _Interval(
-              DateTime.parse(row[startsColumn].toString()).toLocal(),
-              DateTime.parse(row[endsColumn].toString()).toLocal(),
-            ),
-          )
-          .toList();
-    } catch (_) {
-      return const [];
-    }
+    return rows
+        .map(
+          (row) => _Interval(
+            DateTime.parse(row['starts_at'].toString()),
+            DateTime.parse(row['ends_at'].toString()),
+          ),
+        )
+        .toList();
   }
 
   Future<List<_Interval>> _bookingRequestIntervals({
@@ -258,30 +214,31 @@ class AppointmentRepository {
     required DateTime date,
     required int durationMinutes,
   }) async {
-    try {
-      final rows = await _rest.getRows(
-        'booking_request_availability',
-        select: 'requested_time,duration_minutes',
-        filters: {
-          'barber_id': 'eq.$barberId',
-          'requested_date': 'eq.${_dateOnly(date)}',
-          'status': 'in.(new,contacted)',
-        },
-      );
+    final rows = await _rest.getRows(
+      'booking_request_availability',
+      select: 'requested_time,duration_minutes',
+      filters: {
+        'barber_id': 'eq.$barberId',
+        'requested_date': 'eq.${_dateOnly(date)}',
+        'status': 'in.(new,contacted)',
+      },
+    );
 
-      return rows.map((row) {
-        final time = _timeOfDay(row['requested_time']?.toString());
-        final start = _dateTimeFor(date, time ?? const _TimeParts(0, 0));
-        final existingDuration =
-            (row['duration_minutes'] as num?)?.toInt() ?? durationMinutes;
-        return _Interval(
-          start,
-          start.add(Duration(minutes: existingDuration)),
+    return rows.map((row) {
+      final time = _timeOfDay(row['requested_time']?.toString());
+      if (time == null) {
+        throw const FormatException(
+          'Horário inválido retornado pela agenda online.',
         );
-      }).toList();
-    } catch (_) {
-      return const [];
-    }
+      }
+      final start = _dateTimeFor(date, time);
+      final existingDuration =
+          (row['duration_minutes'] as num?)?.toInt() ?? durationMinutes;
+      return _Interval(
+        start,
+        start.add(Duration(minutes: existingDuration)),
+      );
+    }).toList();
   }
 
   _TimeParts? _timeOfDay(String? value) {

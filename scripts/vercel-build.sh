@@ -17,28 +17,18 @@ flutter pub get
 
 flutter build web \
   --release \
-  --web-renderer html \
+  --web-renderer canvaskit \
   --no-tree-shake-icons \
   --pwa-strategy=none \
   --dart-define=SUPABASE_URL="${SUPABASE_URL:-}" \
   --dart-define=SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-}"
 
-cp assets/images/brand_v3_segunda_logo.svg build/web/boot-logo.svg
+cp assets/images/brand_v3_logo_principal.svg build/web/boot-logo.svg
+cp ../../packages/shared/lib/fonts/Inter-Variable.ttf build/web/boot-inter.ttf
 
 python3 - <<'PY'
 import re
 from pathlib import Path
-
-index_path = Path("build/web/index.html")
-index_content = index_path.read_text(encoding="utf-8")
-marker = "__BOOT_SPLASH_DATA__"
-if marker not in index_content:
-    raise RuntimeError("Marcador da imagem de inicializacao nao encontrado")
-encoded_splash = Path("web/boot-splash.b64").read_text(encoding="ascii").strip()
-index_path.write_text(
-    index_content.replace(marker, f"data:image/jpeg;base64,{encoded_splash}"),
-    encoding="utf-8",
-)
 
 path = Path("build/web/flutter_bootstrap.js")
 content = path.read_text(encoding="utf-8")
@@ -49,55 +39,3 @@ content = re.sub(
 )
 path.write_text(content, encoding="utf-8")
 PY
-
-cd ../gestao
-
-flutter pub get
-
-flutter build web \
-  --release \
-  --web-renderer html \
-  --no-tree-shake-icons \
-  --pwa-strategy=none \
-  --base-href=/gestao/ \
-  --dart-define=SUPABASE_URL="${SUPABASE_URL:-}" \
-  --dart-define=SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-}"
-
-python3 - <<'PY'
-import re
-from pathlib import Path
-
-index_path = Path("build/web/index.html")
-index_content = index_path.read_text(encoding="utf-8")
-marker = "__GESTAO_BOOT_SPLASH_DATA__"
-if marker not in index_content:
-    raise RuntimeError("Marcador da splash da Gestao nao encontrado")
-encoded_splash = Path("../cliente/web/boot-splash.b64").read_text(encoding="ascii").strip()
-logo_marker = "__GESTAO_BOOT_LOGO_DATA__"
-if logo_marker not in index_content:
-    raise RuntimeError("Marcador da logo da Gestao nao encontrado")
-encoded_logo = Path("web/boot-logo.svg").read_bytes()
-import base64
-encoded_logo = base64.b64encode(encoded_logo).decode("ascii")
-index_content = index_content.replace(
-    marker,
-    f"data:image/jpeg;base64,{encoded_splash}",
-)
-index_content = index_content.replace(
-    logo_marker,
-    f"data:image/svg+xml;base64,{encoded_logo}",
-)
-index_path.write_text(index_content, encoding="utf-8")
-
-path = Path("build/web/flutter_bootstrap.js")
-content = path.read_text(encoding="utf-8")
-content = re.sub(
-    r"""serviceWorkerSettings:\s*\{\s*serviceWorkerVersion:\s*["'][^"']*["']\s*\}""",
-    "serviceWorkerSettings: null",
-    content,
-)
-path.write_text(content, encoding="utf-8")
-PY
-
-mkdir -p ../cliente/build/web/gestao
-cp -R build/web/. ../cliente/build/web/gestao/

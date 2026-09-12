@@ -2,14 +2,17 @@
 
 ## Fonte Oficial
 
-A iconografia oficial deriva do `docs/brand/Brand_Kit_v2.png` e dos UX Boards aprovados.
+A iconografia vigente segue a Marca V3 e as UI Specifications V3 aprovadas. O
+Brand Kit V2 e os UX Boards antigos são históricos, conforme
+`ADR-001-V3-AUTORIDADE-VISUAL.md`.
 
 ## Direção Visual
 
 A iconografia deve reforçar:
 
 - Barbearia.
-- Navalha.
+- Navalha apenas como referência temática em conteúdo editorial; nunca como
+  parte do logo, ícone do app ou navegação institucional V3.
 - Régua.
 - Precisão.
 - Gestão.

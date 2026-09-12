@@ -1,22 +1,31 @@
 import 'dart:async';
 
+import 'package:clubedaregua_gestao/management.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'app.dart';
+import 'providers/app_mode_controller.dart';
 import 'providers/app_state.dart';
 
 Future<void> main() async {
   await runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
+    PaintingBinding.instance.imageCache.maximumSizeBytes = 32 * 1024 * 1024;
 
     FlutterError.onError = (details) {
       FlutterError.presentError(details);
     };
 
     runApp(
-      ChangeNotifierProvider(
-        create: (_) => AppState()..loadInitialData(),
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => AppModeController()),
+          ChangeNotifierProvider(create: (_) => ManagementSession()),
+          ChangeNotifierProvider(
+            create: (_) => AppState()..loadInitialData(),
+          ),
+        ],
         child: const ClubeDaReguaApp(),
       ),
     );

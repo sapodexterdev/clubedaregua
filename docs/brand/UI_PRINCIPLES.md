@@ -2,7 +2,10 @@
 
 ## Fonte Oficial
 
-Toda decisão de UI deve partir do `docs/brand/Brand_Kit_v2.png`, dos documentos em `docs/brand/` e dos UX Boards aprovados.
+Toda decisão de UI deve partir de `docs/brand/v3/`, dos tokens e ativos em
+`assets/brand/v3/` e da UI Specification V3 aprovada. O Brand Kit V2 e os UX
+Boards com a identidade anterior permanecem apenas como referência histórica
+de jornada e composição, conforme `ADR-001-V3-AUTORIDADE-VISUAL.md`.
 
 ## Princípio Central
 

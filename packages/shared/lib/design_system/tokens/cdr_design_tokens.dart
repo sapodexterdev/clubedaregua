@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 class CDRColorTokens {
   const CDRColorTokens._();
 
-  static const black = Color(0xFF000000);
+  static const black = Color(0xFF050505);
   static const brandBlack = Color(0xFF050505);
   static const night = Color(0xFF09090B);
   static const graphite = Color(0xFF18181B);
   static const graphiteLight = Color(0xFF27272A);
-  static const elevated = Color(0xFF202024);
+  static const elevated = graphiteLight;
   static const brandYellow = Color(0xFFF3B200);
   static const brandYellowHover = Color(0xFFFFC62B);
   static const brandYellowPressed = Color(0xFFD99F00);
@@ -16,7 +16,7 @@ class CDRColorTokens {
   static const goldHover = brandYellowHover;
   static const goldPressed = brandYellowPressed;
   static const white = Color(0xFFFFFFFF);
-  static const gray = Color(0xFFB3B3BC);
+  static const gray = Color(0xFFA1A1AA);
   static const grayStrong = Color(0xFFD4D4D8);
   static const border = Color(0xFF3F3F46);
   static const disabledBackground = Color(0xFF27272A);
@@ -26,6 +26,16 @@ class CDRColorTokens {
   static const warning = Color(0xFFF97316);
   static const error = Color(0xFFEF4444);
   static const info = Color(0xFF38BDF8);
+
+  // Nomes canônicos do contrato V3. Os nomes históricos acima permanecem
+  // disponíveis para que a migração dos aplicativos possa ser gradual.
+  static const surfaceBackground = night;
+  static const surfaceDefault = graphite;
+  static const surfaceElevated = graphiteLight;
+  static const textPrimary = white;
+  static const textSecondary = gray;
+  static const textInverse = onGold;
+  static const textDisabled = disabledForeground;
 }
 
 class CDRSpacingTokens {
@@ -63,7 +73,12 @@ class CDRSizeTokens {
   static const loader = 18.0;
   static const touchTarget = 48.0;
   static const inputHeight = 56.0;
-  static const contentMaxWidth = 720.0;
+  static const clientFrameMaxWidth = 430.0;
+  static const clientContentMaxWidth = 720.0;
+  static const managementContentMaxWidth = 1180.0;
+
+  /// Compatibilidade com telas anteriores à separação Cliente/Gestão.
+  static const contentMaxWidth = clientContentMaxWidth;
 }
 
 class CDRBreakpointTokens {
@@ -85,13 +100,74 @@ class CDRDurationTokens {
 class CDRTypographyTokens {
   const CDRTypographyTokens._();
 
+  static const displayFontFamily = 'Barlow Condensed';
+  static const interfaceFontFamily = 'Inter';
+
+  static const display = TextStyle(
+    fontFamily: displayFontFamily,
+    fontSize: 40,
+    height: 1.1,
+    fontWeight: FontWeight.w800,
+  );
+
+  static const title1 = TextStyle(
+    fontFamily: displayFontFamily,
+    fontSize: 32,
+    height: 1.125,
+    fontWeight: FontWeight.w700,
+  );
+
+  static const title2 = TextStyle(
+    fontFamily: displayFontFamily,
+    fontSize: 24,
+    height: 1.167,
+    fontWeight: FontWeight.w700,
+  );
+
+  static const title3 = TextStyle(
+    fontFamily: interfaceFontFamily,
+    fontSize: 20,
+    height: 1.3,
+    fontWeight: FontWeight.w700,
+  );
+
+  static const body = TextStyle(
+    fontFamily: interfaceFontFamily,
+    fontSize: 16,
+    height: 1.5,
+    fontWeight: FontWeight.w400,
+  );
+
+  static const bodySmall = TextStyle(
+    fontFamily: interfaceFontFamily,
+    fontSize: 14,
+    height: 1.429,
+    fontWeight: FontWeight.w400,
+  );
+
+  static const label = TextStyle(
+    fontFamily: interfaceFontFamily,
+    fontSize: 14,
+    height: 1.286,
+    fontWeight: FontWeight.w600,
+  );
+
+  static const caption = TextStyle(
+    fontFamily: interfaceFontFamily,
+    fontSize: 12,
+    height: 1.333,
+    fontWeight: FontWeight.w500,
+  );
+
   static const button = TextStyle(
+    fontFamily: interfaceFontFamily,
     fontSize: 16,
     fontWeight: FontWeight.w700,
     letterSpacing: 0,
   );
 
   static const overline = TextStyle(
+    fontFamily: interfaceFontFamily,
     fontSize: 12,
     height: 1.3,
     fontWeight: FontWeight.w700,

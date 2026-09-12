@@ -1,12 +1,13 @@
 import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/app_mode.dart';
+import '../providers/app_mode_controller.dart';
 import '../providers/app_state.dart';
 import '../repositories/owner_onboarding_repository.dart';
-import '../services/app_mode_navigation.dart';
 import '../theme/app_colors.dart';
+import 'professional_mode_screen.dart';
 
 class OwnerOnboardingScreen extends StatefulWidget {
   const OwnerOnboardingScreen({super.key});
@@ -226,9 +227,20 @@ class _OwnerOnboardingScreenState extends State<OwnerOnboardingScreen> {
   }
 
   Future<void> _enterOwnerMode() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(appLastModeKey, 'owner');
-    openOwnerMode();
+    final state = context.read<AppState>();
+    final modes = context.read<AppModeController>();
+    await modes.synchronizeAccess(
+      isSignedIn: state.isSignedIn,
+      userId: AuthService().currentUser?.id,
+      professionalRoles: state.professionalRoles,
+    );
+    final selected = await modes.selectMode(AppMode.owner);
+    if (!selected || !mounted) return;
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      ProfessionalModeScreen.ownerRoute,
+      (_) => false,
+    );
   }
 }
 

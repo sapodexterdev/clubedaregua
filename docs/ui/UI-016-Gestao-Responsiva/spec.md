@@ -7,6 +7,9 @@ coerente com o App Cliente, preservando velocidade de leitura e operação.
 
 ## Shell
 
+Destinos, overflow `Mais`, Perfil, troca Barbeiro/Dono, estado ativo e
+comportamento de Voltar seguem `../SHARED_NAVIGATION_V3.md`.
+
 ### Desktop (`>= 1024 px`)
 
 - navegação lateral com largura entre `88` e `240 px`;
@@ -28,6 +31,8 @@ coerente com o App Cliente, preservando velocidade de leitura e operação.
 - cabeçalho compacto;
 - conteúdo em uma coluna;
 - margem lateral de `16–20 px`.
+- modo Dono usa `Painel`, `Agenda`, `Clientes`, `Caixa` e `Mais`;
+- modo Barbeiro usa `Agenda`, `Horários`, `Clientes`, `Comissão` e `Pedidos`.
 
 ## Cores
 
@@ -66,11 +71,13 @@ Cards brancos são proibidos no shell e nos módulos operacionais.
 - ações secundárias escuras com borda;
 - status em badges semânticos.
 
-### Seletor Barbeiro/Admin
+### Seletor Barbeiro/Dono no Perfil
 
 - controle segmentado compacto;
 - selecionado em Amarelo Régua com texto Noite;
 - não ocupar toda a largura no desktop.
+- não exibir o seletor no conteúdo das páginas ou no cabeçalho;
+- trocar o modo preserva a sessão e não reabre Splash ou autenticação.
 
 ## Estados
 
