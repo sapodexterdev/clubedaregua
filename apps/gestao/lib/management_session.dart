@@ -21,7 +21,8 @@ class ManagementSession extends ChangeNotifier {
   var _availabilityLoaded = false;
   var _scheduleLoaded = false;
   var _servicesLoaded = false;
-  var _customersLoaded = false;
+  ManagementRole? _customersLoadedRole;
+  var _customersRequestGeneration = 0;
   var _commerceLoaded = false;
   var _settingsLoaded = false;
   String? _accessToken;
@@ -86,6 +87,10 @@ class ManagementSession extends ChangeNotifier {
       _membershipRole == 'manager';
   bool get canManageCustomerBlocks =>
       _isPlatformAdmin || _isShopOwner || _membershipRole == 'owner';
+  bool get canManageCustomerBlocksInActiveMode =>
+      activeRole == ManagementRole.admin && canManageCustomerBlocks;
+  bool get canEditCustomersInActiveMode =>
+      activeRole == ManagementRole.admin && canManageShop;
   bool get canManageCommerce => canManageCustomerBlocks;
   bool get hasProfessionalAccess => canWorkAsBarber || canManageShop;
   ManagementRole get activeRole => _effectiveRole(_activeRole);
@@ -120,7 +125,7 @@ class ManagementSession extends ChangeNotifier {
     ManagementRole initialRole,
     int lifecycleGeneration,
   ) async {
-    _activeRole = initialRole;
+    _setActiveRole(initialRole, resolveCapabilities: false);
     try {
       final session = await _authService.getValidSession();
       if (!_isSessionLifecycleActive(lifecycleGeneration)) return;
@@ -157,7 +162,7 @@ class ManagementSession extends ChangeNotifier {
       if (!_isSessionLifecycleActive(lifecycleGeneration)) return false;
       await _resolveShopCapabilities(token).timeout(const Duration(seconds: 8));
       if (!_isSessionLifecycleActive(lifecycleGeneration)) return false;
-      _activeRole = _effectiveRole(_activeRole);
+      _setActiveRole(_activeRole);
       await refreshManagementData();
       if (!_isSessionLifecycleActive(lifecycleGeneration)) return false;
       return true;
@@ -308,7 +313,7 @@ class ManagementSession extends ChangeNotifier {
         throw StateError('Sua conta não possui acesso profissional ativo.');
       }
       _professionalAccessResolved = true;
-      _activeRole = _effectiveRole(_activeRole);
+      _setActiveRole(_activeRole);
       await refreshManagementData();
       _unifiedSessionInitialized = true;
     } catch (error) {
@@ -338,7 +343,7 @@ class ManagementSession extends ChangeNotifier {
     ManagementRole role, {
     ManagementDestinationId? destination,
   }) async {
-    _activeRole = _effectiveRole(role);
+    _setActiveRole(role);
     await ensureDataForDestination(
       _activeRole,
       destination ?? _defaultDestinationFor(_activeRole),
@@ -350,7 +355,7 @@ class ManagementSession extends ChangeNotifier {
     ManagementDestinationId destination, {
     bool force = false,
   }) async {
-    _activeRole = _effectiveRole(role);
+    _setActiveRole(role);
     if (_disposed) return;
 
     if (_activeRole == ManagementRole.barber) {
@@ -366,7 +371,9 @@ class ManagementSession extends ChangeNotifier {
             await fetchWeeklyAvailability();
           }
         case ManagementDestinationId.clients:
-          if (force || !_customersLoaded) await fetchCustomers();
+          if (force || _customersLoadedRole != _activeRole) {
+            await fetchCustomers(role: _activeRole);
+          }
         case ManagementDestinationId.commission:
         case ManagementDestinationId.dashboard:
         case ManagementDestinationId.services:
@@ -394,7 +401,9 @@ class ManagementSession extends ChangeNotifier {
       case ManagementDestinationId.team:
         if (force || !_teamLoaded) await fetchTeamBarbers();
       case ManagementDestinationId.clients:
-        if (force || !_customersLoaded) await fetchCustomers();
+        if (force || _customersLoadedRole != _activeRole) {
+          await fetchCustomers(role: _activeRole);
+        }
       case ManagementDestinationId.commerce:
         if (force || !_commerceLoaded) await fetchCommerce();
       case ManagementDestinationId.settings:
@@ -447,6 +456,21 @@ class ManagementSession extends ChangeNotifier {
       return ManagementRole.barber;
     }
     return canManageShop ? ManagementRole.admin : ManagementRole.barber;
+  }
+
+  void _setActiveRole(
+    ManagementRole requested, {
+    bool resolveCapabilities = true,
+  }) {
+    final next = resolveCapabilities ? _effectiveRole(requested) : requested;
+    if (_activeRole == next) return;
+    _activeRole = next;
+    _customersRequestGeneration++;
+    _customersLoadedRole = null;
+    customers = [];
+    customerAppointments = [];
+    customersError = null;
+    isCustomersLoading = false;
   }
 
   bool _isRefreshActive(int generation) =>
@@ -764,9 +788,13 @@ class ManagementSession extends ChangeNotifier {
       });
   }
 
-  Future<void> fetchCustomers() async {
+  Future<void> fetchCustomers({ManagementRole? role}) async {
     final token = _accessToken;
     if (token == null) return;
+    final targetRole = _effectiveRole(role ?? _activeRole);
+    if (targetRole != _activeRole) return;
+    final requestGeneration = ++_customersRequestGeneration;
+    final lifecycleGeneration = _sessionLifecycleGeneration;
 
     isCustomersLoading = true;
     customersError = null;
@@ -774,51 +802,124 @@ class ManagementSession extends ChangeNotifier {
 
     try {
       final shopId = await _ensureBarberShopId(token);
-      final rows = await _getRestRows(
-        token,
-        'management_clients',
-        query: {
-          'select':
-              'relationship_id,barber_shop_id,client_id,first_seen_at,last_appointment_at,notes,is_blocked,email,user_is_active,full_name,phone,avatar_url,profile_created_at',
-          'barber_shop_id': 'eq.$shopId',
-          'order': 'full_name.asc',
-          'limit': '500',
-        },
-      );
-      final appointmentRows = await _getRestRows(
-        token,
-        'management_client_appointments',
-        query: {
-          'select':
-              'id,client_id,starts_at,status,notes,service_name,barber_name',
-          'barber_shop_id': 'eq.$shopId',
-          'order': 'starts_at.desc',
-          'limit': '500',
-        },
-      );
-      final bookingRows = await _getRestRows(
-        token,
-        'booking_requests',
-        query: {
-          'select':
-              'id,customer_name,customer_phone,requested_date,requested_time,status,notes,created_at,barbers(name),services(name)',
-          'barber_shop_id': 'eq.$shopId',
-          'order': 'created_at.desc',
-          'limit': '500',
-        },
-      );
-      final blockRows = canManageCustomerBlocks
-          ? await _getRestRows(
-              token,
-              'client_booking_blocks',
-              query: {
-                'select': 'client_id,customer_phone_digits,barber_id',
-                'barber_shop_id': 'eq.$shopId',
-              },
-            )
-          : const <Map<String, dynamic>>[];
-      if (_disposed) return;
-      customerAppointments = [
+      if (!_isCustomerRequestActive(
+        targetRole,
+        requestGeneration,
+        lifecycleGeneration,
+      )) {
+        return;
+      }
+
+      late final List<Map<String, dynamic>> rows;
+      late final List<Map<String, dynamic>> appointmentRows;
+      var bookingRows = const <Map<String, dynamic>>[];
+      var blockRows = const <Map<String, dynamic>>[];
+
+      if (targetRole == ManagementRole.barber) {
+        final barberId = currentBarber?.id;
+        if (barberId == null || barberId.isEmpty) {
+          rows = const [];
+          appointmentRows = const [];
+        } else {
+          rows = await _postRpcRows(
+            token,
+            'list_barber_customers',
+            data: {
+              'p_barber_shop_id': shopId,
+              'p_barber_id': barberId,
+            },
+          );
+          if (!_isCustomerRequestActive(
+            targetRole,
+            requestGeneration,
+            lifecycleGeneration,
+          )) {
+            return;
+          }
+          appointmentRows = await _postRpcRows(
+            token,
+            'list_barber_customer_appointments',
+            data: {
+              'p_barber_shop_id': shopId,
+              'p_barber_id': barberId,
+            },
+          );
+        }
+      } else {
+        rows = await _getRestRows(
+          token,
+          'management_clients',
+          query: {
+            'select':
+                'relationship_id,barber_shop_id,client_id,first_seen_at,last_appointment_at,notes,is_blocked,email,user_is_active,full_name,phone,avatar_url,profile_created_at',
+            'barber_shop_id': 'eq.$shopId',
+            'order': 'full_name.asc',
+            'limit': '500',
+          },
+        );
+        if (!_isCustomerRequestActive(
+          targetRole,
+          requestGeneration,
+          lifecycleGeneration,
+        )) {
+          return;
+        }
+        appointmentRows = await _getRestRows(
+          token,
+          'management_client_appointments',
+          query: {
+            'select':
+                'id,client_id,starts_at,status,notes,service_name,barber_name',
+            'barber_shop_id': 'eq.$shopId',
+            'order': 'starts_at.desc',
+            'limit': '500',
+          },
+        );
+        if (!_isCustomerRequestActive(
+          targetRole,
+          requestGeneration,
+          lifecycleGeneration,
+        )) {
+          return;
+        }
+        bookingRows = await _getRestRows(
+          token,
+          'booking_requests',
+          query: {
+            'select':
+                'id,customer_name,customer_phone,requested_date,requested_time,status,notes,created_at,barbers(name),services(name)',
+            'barber_shop_id': 'eq.$shopId',
+            'order': 'created_at.desc',
+            'limit': '500',
+          },
+        );
+        if (!_isCustomerRequestActive(
+          targetRole,
+          requestGeneration,
+          lifecycleGeneration,
+        )) {
+          return;
+        }
+        blockRows = canManageCustomerBlocks
+            ? await _getRestRows(
+                token,
+                'client_booking_blocks',
+                query: {
+                  'select': 'client_id,customer_phone_digits,barber_id',
+                  'barber_shop_id': 'eq.$shopId',
+                },
+              )
+            : const <Map<String, dynamic>>[];
+      }
+
+      if (!_isCustomerRequestActive(
+        targetRole,
+        requestGeneration,
+        lifecycleGeneration,
+      )) {
+        return;
+      }
+      final loadedAppointments = [
         ...appointmentRows.map(CustomerAppointment.fromMap),
         ...bookingRows.map(CustomerAppointment.fromBookingRequest),
       ];
@@ -826,7 +927,7 @@ class ManagementSession extends ChangeNotifier {
       final appointmentCounts = <String, int>{};
       final barberCounts = <String, Map<String, int>>{};
       final lastAppointments = <String, DateTime>{};
-      for (final appointment in customerAppointments) {
+      for (final appointment in loadedAppointments) {
         appointmentCounts[appointment.clientId] =
             (appointmentCounts[appointment.clientId] ?? 0) + 1;
         final byBarber =
@@ -886,21 +987,54 @@ class ManagementSession extends ChangeNotifier {
         ...relationshipCustomers,
         ...bookingCustomersByPhone.values,
       ];
-      customers = canManageCustomerBlocks
-          ? [
-              for (final customer in loadedCustomers)
-                _customerWithBookingBlocks(customer, blockRows),
-            ]
-          : loadedCustomers;
-      _customersLoaded = true;
+      final scopedCustomers =
+          targetRole == ManagementRole.admin && canManageCustomerBlocks
+              ? [
+                  for (final customer in loadedCustomers)
+                    _customerWithBookingBlocks(customer, blockRows),
+                ]
+              : loadedCustomers;
+
+      if (!_isCustomerRequestActive(
+        targetRole,
+        requestGeneration,
+        lifecycleGeneration,
+      )) {
+        return;
+      }
+      customerAppointments = loadedAppointments;
+      customers = scopedCustomers;
+      _customersLoadedRole = targetRole;
       customersError = null;
     } catch (error) {
-      customersError = _cleanErrorMessage(error);
+      if (_isCustomerRequestActive(
+        targetRole,
+        requestGeneration,
+        lifecycleGeneration,
+      )) {
+        customersError = _cleanErrorMessage(error);
+      }
     } finally {
-      isCustomersLoading = false;
-      notifyListeners();
+      if (_isCustomerRequestActive(
+        targetRole,
+        requestGeneration,
+        lifecycleGeneration,
+      )) {
+        isCustomersLoading = false;
+        notifyListeners();
+      }
     }
   }
+
+  bool _isCustomerRequestActive(
+    ManagementRole role,
+    int requestGeneration,
+    int lifecycleGeneration,
+  ) =>
+      !_disposed &&
+      _activeRole == role &&
+      _customersRequestGeneration == requestGeneration &&
+      _sessionLifecycleGeneration == lifecycleGeneration;
 
   Future<void> updateCustomer(
     ManagedCustomer customer, {
@@ -909,7 +1043,17 @@ class ManagementSession extends ChangeNotifier {
     required String notes,
   }) async {
     final token = _accessToken;
-    if (token == null) return;
+    if (token == null) {
+      throw StateError('Sua sessão expirou. Entre novamente.');
+    }
+    if (!canEditCustomersInActiveMode) {
+      throw StateError('Somente a gestão pode editar dados de clientes.');
+    }
+    if (isCustomersLoading) {
+      throw StateError('Aguarde a atualização dos clientes terminar.');
+    }
+    final requestGeneration = _customersRequestGeneration;
+    final lifecycleGeneration = _sessionLifecycleGeneration;
 
     isCustomersLoading = true;
     customersError = null;
@@ -934,6 +1078,14 @@ class ManagementSession extends ChangeNotifier {
         },
       );
 
+      if (!_isCustomerRequestActive(
+        ManagementRole.admin,
+        requestGeneration,
+        lifecycleGeneration,
+      )) {
+        return;
+      }
+
       customers = [
         for (final item in customers)
           if (item.clientId == customer.clientId)
@@ -947,11 +1099,23 @@ class ManagementSession extends ChangeNotifier {
       ];
       customersError = null;
     } catch (error) {
-      customersError = _cleanErrorMessage(error);
+      if (_isCustomerRequestActive(
+        ManagementRole.admin,
+        requestGeneration,
+        lifecycleGeneration,
+      )) {
+        customersError = _cleanErrorMessage(error);
+      }
       rethrow;
     } finally {
-      isCustomersLoading = false;
-      notifyListeners();
+      if (_isCustomerRequestActive(
+        ManagementRole.admin,
+        requestGeneration,
+        lifecycleGeneration,
+      )) {
+        isCustomersLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -972,7 +1136,7 @@ class ManagementSession extends ChangeNotifier {
         .toSet();
     return customer.copyWith(
       isBlocked: matching.any((row) => row['barber_id'] == null),
-      blockedBarberIds: barberIds,
+      blockedBarberIds: Set.unmodifiable(barberIds),
     );
   }
 
@@ -985,9 +1149,16 @@ class ManagementSession extends ChangeNotifier {
     if (token == null) {
       throw StateError('Sua sessão expirou. Entre novamente.');
     }
-    if (!canManageCustomerBlocks) {
+    if (!canManageCustomerBlocksInActiveMode) {
       throw StateError('Somente o dono pode bloquear agendamentos.');
     }
+    if (isCustomersLoading) {
+      throw StateError('Aguarde a atualização dos clientes terminar.');
+    }
+
+    final selectedBarberIds = Set<String>.unmodifiable(barberIds);
+    final requestGeneration = _customersRequestGeneration;
+    final lifecycleGeneration = _sessionLifecycleGeneration;
 
     final shopId = await _ensureBarberShopId(token);
     await _postRpc(
@@ -998,17 +1169,25 @@ class ManagementSession extends ChangeNotifier {
         'p_client_id':
             customer.clientId.startsWith('booking:') ? null : customer.clientId,
         'p_customer_phone': customer.phone,
-        'p_barber_ids': blocked ? barberIds.toList() : <String>[],
+        'p_barber_ids': blocked ? selectedBarberIds.toList() : <String>[],
         'p_blocked': blocked,
       },
     );
+
+    if (!_isCustomerRequestActive(
+      ManagementRole.admin,
+      requestGeneration,
+      lifecycleGeneration,
+    )) {
+      return;
+    }
 
     customers = [
       for (final item in customers)
         if (item.clientId == customer.clientId)
           item.copyWith(
             isBlocked: blocked && barberIds.isEmpty,
-            blockedBarberIds: blocked ? barberIds : <String>{},
+            blockedBarberIds: blocked ? selectedBarberIds : const <String>{},
           )
         else
           item,
@@ -2043,7 +2222,8 @@ class ManagementSession extends ChangeNotifier {
     _availabilityLoaded = false;
     _scheduleLoaded = false;
     _servicesLoaded = false;
-    _customersLoaded = false;
+    _customersLoadedRole = null;
+    _customersRequestGeneration++;
     _commerceLoaded = false;
     _settingsLoaded = false;
     errorMessage = null;
@@ -2312,6 +2492,23 @@ class ManagementSession extends ChangeNotifier {
     }
     if (response.body.trim().isEmpty) return null;
     return jsonDecode(response.body);
+  }
+
+  Future<List<Map<String, dynamic>>> _postRpcRows(
+    String token,
+    String functionName, {
+    required Map<String, dynamic> data,
+  }) async {
+    final decoded = await _postRpc(
+      token,
+      functionName,
+      data: data,
+    );
+    if (decoded is! List) return const [];
+    return decoded
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
   }
 
   Future<void> _deleteRestRows(

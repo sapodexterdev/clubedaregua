@@ -52,7 +52,7 @@ class _ClientsPage extends StatelessWidget {
               _InlineNotice(
                 icon: Icons.warning_amber_rounded,
                 title: 'Não foi possível carregar os clientes',
-                subtitle: session.customersError!,
+                subtitle: 'Tente novamente em instantes.',
                 actionLabel: 'TENTAR NOVAMENTE',
                 onAction: session.fetchCustomers,
               )
@@ -217,6 +217,9 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
         .where((barber) => _blockedBarberIds.contains(barber.id))
         .map((barber) => barber.name)
         .toList();
+    final canEditCustomer =
+        customer.canEdit && session.canEditCustomersInActiveMode;
+    final isBusy = _isSaving || _isSavingBlock;
     final bottomPadding = MediaQuery.viewInsetsOf(context).bottom + 20;
 
     return SingleChildScrollView(
@@ -230,7 +233,7 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
             _SheetHeader(
               eyebrow: 'PERFIL DO CLIENTE',
               title: customer.name,
-              onClose: _isSaving ? null : () => Navigator.pop(context),
+              onClose: isBusy ? null : () => Navigator.pop(context),
             ),
             const SizedBox(height: 12),
             Center(child: _CustomerAvatar(customer: customer, radius: 34)),
@@ -239,7 +242,7 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _nameController,
-              enabled: customer.canEdit,
+              enabled: canEditCustomer && !isBusy,
               decoration: const InputDecoration(
                 labelText: 'Nome',
                 prefixIcon: Icon(Icons.person_outline_rounded),
@@ -254,7 +257,7 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
             const SizedBox(height: 12),
             TextFormField(
               controller: _phoneController,
-              enabled: customer.canEdit,
+              enabled: canEditCustomer && !isBusy,
               keyboardType: TextInputType.phone,
               decoration: const InputDecoration(
                 labelText: 'Telefone',
@@ -282,7 +285,7 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
             const SizedBox(height: 12),
             TextFormField(
               controller: _notesController,
-              enabled: customer.canEdit,
+              enabled: canEditCustomer && !isBusy,
               minLines: 2,
               maxLines: 4,
               decoration: const InputDecoration(
@@ -291,20 +294,23 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
               ),
             ),
             const SizedBox(height: 12),
-            if (!customer.canEdit)
-              const _InlineNotice(
+            if (!canEditCustomer)
+              _InlineNotice(
                 icon: Icons.info_outline_rounded,
-                title: 'Cliente vindo de solicitação',
-                subtitle:
-                    'Este cliente ainda não possui cadastro vinculado. Ele aparece pelo agendamento realizado, mas a edição fica bloqueada.',
+                title: session.activeRole == ManagementRole.barber
+                    ? 'Visualização do cliente'
+                    : 'Cliente vindo de solicitação',
+                subtitle: session.activeRole == ManagementRole.barber
+                    ? 'No modo Barbeiro, os dados do cliente são somente para consulta.'
+                    : 'Este cliente ainda não possui cadastro vinculado. Ele aparece pelo agendamento realizado, mas a edição fica bloqueada.',
               )
             else
               CDRButton.primary(
                 label: 'SALVAR ALTERAÇÕES',
-                onPressed: _isSaving ? null : () => _save(customer),
+                onPressed: isBusy ? null : () => _save(customer),
                 isLoading: _isSaving,
               ),
-            if (session.canManageCustomerBlocks) ...[
+            if (session.canManageCustomerBlocksInActiveMode) ...[
               const SizedBox(height: 28),
               const Divider(height: 1),
               const SizedBox(height: 20),
@@ -323,7 +329,7 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
                 subtitle: 'O cliente pode escolher qualquer profissional.',
                 icon: Icons.event_available_outlined,
                 selected: _blockScope == _BookingBlockScope.none,
-                onTap: _isSavingBlock
+                onTap: isBusy
                     ? null
                     : () => setState(
                           () => _blockScope = _BookingBlockScope.none,
@@ -335,7 +341,7 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
                 subtitle: 'Impede novos agendamentos com toda a equipe.',
                 icon: Icons.storefront_outlined,
                 selected: _blockScope == _BookingBlockScope.general,
-                onTap: _isSavingBlock
+                onTap: isBusy
                     ? null
                     : () => setState(
                           () => _blockScope = _BookingBlockScope.general,
@@ -347,15 +353,11 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
                 subtitle: 'Restringe apenas o barbeiro selecionado.',
                 icon: Icons.content_cut_rounded,
                 selected: _blockScope == _BookingBlockScope.barber,
-                onTap: _isSavingBlock
+                onTap: isBusy
                     ? null
-                    : () => setState(() {
-                          _blockScope = _BookingBlockScope.barber;
-                          if (_blockedBarberIds.isEmpty &&
-                              availableBarbers.isNotEmpty) {
-                            _blockedBarberIds.add(availableBarbers.first.id);
-                          }
-                        }),
+                    : () => setState(
+                          () => _blockScope = _BookingBlockScope.barber,
+                        ),
               ),
               if (_blockScope == _BookingBlockScope.barber) ...[
                 const SizedBox(height: 12),
@@ -372,7 +374,7 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
                   _BarberBlockChoice(
                     barber: barber,
                     selected: _blockedBarberIds.contains(barber.id),
-                    onChanged: _isSavingBlock
+                    onChanged: isBusy
                         ? null
                         : (selected) => setState(() {
                               if (selected) {
@@ -393,8 +395,7 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
               const SizedBox(height: 14),
               CDRButton.primary(
                 label: 'SALVAR CONFIGURAÇÃO',
-                onPressed:
-                    _isSavingBlock ? null : () => _saveBookingBlock(customer),
+                onPressed: isBusy ? null : () => _saveBookingBlock(customer),
                 isLoading: _isSavingBlock,
               ),
             ],
@@ -435,10 +436,12 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cliente salvo com sucesso.')),
       );
-    } catch (error) {
+    } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
+        const SnackBar(
+          content: Text('Não foi possível salvar o cliente. Tente novamente.'),
+        ),
       );
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -475,10 +478,14 @@ class _CustomerDetailsSheetState extends State<_CustomerDetailsSheet> {
           }),
         ),
       );
-    } catch (error) {
+    } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
+        const SnackBar(
+          content: Text(
+            'Não foi possível salvar o bloqueio. Tente novamente.',
+          ),
+        ),
       );
     } finally {
       if (mounted) setState(() => _isSavingBlock = false);

@@ -594,7 +594,9 @@ class ManagedCustomer {
       lastAppointmentAt: lastAppointmentAt,
       notes: notes ?? this.notes,
       isBlocked: isBlocked ?? this.isBlocked,
-      blockedBarberIds: blockedBarberIds ?? this.blockedBarberIds,
+      blockedBarberIds: Set.unmodifiable(
+        blockedBarberIds ?? this.blockedBarberIds,
+      ),
       appointmentCount: appointmentCount,
       favoriteBarber: favoriteBarber,
     );
