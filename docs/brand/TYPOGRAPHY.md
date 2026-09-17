@@ -2,7 +2,10 @@
 
 ## Fonte Oficial
 
-A tipografia oficial deriva do `docs/brand/Brand_Kit_v2.png` e da identidade validada nos UX Boards aprovados.
+A tipografia oficial vigente é definida em
+`docs/brand/v3/BRAND_FOUNDATIONS.md` e
+`assets/brand/v3/tokens.json`. O Brand Kit V2 e os UX Boards antigos são
+referências históricas, conforme `ADR-001-V3-AUTORIDADE-VISUAL.md`.
 
 ## Fontes Oficiais
 

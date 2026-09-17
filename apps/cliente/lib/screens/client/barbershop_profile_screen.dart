@@ -56,10 +56,9 @@ class BarbershopProfileScreen extends StatelessWidget {
                   }
                   final success = await state.toggleFavorite(shop);
                   if (!context.mounted || success) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Não foi possível atualizar o favorito.'),
-                    ),
+                  CDRSnackbar.error(
+                    context,
+                    'Não foi possível atualizar o favorito. Tente novamente.',
                   );
                 },
               ),
@@ -67,73 +66,83 @@ class BarbershopProfileScreen extends StatelessWidget {
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(
-                      maxWidth: CDRSizeTokens.contentMaxWidth,
+                      maxWidth: CDRSizeTokens.clientFrameMaxWidth,
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 4, 18, 34),
+                      padding: const EdgeInsets.fromLTRB(
+                        CDRSpacingTokens.xxl,
+                        CDRSpacingTokens.xs,
+                        CDRSpacingTokens.xxl,
+                        CDRSpacingTokens.xxxl,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                      _ProfileHeader(shop: shop),
-                      const SizedBox(height: 20),
-                      _QuickFacts(shop: shop),
-                      const SizedBox(height: 28),
-                      const _SectionTitle('Sobre'),
-                      const SizedBox(height: 10),
-                      _AboutShop(shop: shop),
-                      if (_hasContact(shop)) ...[
-                        const SizedBox(height: 28),
-                        const _SectionTitle('Contato e localização'),
-                        const SizedBox(height: 12),
-                        _ContactActions(shop: shop),
-                      ],
-                      if (shop.services.isNotEmpty) ...[
-                        const SizedBox(height: 28),
-                        _SectionHeader(
-                          title: 'Serviços',
-                          caption: '${shop.services.length} disponíveis',
-                        ),
-                        const SizedBox(height: 12),
-                        ...shop.services.map(
-                          (service) => Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: ServiceCard(
-                              service: service,
-                              isSelected:
-                                  state.selectedService?.id == service.id,
-                              onTap: () => state.selectService(service),
+                          _ProfileHeader(shop: shop),
+                          const SizedBox(height: 20),
+                          _QuickFacts(shop: shop),
+                          const SizedBox(height: 28),
+                          const _SectionTitle('Sobre'),
+                          const SizedBox(height: 10),
+                          _AboutShop(shop: shop),
+                          if (_hasContact(shop)) ...[
+                            const SizedBox(height: 28),
+                            const _SectionTitle('Contato e localização'),
+                            const SizedBox(height: 12),
+                            _ContactActions(shop: shop),
+                          ],
+                          if (shop.services.isNotEmpty) ...[
+                            const SizedBox(height: 28),
+                            _SectionHeader(
+                              title: 'Serviços',
+                              caption: '${shop.services.length} disponíveis',
                             ),
-                          ),
-                        ),
-                      ],
-                      if (shop.barbers.isNotEmpty) ...[
-                        const SizedBox(height: 22),
-                        _SectionHeader(
-                          title: 'Profissionais',
-                          caption: '${shop.barbers.length} na equipe',
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          height: 142,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: shop.barbers.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(width: 10),
-                            itemBuilder: (context, index) {
-                              final barber = shop.barbers[index];
-                              return _ProfessionalCard(
-                                name: barber.name,
-                                imageUrl: barber.imageUrl,
-                                rating: barber.rating,
-                                selected:
-                                    state.selectedBarber?.id == barber.id,
-                                onTap: () => state.selectBarber(barber),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
+                            const SizedBox(height: 12),
+                            ...shop.services.map(
+                              (service) => Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: ServiceCard(
+                                  service: service,
+                                  isSelected:
+                                      state.selectedService?.id == service.id,
+                                  onTap: () => state.selectService(service),
+                                ),
+                              ),
+                            ),
+                          ],
+                          if (shop.barbers.isNotEmpty) ...[
+                            const SizedBox(height: 22),
+                            _SectionHeader(
+                              title: 'Profissionais',
+                              caption: '${shop.barbers.length} na equipe',
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              height: 142.0 +
+                                  (MediaQuery.textScalerOf(context)
+                                              .scale(1)
+                                              .clamp(1.0, 2.0) -
+                                          1) *
+                                      36,
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: shop.barbers.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(width: 10),
+                                itemBuilder: (context, index) {
+                                  final barber = shop.barbers[index];
+                                  return _ProfessionalCard(
+                                    name: barber.name,
+                                    imageUrl: barber.imageUrl,
+                                    rating: barber.rating,
+                                    selected:
+                                        state.selectedBarber?.id == barber.id,
+                                    onTap: () => state.selectBarber(barber),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -191,7 +200,8 @@ class _CoverAppBar extends StatelessWidget {
             icon: favorite
                 ? Icons.favorite_rounded
                 : Icons.favorite_border_rounded,
-            onTap: updating ? () {} : onFavorite,
+            loading: updating,
+            onTap: updating ? null : onFavorite,
           ),
         ),
       ],
@@ -211,7 +221,11 @@ class _CoverAppBar extends StatelessWidget {
                 fit: BoxFit.cover,
                 loadingBuilder: (context, child, progress) => progress == null
                     ? child
-                    : const ColoredBox(color: AppColors.elevated),
+                    : const CDRSkeleton(
+                        width: double.infinity,
+                        height: double.infinity,
+                        borderRadius: 0,
+                      ),
                 errorBuilder: (_, __, ___) => Image.asset(
                   AppConstants.splashBarberReference,
                   fit: BoxFit.cover,
@@ -223,8 +237,8 @@ class _CoverAppBar extends StatelessWidget {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black38,
-                    Colors.transparent,
+                    CDRColorTokens.black,
+                    Color(0x00000000),
                     AppColors.background,
                   ],
                   stops: [0, .55, 1],
@@ -243,23 +257,27 @@ class _RoundAction extends StatelessWidget {
     required this.tooltip,
     required this.icon,
     required this.onTap,
+    this.loading = false,
   });
 
   final String tooltip;
   final IconData icon;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.black.withOpacity(.62),
+      color: CDRColorTokens.black.withOpacity(.72),
       shape: const CircleBorder(),
       child: IconButton(
         tooltip: tooltip,
         onPressed: onTap,
-        constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+        constraints: const BoxConstraints.tightFor(width: 44, height: 44),
         padding: EdgeInsets.zero,
-        icon: Icon(icon, color: Colors.white),
+        icon: loading
+            ? const CDRLoading.compact(size: CDRSizeTokens.icon)
+            : Icon(icon, color: AppColors.text),
       ),
     );
   }
@@ -357,7 +375,7 @@ class _ShopLogo extends StatelessWidget {
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(CDRRadiusTokens.large),
         border: Border.all(color: AppColors.stroke),
       ),
       clipBehavior: Clip.antiAlias,
@@ -414,24 +432,39 @@ class _QuickFacts extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _FactCard(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final vertical = MediaQuery.textScalerOf(context).scale(1) >= 1.6 ||
+            constraints.maxWidth < CDRBreakpointTokens.compact;
+        final cards = [
+          _FactCard(
             label: 'Funcionamento',
             value: shop.identity.openingHoursLabel,
             icon: Icons.schedule_outlined,
           ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _FactCard(
+          _FactCard(
             label: 'Serviços',
             value: shop.priceRange,
             icon: Icons.content_cut_rounded,
           ),
-        ),
-      ],
+        ];
+        if (vertical) {
+          return Column(
+            children: [
+              SizedBox(width: double.infinity, child: cards.first),
+              const SizedBox(height: CDRSpacingTokens.md),
+              SizedBox(width: double.infinity, child: cards.last),
+            ],
+          );
+        }
+        return Row(
+          children: [
+            Expanded(child: cards.first),
+            const SizedBox(width: CDRSpacingTokens.md),
+            Expanded(child: cards.last),
+          ],
+        );
+      },
     );
   }
 }
@@ -454,7 +487,7 @@ class _FactCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(CDRRadiusTokens.large),
         border: Border.all(color: AppColors.stroke),
       ),
       child: Column(
@@ -464,7 +497,7 @@ class _FactCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             value,
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: AppColors.text,
@@ -559,9 +592,7 @@ class _ContactActions extends StatelessWidget {
   ) async {
     await Clipboard.setData(ClipboardData(text: value));
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$label copiado.')),
-    );
+    CDRSnackbar.success(context, '$label copiado.');
   }
 }
 
@@ -615,53 +646,58 @@ class _ProfessionalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        width: 128,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.orange.withOpacity(.1) : AppColors.card,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: selected ? AppColors.orange : AppColors.stroke,
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: 'Profissional $name',
+      child: InkWell(
+        borderRadius: BorderRadius.circular(CDRRadiusTokens.large),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: CDRDurationTokens.fast,
+          width: 128,
+          padding: const EdgeInsets.all(CDRSpacingTokens.md),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.orange : AppColors.card,
+            borderRadius: BorderRadius.circular(CDRRadiusTokens.large),
+            border: Border.all(
+              color: selected ? AppColors.orange : AppColors.stroke,
+            ),
           ),
-        ),
-        child: Column(
-          children: [
-            CircleAvatar(
-              radius: 29,
-              backgroundColor: AppColors.elevated,
-              backgroundImage: imageUrl.isEmpty ? null : NetworkImage(imageUrl),
-              child: imageUrl.isEmpty
-                  ? const Icon(Icons.person_rounded, color: AppColors.orange)
-                  : null,
-            ),
-            const SizedBox(height: 10),
-            Text(
-              name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.text,
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
+          child: Column(
+            children: [
+              CDRAvatar(
+                name: name,
+                imageUrl: imageUrl,
+                size: 58,
+                excludeFromSemantics: true,
               ),
-            ),
-            if (rating > 0) ...[
-              const SizedBox(height: 4),
+              const SizedBox(height: 10),
               Text(
-                '${rating.toStringAsFixed(1)} ★',
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  color: AppColors.muted,
+                  color: AppColors.text,
                   fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
+                  fontWeight: FontWeight.w800,
+                ).copyWith(color: selected ? AppColors.onGold : AppColors.text),
               ),
+              if (rating > 0) ...[
+                const SizedBox(height: 4),
+                Text(
+                  '${rating.toStringAsFixed(1)} ★',
+                  style: const TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ).copyWith(
+                    color: selected ? AppColors.onGold : AppColors.muted,
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -679,7 +715,6 @@ class _SectionTitle extends StatelessWidget {
       title,
       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
             fontSize: 22,
-            fontWeight: FontWeight.w800,
           ),
     );
   }
@@ -720,7 +755,12 @@ class _ScheduleBar extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
+        padding: const EdgeInsets.fromLTRB(
+          CDRSpacingTokens.xxl,
+          CDRSpacingTokens.md,
+          CDRSpacingTokens.xxl,
+          CDRSpacingTokens.md,
+        ),
         decoration: const BoxDecoration(
           color: AppColors.background,
           border: Border(top: BorderSide(color: AppColors.stroke)),
@@ -754,7 +794,7 @@ class _ScheduleBar extends StatelessWidget {
             foregroundColor: AppColors.onGold,
           ),
           child: Text(
-            enabled ? 'VER HORÁRIOS DISPONÍVEIS' : 'AGENDA INDISPONÍVEL',
+            enabled ? 'Ver horários disponíveis' : 'Agenda indisponível',
           ),
         ),
       ),
@@ -767,33 +807,12 @@ class _MissingShop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.storefront_outlined,
-              color: AppColors.muted,
-              size: 42,
-            ),
-            const SizedBox(height: 14),
-            const Text(
-              'Barbearia não encontrada.',
-              style: TextStyle(
-                color: AppColors.text,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 14),
-            OutlinedButton(
-              onPressed: () => Navigator.maybePop(context),
-              child: const Text('Voltar para descobrir'),
-            ),
-          ],
-        ),
-      ),
+    return CDREmptyState(
+      icon: Icons.storefront_outlined,
+      title: 'Barbearia não encontrada',
+      message: 'Volte para descobrir outras barbearias disponíveis.',
+      actionLabel: 'Voltar para descobrir',
+      onAction: () => Navigator.maybePop(context),
     );
   }
 }

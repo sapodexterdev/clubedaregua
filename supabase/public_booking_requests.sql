@@ -116,3 +116,6 @@ create policy booking_requests_update_staff on public.booking_requests
 for update
 using (public.is_shop_member(barber_shop_id) or public.is_platform_admin())
 with check (public.is_shop_member(barber_shop_id) or public.is_platform_admin());
+
+-- A conversao automatica e atomica e instalada por
+-- issue_020_auto_confirm_bookings.sql depois das migrations de integridade.

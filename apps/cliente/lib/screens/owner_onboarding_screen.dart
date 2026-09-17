@@ -1,21 +1,24 @@
 import 'package:clubedaregua_shared/clubedaregua_shared.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/app_mode.dart';
+import '../providers/app_mode_controller.dart';
 import '../providers/app_state.dart';
 import '../repositories/owner_onboarding_repository.dart';
-import '../services/app_mode_navigation.dart';
+import '../services/postal_code_service.dart';
 import '../theme/app_colors.dart';
+import 'professional_mode_screen.dart';
 
 class OwnerOnboardingScreen extends StatefulWidget {
-  const OwnerOnboardingScreen({super.key});
+  const OwnerOnboardingScreen({super.key, this.postalCodeService});
+
+  final PostalCodeService? postalCodeService;
 
   static const route = '/cadastrar-barbearia';
 
   @override
-  State<OwnerOnboardingScreen> createState() =>
-      _OwnerOnboardingScreenState();
+  State<OwnerOnboardingScreen> createState() => _OwnerOnboardingScreenState();
 }
 
 class _OwnerOnboardingScreenState extends State<OwnerOnboardingScreen> {
@@ -24,6 +27,8 @@ class _OwnerOnboardingScreenState extends State<OwnerOnboardingScreen> {
   final _phoneController = TextEditingController();
   final _whatsappController = TextEditingController();
   final _addressController = TextEditingController();
+  final _postalCodeController = TextEditingController();
+  late final PostalCodeService _postalCodeService;
   final _cityController = TextEditingController();
   final _stateController = TextEditingController();
 
@@ -32,10 +37,15 @@ class _OwnerOnboardingScreenState extends State<OwnerOnboardingScreen> {
   var _isSaving = false;
   var _completed = false;
   String? _errorMessage;
+  String? _postalCodeMessage;
+  String _lastPostalCode = '';
+  var _postalCodeGeneration = 0;
+  var _isLookingUpPostalCode = false;
 
   @override
   void initState() {
     super.initState();
+    _postalCodeService = widget.postalCodeService ?? PostalCodeService();
     final profilePhone = context.read<AppState>().currentUserPhone ?? '';
     _phoneController.text = profilePhone;
     _whatsappController.text = profilePhone;
@@ -43,6 +53,9 @@ class _OwnerOnboardingScreenState extends State<OwnerOnboardingScreen> {
 
   @override
   void dispose() {
+    _postalCodeGeneration++;
+    if (widget.postalCodeService == null) _postalCodeService.dispose();
+    _postalCodeController.dispose();
     _nameController.dispose();
     _phoneController.dispose();
     _whatsappController.dispose();
@@ -95,6 +108,12 @@ class _OwnerOnboardingScreenState extends State<OwnerOnboardingScreen> {
                           addressController: _addressController,
                           cityController: _cityController,
                           stateController: _stateController,
+                          postalCodeController: _postalCodeController,
+                          isLookingUpPostalCode: _isLookingUpPostalCode,
+                          postalCodeMessage: _postalCodeMessage,
+                          onPostalCodeChanged: _onPostalCodeChanged,
+                          onLookupPostalCode: _lookupPostalCode,
+                          onAddressEdited: _onAddressEdited,
                         ),
                       _ => _ConfirmationStep(
                           key: const ValueKey('confirmation'),
@@ -126,12 +145,9 @@ class _OwnerOnboardingScreenState extends State<OwnerOnboardingScreen> {
                       ],
                       Expanded(
                         child: CDRButton.primary(
-                          label: _step == 2
-                              ? 'INICIAR TESTE GRÁTIS'
-                              : 'CONTINUAR',
-                          onPressed: _isSaving
-                              ? null
-                              : () => _continue(state),
+                          label:
+                              _step == 2 ? 'INICIAR TESTE GRÁTIS' : 'CONTINUAR',
+                          onPressed: _isSaving ? null : () => _continue(state),
                           isLoading: _isSaving,
                           trailing: _step == 2
                               ? const Icon(Icons.rocket_launch_outlined)
@@ -151,6 +167,7 @@ class _OwnerOnboardingScreenState extends State<OwnerOnboardingScreen> {
 
   void _back() {
     setState(() {
+      _cancelPostalCodeLookup();
       _errorMessage = null;
       _step -= 1;
     });
@@ -165,6 +182,7 @@ class _OwnerOnboardingScreenState extends State<OwnerOnboardingScreen> {
 
     if (_step < 2) {
       setState(() {
+        _cancelPostalCodeLookup();
         _errorMessage = null;
         _step += 1;
       });
@@ -225,10 +243,87 @@ class _OwnerOnboardingScreenState extends State<OwnerOnboardingScreen> {
     return null;
   }
 
+  void _cancelPostalCodeLookup() {
+    _postalCodeGeneration++;
+    if (_isLookingUpPostalCode) _postalCodeMessage = null;
+    _isLookingUpPostalCode = false;
+  }
+
+  void _onAddressEdited(String _) {
+    if (!_isLookingUpPostalCode) return;
+    setState(() {
+      _cancelPostalCodeLookup();
+      _postalCodeMessage =
+          'Continue preenchendo o endereço. Suas alterações foram mantidas.';
+    });
+  }
+
+  void _onPostalCodeChanged(String value) {
+    final digits = value.replaceAll(RegExp(r'\D'), '');
+    if (digits == _lastPostalCode) return;
+    setState(() {
+      _lastPostalCode = digits;
+      _cancelPostalCodeLookup();
+      _postalCodeMessage = null;
+    });
+    if (digits.length == 8) _lookupPostalCode();
+  }
+
+  Future<void> _lookupPostalCode() async {
+    final digits = _postalCodeController.text.replaceAll(RegExp(r'\D'), '');
+    if (_isLookingUpPostalCode) return;
+    if (digits.length != 8) {
+      setState(() => _postalCodeMessage =
+          'Informe os 8 números do CEP ou preencha o endereço abaixo.');
+      return;
+    }
+    final generation = ++_postalCodeGeneration;
+    setState(() {
+      _isLookingUpPostalCode = true;
+      _postalCodeMessage = 'Buscando endereço…';
+    });
+    bool isCurrent() =>
+        mounted && generation == _postalCodeGeneration && _step == 1;
+    try {
+      final address = await _postalCodeService.lookup(digits);
+      if (!isCurrent()) return;
+      setState(() {
+        if (address == null) {
+          _postalCodeMessage =
+              'CEP não encontrado. Confira os números ou preencha o endereço abaixo.';
+        } else {
+          _addressController.text = address.formattedAddress;
+          _cityController.text = address.city;
+          _stateController.text = address.state;
+          _postalCodeMessage = address.formattedAddress.isEmpty
+              ? 'Cidade e UF preenchidas. Informe a rua, o número e o complemento, se houver.'
+              : 'Endereço encontrado. Adicione o número e o complemento, se houver.';
+        }
+      });
+    } catch (_) {
+      if (!isCurrent()) return;
+      setState(() => _postalCodeMessage =
+          'Não foi possível buscar o CEP agora. Tente novamente ou preencha o endereço abaixo.');
+    } finally {
+      if (isCurrent()) setState(() => _isLookingUpPostalCode = false);
+    }
+  }
+
   Future<void> _enterOwnerMode() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(appLastModeKey, 'owner');
-    openOwnerMode();
+    final state = context.read<AppState>();
+    final modes = context.read<AppModeController>();
+    await modes.synchronizeAccess(
+      isSignedIn: state.isSignedIn,
+      userId: AuthService().currentUser?.id,
+      professionalRoles: state.professionalRoles,
+    );
+    final selected = await modes.selectMode(AppMode.owner);
+    if (!selected || !mounted) return;
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      ProfessionalModeScreen.ownerRoute,
+      (_) => false,
+    );
   }
 }
 
@@ -272,9 +367,8 @@ class _ProgressHeader extends StatelessWidget {
                   duration: const Duration(milliseconds: 220),
                   height: 5,
                   decoration: BoxDecoration(
-                    color: index <= current
-                        ? AppColors.orange
-                        : AppColors.stroke,
+                    color:
+                        index <= current ? AppColors.orange : AppColors.stroke,
                     borderRadius: BorderRadius.circular(99),
                   ),
                 ),
@@ -340,11 +434,23 @@ class _AddressStep extends StatelessWidget {
     required this.addressController,
     required this.cityController,
     required this.stateController,
+    required this.postalCodeController,
+    required this.isLookingUpPostalCode,
+    required this.postalCodeMessage,
+    required this.onPostalCodeChanged,
+    required this.onLookupPostalCode,
+    required this.onAddressEdited,
   });
 
   final TextEditingController addressController;
   final TextEditingController cityController;
   final TextEditingController stateController;
+  final TextEditingController postalCodeController;
+  final bool isLookingUpPostalCode;
+  final String? postalCodeMessage;
+  final ValueChanged<String> onPostalCodeChanged;
+  final VoidCallback onLookupPostalCode;
+  final ValueChanged<String> onAddressEdited;
 
   @override
   Widget build(BuildContext context) {
@@ -354,10 +460,48 @@ class _AddressStep extends StatelessWidget {
       subtitle: 'O endereço ajuda clientes próximos a encontrarem você.',
       children: [
         CDRTextField(
+          controller: postalCodeController,
+          label: 'CEP (opcional)',
+          hint: '00000-000',
+          leading: Icons.location_searching_rounded,
+          keyboardType: TextInputType.number,
+          textInputAction: TextInputAction.search,
+          autofillHints: const [AutofillHints.postalCode],
+          onChanged: onPostalCodeChanged,
+          onSubmitted: (_) => onLookupPostalCode(),
+          trailing: isLookingUpPostalCode
+              ? const Padding(
+                  padding: EdgeInsets.all(14),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              : IconButton(
+                  tooltip: 'Buscar CEP',
+                  onPressed: onLookupPostalCode,
+                  icon: const Icon(Icons.search_rounded),
+                ),
+        ),
+        const SizedBox(height: 8),
+        Semantics(
+          liveRegion: true,
+          child: Text(
+            postalCodeMessage ??
+                'Digite o CEP para preencher o endereço automaticamente. Você também pode preencher manualmente.',
+            style: const TextStyle(
+                color: AppColors.muted, fontSize: 12, height: 1.4),
+          ),
+        ),
+        const SizedBox(height: 18),
+        CDRTextField(
           controller: addressController,
           label: 'Endereço completo',
+          hint: 'Rua, número e complemento',
           leading: Icons.location_on_outlined,
           textInputAction: TextInputAction.next,
+          onChanged: onAddressEdited,
         ),
         const SizedBox(height: 14),
         Row(
@@ -369,6 +513,7 @@ class _AddressStep extends StatelessWidget {
                 label: 'Cidade',
                 leading: Icons.location_city_outlined,
                 textInputAction: TextInputAction.next,
+                onChanged: onAddressEdited,
               ),
             ),
             const SizedBox(width: 12),
@@ -377,6 +522,7 @@ class _AddressStep extends StatelessWidget {
                 controller: stateController,
                 label: 'UF',
                 textInputAction: TextInputAction.done,
+                onChanged: onAddressEdited,
               ),
             ),
           ],

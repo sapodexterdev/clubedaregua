@@ -1,8 +1,18 @@
 # UX Boards
 
-Cada jornada do Clube da Regua possui um UX Board oficial. Os arquivos `board.png` sao a fonte visual de verdade da experiencia e nao devem ser alterados durante implementacoes.
+Cada jornada do Clube da Regua possui um UX Board oficial. Os arquivos
+`board.png` são a fonte de verdade da jornada, arquitetura da informação e
+intenção de uso, e não devem ser alterados durante implementações.
 
-Toda implementacao deve ser baseada primeiro no board aprovado e somente depois na Issue tecnica correspondente. Quando houver conflito entre uma interpretacao da issue e o board aprovado, o board deve orientar a decisao de UX.
+Os boards atuais preservam composições e ativos de versões anteriores da marca.
+Para cores, tipografia, logos, iconografia, movimento e componentes, a Marca V3
+e a UI Specification V3 aprovada sempre prevalecem, conforme
+`docs/brand/ADR-001-V3-AUTORIDADE-VISUAL.md`.
+
+Toda implementação deve respeitar primeiro a jornada do board aprovado e,
+depois, a UI Specification e a issue técnica. Quando houver conflito funcional
+entre a issue e o board, o board orienta a decisão de UX; quando o conflito for
+visual, a Marca V3 orienta a decisão.
 
 | Jornada | Status |
 | --- | --- |

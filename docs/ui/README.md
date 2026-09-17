@@ -4,7 +4,16 @@ UI Specifications representam a implementacao visual final de cada tela do Clube
 
 Enquanto os UX Boards documentam a experiencia, jornadas e intencoes de uso, as UI Specifications documentam exatamente como cada tela deve ser construida visualmente.
 
-Toda implementacao Flutter devera seguir prioritariamente a UI Specification aprovada para a tela correspondente.
+Toda implementação Flutter deve seguir a Marca V3 e a UI Specification V3
+aprovada para a tela correspondente. Specs anteriores à V3 permanecem como
+referência funcional até serem migradas.
+
+Os componentes equivalentes de Cliente e Gestão seguem obrigatoriamente o
+contrato `SHARED_COMPONENTS_V3.md`. A spec de tela seleciona as variantes
+permitidas e define a composição, sem criar um componente paralelo.
+
+Shell, destinos raiz, Perfil, troca de modo e comportamento de Voltar seguem o
+contrato `SHARED_NAVIGATION_V3.md`.
 
 ## Niveis de Documentacao
 
@@ -30,6 +39,14 @@ UX
 
 ->
 
+Contrato de componentes compartilhados
+
+->
+
+Contrato de shell e navegação
+
+->
+
 UI Specification
 
 ->
@@ -45,8 +62,8 @@ Implementacao
 - `UI-001-Splash`
 - `UI-002-Onboarding-01`
 - `UI-003-Onboarding-02`
-- `UI-004-Onboarding-03`
-- `UI-005-Onboarding-04`
+- `UI-004-Onboarding-03` — etapa 3 Explorar, aprovada V3
+- `UI-005-Onboarding-04` — histórico arquivado; não há quarta etapa
 - `UI-006-Home-Publica`
 - `UI-007-Perfil-Barbearia`
 - `UI-008-Ver-Horarios`
@@ -63,4 +80,7 @@ Implementacao
 
 Antes de implementar ou alterar qualquer tela, deve existir uma UI Specification aprovada.
 
-Se a implementacao Flutter divergir da especificacao visual oficial, prevalece a UI Specification.
+Se a implementação Flutter divergir da especificação visual oficial, prevalece
+a UI Specification V3 aprovada. Se uma spec histórica divergir das fundações
+V3, prevalece `docs/brand/ADR-001-V3-AUTORIDADE-VISUAL.md` e a spec deve ser
+atualizada antes da implementação.

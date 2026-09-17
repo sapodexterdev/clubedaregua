@@ -69,7 +69,7 @@ values (
   '11111111-1111-4111-8111-111111111111',
   30,
   2,
-  false,
+  true,
   false,
   true,
   'pix-demo@clubedaregua.com'

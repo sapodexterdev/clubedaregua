@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import 'core/app_mode.dart';
+import 'providers/app_mode_controller.dart';
 import 'screens/auth/login_screen.dart';
+import 'screens/auth/password_recovery_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/client/appointment_confirmation_screen.dart';
 import 'screens/client/appointment_screen.dart';
 import 'screens/client/barber_details_screen.dart';
 import 'screens/client/barbershop_profile_screen.dart';
+import 'screens/client/client_shell.dart';
 import 'screens/client/favorites_screen.dart';
 import 'screens/client/history_screen.dart';
 import 'screens/client/home_screen.dart';
@@ -13,6 +18,7 @@ import 'screens/client/notifications_screen.dart';
 import 'screens/client/profile_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/owner_onboarding_screen.dart';
+import 'screens/professional_mode_screen.dart';
 import 'screens/mode_selection_screen.dart';
 import 'screens/splash_screen.dart';
 import 'theme/app_theme.dart';
@@ -27,7 +33,13 @@ class ClubeDaReguaApp extends StatelessWidget {
       title: 'Clube da Régua',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      builder: (context, child) => _ResponsivePhoneFrame(child: child),
+      navigatorObservers: [clientRootRouteObserver],
+      builder: (context, child) {
+        final mode = context.watch<AppModeController>().currentMode;
+        return mode == AppMode.client
+            ? _ResponsivePhoneFrame(child: child)
+            : child ?? const SizedBox.shrink();
+      },
       initialRoute: SplashScreen.route,
       routes: {
         SplashScreen.route: (_) => const SplashScreen(),
@@ -35,17 +47,25 @@ class ClubeDaReguaApp extends StatelessWidget {
         OwnerOnboardingScreen.route: (_) => const OwnerOnboardingScreen(),
         ModeSelectionScreen.route: (_) => const ModeSelectionScreen(),
         LoginScreen.route: (_) => const LoginScreen(),
+        PasswordRecoveryScreen.route: (_) => const PasswordRecoveryScreen(),
         RegisterScreen.route: (_) => const RegisterScreen(),
-        HomeScreen.route: (_) => const HomeScreen(),
+        HomeScreen.route: (_) => const ClientShell(),
         NotificationsScreen.route: (_) => const NotificationsScreen(),
         BarbershopProfileScreen.route: (_) => const BarbershopProfileScreen(),
         BarberDetailsScreen.route: (_) => const BarberDetailsScreen(),
         AppointmentScreen.route: (_) => const AppointmentScreen(),
         AppointmentConfirmationScreen.route: (_) =>
             const AppointmentConfirmationScreen(),
-        HistoryScreen.route: (_) => const HistoryScreen(),
-        FavoritesScreen.route: (_) => const FavoritesScreen(),
-        ProfileScreen.route: (_) => const ProfileScreen(),
+        HistoryScreen.route: (_) =>
+            const ClientShell(initialTab: ClientRootTab.agenda),
+        FavoritesScreen.route: (_) =>
+            const ClientShell(initialTab: ClientRootTab.favorites),
+        ProfileScreen.route: (_) =>
+            const ClientShell(initialTab: ClientRootTab.profile),
+        ProfessionalModeScreen.barberRoute: (_) =>
+            const ProfessionalModeScreen(mode: AppMode.barber),
+        ProfessionalModeScreen.ownerRoute: (_) =>
+            const ProfessionalModeScreen(mode: AppMode.owner),
       },
     );
   }
@@ -87,7 +107,6 @@ class _ResponsivePhoneFrame extends StatelessWidget {
               child: MediaQuery(
                 data: MediaQuery.of(context).copyWith(
                   size: Size(430, height),
-                  padding: EdgeInsets.zero,
                 ),
                 child: currentChild,
               ),

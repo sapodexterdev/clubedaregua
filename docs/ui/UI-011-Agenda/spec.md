@@ -3,15 +3,15 @@
 ## Estrutura
 
 1. título `Agenda`;
-2. lista privada de solicitações ordenada por data e horário;
+2. lista privada de agendamentos ordenada por data e horário;
 3. cards com barbearia, serviço, profissional, data, horário, valor e status;
 4. cancelamento com confirmação para status permitidos;
 5. navegação inferior oficial.
 
 ## Status
 
-- `new`: Solicitado;
-- `contacted`: Em contato;
+- `new`: Processando agendamento;
+- `contacted`: Ação necessária;
 - `converted`: Confirmado;
 - `cancelled`: Cancelado.
 
@@ -21,5 +21,5 @@
 - RLS restringe leitura e cancelamento a `auth.uid() = client_id`;
 - atualizar por gesto de pull-to-refresh;
 - não exibir ação de avaliação sem avaliações reais implementadas;
-- não exibir cancelamento para solicitações convertidas ou canceladas;
+- não exibir cancelamento para agendamentos concluídos ou cancelados;
 - falha no cancelamento mantém o card e informa o usuário.

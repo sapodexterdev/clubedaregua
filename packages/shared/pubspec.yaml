@@ -10,3 +10,24 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_svg: 2.0.10+1
+  http: ^1.2.2
+  shared_preferences: ^2.3.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: lib/fonts/Inter-Variable.ttf
+    - family: Barlow Condensed
+      fonts:
+        - asset: lib/fonts/BarlowCondensed-SemiBold.ttf
+          weight: 600
+        - asset: lib/fonts/BarlowCondensed-Bold.ttf
+          weight: 700
+        - asset: lib/fonts/BarlowCondensed-ExtraBold.ttf
+          weight: 800

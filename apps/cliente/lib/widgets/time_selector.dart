@@ -28,7 +28,7 @@ class TimeSelector extends StatelessWidget {
           selectedColor: AppColors.orange,
           backgroundColor: AppColors.card,
           labelStyle: TextStyle(
-            color: selected ? Colors.white : AppColors.text,
+            color: selected ? AppColors.onGold : AppColors.text,
             fontWeight: FontWeight.w800,
           ),
           shape: RoundedRectangleBorder(

@@ -113,7 +113,7 @@ create table if not exists public.shop_settings (
   barber_shop_id uuid not null unique references public.barber_shops(id) on delete cascade,
   booking_interval_minutes integer not null default 30,
   min_cancel_hours integer not null default 2,
-  auto_confirm_appointments boolean not null default false,
+  auto_confirm_appointments boolean not null default true,
   require_payment_to_confirm boolean not null default false,
   loyalty_enabled boolean not null default true,
   pix_key text,
@@ -184,6 +184,25 @@ create table if not exists public.barbers (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (barber_shop_id, name)
+);
+
+create table if not exists public.client_booking_blocks (
+  id uuid primary key default gen_random_uuid(),
+  barber_shop_id uuid not null references public.barber_shops(id) on delete cascade,
+  client_id uuid references public.users(id) on delete cascade,
+  customer_phone_digits text,
+  barber_id uuid references public.barbers(id) on delete cascade,
+  blocked_by uuid not null references public.users(id) on delete restrict,
+  created_at timestamptz not null default now(),
+  check (client_id is not null or nullif(customer_phone_digits, '') is not null)
+);
+
+create unique index if not exists idx_client_booking_blocks_identity_scope
+on public.client_booking_blocks (
+  barber_shop_id,
+  coalesce(client_id, '00000000-0000-0000-0000-000000000000'::uuid),
+  coalesce(customer_phone_digits, ''),
+  coalesce(barber_id, '00000000-0000-0000-0000-000000000000'::uuid)
 );
 
 create table if not exists public.services (

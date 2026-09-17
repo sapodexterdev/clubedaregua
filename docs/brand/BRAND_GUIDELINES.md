@@ -1,24 +1,36 @@
 # Brand Guidelines - Clube da Régua
 
-> A partir desta versão, toda alteração visual do Clube da Régua deve seguir obrigatoriamente esta documentação e o arquivo Brand_Kit_v2.png. Em caso de conflito entre código existente e documentação da marca, prevalece a documentação da marca.
+> **Documento histórico da Marca V2.** A autoridade visual vigente é a Marca
+> V3, conforme `ADR-001-V3-AUTORIDADE-VISUAL.md`. O conteúdo abaixo é preservado
+> como registro da evolução e não deve orientar novos ativos ou componentes
+> quando divergir de `docs/brand/v3/`.
 
-## Fonte Oficial
+## Fonte oficial na V2
 
-A imagem `docs/brand/Brand_Kit_v2.png` é a fonte oficial da identidade visual do Clube da Régua.
+A imagem `docs/brand/Brand_Kit_v2.png` foi a fonte oficial da identidade visual
+na V2.
 
-A fonte de verdade inclui a prancha oficial e os arquivos mestres em `assets/brand/`. UX Boards anteriores devem ser atualizados quando houver conflito com o Brand Kit V2.
+A fonte de verdade vigente está em `assets/brand/v3/` e
+`docs/brand/v3/`. A prancha V2 e os UX Boards anteriores são históricos.
 
 Nenhuma alteração visual deve ser implementada sem consultar:
 
-- `docs/brand/Brand_Kit_v2.png`
-- `docs/brand/BRAND_GUIDELINES.md`
+- `docs/brand/ADR-001-V3-AUTORIDADE-VISUAL.md`
+- `docs/brand/v3/BRAND_FOUNDATIONS.md`
+- `docs/brand/v3/MOTION_SYSTEM.md`
+- `assets/brand/v3/tokens.json`
 - `docs/brand/UI_PRINCIPLES.md`
+
+O arquivo `docs/brand/Brand_Kit_v2.png` permanece disponível para consulta
+histórica da evolução.
 
 ## Brand Evolution
 
 A identidade visual do Clube da Régua foi refinada e vetorizada a partir da marca aprovada, preservando coroa, lettering urbano e navalha-régua.
 
-O Brand Kit V2 consolida essa evolução e passa a ser a referência oficial para produto, documentação, mockups, telas, componentes e peças visuais.
+O Brand Kit V2 consolidou essa etapa da evolução e foi substituído pela Marca
+V3 como referência oficial para produto, documentação, mockups, telas,
+componentes e peças visuais.
 
 O arquivo `docs/brand/Brand_Kit_v1.png` fica marcado como legado. Ele pode ser consultado apenas como histórico de evolução da marca, mas não deve orientar novas implementações.
 
@@ -51,7 +63,8 @@ A marca deve transmitir uma barbearia moderna, urbana e premium. A estética com
 
 ## Regras Obrigatórias
 
-1. A `Brand_Kit_v2.png` é a fonte oficial da identidade visual.
+1. A `Brand_Kit_v2.png` documenta a identidade visual histórica da V2; a V3 é
+   a autoridade vigente.
 2. Toda UI deve ser dark first.
 3. Botões principais devem usar amarelo.
 4. Cards devem usar fundo escuro/grafite com borda discreta.

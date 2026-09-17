@@ -19,26 +19,46 @@ class CDRTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       colorScheme: scheme,
+      fontFamily: CDRTypographyTokens.interfaceFontFamily,
       scaffoldBackgroundColor: CDRColorTokens.night,
       canvasColor: CDRColorTokens.graphite,
       visualDensity: VisualDensity.standard,
     );
     final textTheme = base.textTheme.copyWith(
-      displayLarge: _heading(42, FontWeight.w800),
-      displayMedium: _heading(36, FontWeight.w800),
-      displaySmall: _heading(32, FontWeight.w800),
-      headlineLarge: _heading(30, FontWeight.w800),
-      headlineMedium: _heading(26, FontWeight.w800),
-      headlineSmall: _heading(22, FontWeight.w700),
-      titleLarge: _heading(20, FontWeight.w700),
-      titleMedium: const TextStyle(color: CDRColorTokens.white, fontSize: 16, height: 1.3, fontWeight: FontWeight.w700),
-      titleSmall: const TextStyle(color: CDRColorTokens.white, fontSize: 14, height: 1.3, fontWeight: FontWeight.w700),
-      bodyLarge: const TextStyle(color: CDRColorTokens.white, fontSize: 16, height: 1.5, fontWeight: FontWeight.w400),
-      bodyMedium: const TextStyle(color: CDRColorTokens.white, fontSize: 14, height: 1.5, fontWeight: FontWeight.w400),
-      bodySmall: const TextStyle(color: CDRColorTokens.gray, fontSize: 12, height: 1.45, fontWeight: FontWeight.w500),
-      labelLarge: CDRTypographyTokens.button.copyWith(color: CDRColorTokens.white),
-      labelMedium: const TextStyle(color: CDRColorTokens.grayStrong, fontSize: 13, height: 1.3, fontWeight: FontWeight.w700),
-      labelSmall: const TextStyle(color: CDRColorTokens.gray, fontSize: 12, height: 1.3, fontWeight: FontWeight.w600),
+      displayLarge: _displayStyle(CDRTypographyTokens.display),
+      displayMedium: _displayStyle(
+        CDRTypographyTokens.title1.copyWith(fontSize: 36),
+      ),
+      displaySmall: _displayStyle(CDRTypographyTokens.title1),
+      headlineLarge: _displayStyle(CDRTypographyTokens.title1),
+      headlineMedium: _displayStyle(CDRTypographyTokens.title2),
+      headlineSmall: _displayStyle(CDRTypographyTokens.title2),
+      titleLarge: _interfaceStyle(CDRTypographyTokens.title3),
+      titleMedium: _interfaceStyle(
+        CDRTypographyTokens.label.copyWith(
+          fontSize: 16,
+          height: 1.3,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      titleSmall: _interfaceStyle(
+        CDRTypographyTokens.label.copyWith(fontWeight: FontWeight.w700),
+      ),
+      bodyLarge: _interfaceStyle(CDRTypographyTokens.body),
+      bodyMedium: _interfaceStyle(CDRTypographyTokens.bodySmall),
+      bodySmall: _interfaceStyle(
+        CDRTypographyTokens.caption,
+        color: CDRColorTokens.gray,
+      ),
+      labelLarge: _interfaceStyle(CDRTypographyTokens.button),
+      labelMedium: _interfaceStyle(
+        CDRTypographyTokens.label,
+        color: CDRColorTokens.grayStrong,
+      ),
+      labelSmall: _interfaceStyle(
+        CDRTypographyTokens.caption.copyWith(fontWeight: FontWeight.w600),
+        color: CDRColorTokens.gray,
+      ),
     );
     final inputBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(CDRRadiusTokens.medium),
@@ -99,12 +119,15 @@ class CDRTheme {
       iconButtonTheme: IconButtonThemeData(style: IconButton.styleFrom(foregroundColor: CDRColorTokens.gray, highlightColor: CDRColorTokens.brandYellow.withOpacity(.12))),
       chipTheme: ChipThemeData(
         backgroundColor: CDRColorTokens.graphite,
-        selectedColor: CDRColorTokens.brandYellow.withOpacity(.12),
+        selectedColor: CDRColorTokens.brandYellow,
         disabledColor: CDRColorTokens.disabledBackground,
+        checkmarkColor: CDRColorTokens.onGold,
         side: const BorderSide(color: CDRColorTokens.border),
         shape: const StadiumBorder(),
         labelStyle: textTheme.labelMedium,
-        secondaryLabelStyle: textTheme.labelMedium?.copyWith(color: CDRColorTokens.white),
+        secondaryLabelStyle: textTheme.labelMedium?.copyWith(
+          color: CDRColorTokens.onGold,
+        ),
         padding: const EdgeInsets.symmetric(horizontal: CDRSpacingTokens.sm, vertical: CDRSpacingTokens.xs),
       ),
       cardTheme: CardTheme(color: CDRColorTokens.graphite, surfaceTintColor: Colors.transparent, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(CDRRadiusTokens.large), side: const BorderSide(color: CDRColorTokens.border))),
@@ -138,11 +161,17 @@ class CDRTheme {
     );
   }
 
-  static TextStyle _heading(double size, FontWeight weight) => TextStyle(
-    color: CDRColorTokens.white,
-    fontSize: size,
-    height: 1.12,
-    fontWeight: weight,
-    letterSpacing: -.4,
-  );
+  static TextStyle _displayStyle(TextStyle style) => style.copyWith(
+        color: CDRColorTokens.white,
+        fontFamily: CDRTypographyTokens.displayFontFamily,
+      );
+
+  static TextStyle _interfaceStyle(
+    TextStyle style, {
+    Color color = CDRColorTokens.white,
+  }) =>
+      style.copyWith(
+        color: color,
+        fontFamily: CDRTypographyTokens.interfaceFontFamily,
+      );
 }
