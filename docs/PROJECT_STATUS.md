@@ -1,0 +1,65 @@
+# Situação atual do projeto
+
+Atualizado em 17/09/2026.
+
+## Estado do branch
+
+- Branch: `codex/unificar-apps`.
+- Remoto confirmado em `c02fb23` (`fix(security): isolar carteira de clientes por perfil`).
+- Os commits anteriores de navegação unificada, identidade visual, agenda responsiva e segurança de clientes estão publicados.
+- Existe uma alteração preexistente em `apps/gestao/lib/management_team_page.dart`; ela não faz parte desta onda e deve permanecer fora de commits.
+
+## Arquitetura funcional entregue
+
+O monorepo mantém um único produto Flutter com dois pontos de entrada integrados:
+
+- `apps/cliente`: descoberta pública, agendamento, perfil do cliente e onboarding do Dono.
+- `apps/gestao`: navegação profissional compartilhada pelos modos Dono, Barbeiro e funções de gestão.
+- `packages/shared`: componentes, tokens e contratos visuais comuns.
+- `supabase`: schema, migrations, RPCs, RLS e Storage.
+
+A sessão Supabase é única. A renovação compartilhada de token validada em `c366644f0db1b77e9ac5140d884dca2a4b823520` permanece preservada.
+
+## Segurança de clientes
+
+O commit `c02fb23` consolidou o isolamento da carteira de clientes:
+
+- Barbeiro consulta somente clientes com atendimento concluído atribuído ao próprio perfil, por RPCs `list_barber_customers` e `list_barber_customer_appointments`.
+- Dono e Manager mantêm a gestão ampla de clientes.
+- Bloqueio de agendamento continua exclusivo do Dono ativo.
+- Trocas de modo invalidam cargas antigas, limpam o snapshot anterior e impedem respostas atrasadas de sobrescrever o modo atual.
+- A migration `supabase/issue_025_barber_customer_scope.sql` inclui guardrails para impedir cliente, telefone e bloqueio vinculados a outra barbearia.
+
+## Onboarding por CEP
+
+Implementação local pendente de publicação:
+
+- `apps/cliente/lib/services/postal_code_service.dart` consulta o ViaCEP por HTTPS, sem enviar credenciais da sessão Supabase.
+- `OwnerOnboardingScreen` oferece CEP opcional, busca automática ao completar oito dígitos, botão de nova busca e preenchimento de endereço, cidade e UF.
+- O endereço continua editável para número, complemento e correções manuais.
+- CEP inexistente, indisponibilidade, timeout, troca rápida de CEP, edição manual e saída da tela possuem tratamento próprio.
+- Um CEP que retorna apenas cidade e UF limpa o logradouro preenchido anteriormente para evitar endereço misturado.
+
+Arquivos locais dessa alteração:
+
+- `apps/cliente/lib/screens/owner_onboarding_screen.dart`
+- `apps/cliente/lib/services/postal_code_service.dart`
+- `apps/cliente/test/services/postal_code_service_test.dart`
+- `apps/cliente/test/design/owner_onboarding_postal_code_test.dart`
+
+## Validação
+
+Validações executadas para a alteração de CEP:
+
+- Dart format: aprovado.
+- `git diff --check`: aprovado.
+- Testes do serviço: 7 aprovados.
+- Testes da tela: 7 aprovados.
+- Compilação web de `apps/cliente/lib/main.dart` via `dart2js`: concluída com sucesso.
+- Safari/iPhone real: ainda pendente de validação manual.
+
+O comando padrão `flutter test` apresentou bloqueios intermitentes do ambiente Windows ao criar subprocessos. Os mesmos testes foram executados com o `frontend_server` e `flutter_tester`, com resultado aprovado.
+
+## Próxima ação de release
+
+Revisar o diff, criar o commit da funcionalidade CEP e enviar para `origin/codex/unificar-apps`. Depois, validar o onboarding instalado no Safari do iPhone, incluindo CEP válido, CEP inexistente, CEP genérico e preenchimento manual.

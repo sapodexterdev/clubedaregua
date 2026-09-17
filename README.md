@@ -1,5 +1,7 @@
 # Clube da Régua
 
+O estado técnico atual do produto, dos commits publicados, das validações e das alterações locais pendentes está em [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md).
+
 SaaS para barbearias feito em Flutter, Dart e Supabase. A plataforma agora está organizada como monorepo com dois apps: um app rápido para clientes agendarem em poucos cliques e um app de gestão para barbeiros, donos e equipes administrarem agenda, serviços, clientes, caixa e operação.
 
 ## Identidade Visual
