@@ -73,6 +73,8 @@ Implementação local pendente de publicação:
 
 - Horários convertidos para `starts_at` são exibidos no fuso local do usuário,
   evitando deslocamento de horário causado pela leitura direta do UTC.
+- A agenda usa o `requested_time` da solicitação convertida como fonte do
+  horário escolhido e não duplica o `appointment` já vinculado à solicitação.
 
 Arquivos locais dessa alteração:
 
