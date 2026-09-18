@@ -11,6 +11,7 @@ import 'client/profile_screen.dart';
 class ProfessionalModeScreen extends StatelessWidget {
   const ProfessionalModeScreen({
     required this.mode,
+    this.initialDestination,
     super.key,
   });
 
@@ -18,6 +19,7 @@ class ProfessionalModeScreen extends StatelessWidget {
   static const ownerRoute = '/professional/owner';
 
   final AppMode mode;
+  final ManagementDestinationId? initialDestination;
 
   static String routeFor(AppMode mode) => switch (mode) {
         AppMode.barber => barberRoute,
@@ -31,6 +33,7 @@ class ProfessionalModeScreen extends StatelessWidget {
       session: context.read<ManagementSession>(),
       initialRole:
           mode == AppMode.owner ? ManagementRole.admin : ManagementRole.barber,
+      initialDestination: initialDestination,
       onOpenClientMode: () => _openMode(context, AppMode.client),
       onSignedOut: () => _finishSignOut(context),
       onOpenProfile: () => Navigator.pushNamed(
