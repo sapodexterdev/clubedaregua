@@ -78,6 +78,7 @@ class ClubeDaReguaGestaoApp extends StatelessWidget {
 class EmbeddedManagementArea extends StatefulWidget {
   const EmbeddedManagementArea({
     required this.initialRole,
+    this.initialDestination,
     required this.onOpenClientMode,
     required this.onSignedOut,
     this.session,
@@ -87,6 +88,7 @@ class EmbeddedManagementArea extends StatefulWidget {
   });
 
   final ManagementRole initialRole;
+  final ManagementDestinationId? initialDestination;
   final ManagementSession? session;
   final VoidCallback onOpenClientMode;
   final VoidCallback onSignedOut;
@@ -160,6 +162,7 @@ class _EmbeddedManagementAreaState extends State<EmbeddedManagementArea> {
             }
             return ManagementHomeScreen(
               initialRole: widget.initialRole,
+              initialDestination: widget.initialDestination,
               onOpenClientMode: widget.onOpenClientMode,
               onOpenProfile: widget.onOpenProfile,
               onRoleChanged: widget.onRoleChanged,
