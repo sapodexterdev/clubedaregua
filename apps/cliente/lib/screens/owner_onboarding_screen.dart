@@ -27,6 +27,9 @@ class _OwnerOnboardingScreenState extends State<OwnerOnboardingScreen> {
   final _phoneController = TextEditingController();
   final _whatsappController = TextEditingController();
   final _addressController = TextEditingController();
+  final _numberController = TextEditingController();
+  final _complementController = TextEditingController();
+  final _neighborhoodController = TextEditingController();
   final _postalCodeController = TextEditingController();
   late final PostalCodeService _postalCodeService;
   final _cityController = TextEditingController();
@@ -60,6 +63,9 @@ class _OwnerOnboardingScreenState extends State<OwnerOnboardingScreen> {
     _phoneController.dispose();
     _whatsappController.dispose();
     _addressController.dispose();
+    _numberController.dispose();
+    _complementController.dispose();
+    _neighborhoodController.dispose();
     _cityController.dispose();
     _stateController.dispose();
     super.dispose();
@@ -106,6 +112,9 @@ class _OwnerOnboardingScreenState extends State<OwnerOnboardingScreen> {
                       1 => _AddressStep(
                           key: const ValueKey('address'),
                           addressController: _addressController,
+                          numberController: _numberController,
+                          complementController: _complementController,
+                          neighborhoodController: _neighborhoodController,
                           cityController: _cityController,
                           stateController: _stateController,
                           postalCodeController: _postalCodeController,
@@ -198,7 +207,7 @@ class _OwnerOnboardingScreenState extends State<OwnerOnboardingScreen> {
         name: _nameController.text,
         phone: _phoneController.text,
         whatsapp: _whatsappController.text,
-        address: _addressController.text,
+        address: _formattedAddressForStorage(),
         city: _cityController.text,
         state: _stateController.text,
         ownerName: state.currentUserName ?? '',
@@ -232,6 +241,9 @@ class _OwnerOnboardingScreenState extends State<OwnerOnboardingScreen> {
     if (_step == 1) {
       if (_addressController.text.trim().length < 5) {
         return 'Informe o endereço da barbearia.';
+      }
+      if (_numberController.text.trim().isEmpty) {
+        return 'Informe o número da barbearia.';
       }
       if (_cityController.text.trim().length < 2) {
         return 'Informe a cidade.';
@@ -292,12 +304,13 @@ class _OwnerOnboardingScreenState extends State<OwnerOnboardingScreen> {
           _postalCodeMessage =
               'CEP não encontrado. Confira os números ou preencha o endereço abaixo.';
         } else {
-          _addressController.text = address.formattedAddress;
+          _addressController.text = address.street;
+          _neighborhoodController.text = address.neighborhood;
           _cityController.text = address.city;
           _stateController.text = address.state;
-          _postalCodeMessage = address.formattedAddress.isEmpty
-              ? 'Cidade e UF preenchidas. Informe a rua, o número e o complemento, se houver.'
-              : 'Endereço encontrado. Adicione o número e o complemento, se houver.';
+          _postalCodeMessage = address.street.isEmpty
+              ? 'Cidade e UF preenchidas. Informe a rua, o bairro e o número.'
+              : 'Endereço encontrado. Adicione o bairro, número e complemento, se houver.';
         }
       });
     } catch (_) {
@@ -307,6 +320,17 @@ class _OwnerOnboardingScreenState extends State<OwnerOnboardingScreen> {
     } finally {
       if (isCurrent()) setState(() => _isLookingUpPostalCode = false);
     }
+  }
+
+  String _formattedAddressForStorage() {
+    final street = _addressController.text.trim();
+    final number = _numberController.text.trim();
+    final complement = _complementController.text.trim();
+    final neighborhood = _neighborhoodController.text.trim();
+    final base = [street, number].where((part) => part.isNotEmpty).join(', ');
+    final details =
+        [neighborhood, complement].where((part) => part.isNotEmpty).join(' - ');
+    return [base, details].where((part) => part.isNotEmpty).join(' - ');
   }
 
   Future<void> _enterOwnerMode() async {
@@ -432,6 +456,9 @@ class _AddressStep extends StatelessWidget {
   const _AddressStep({
     super.key,
     required this.addressController,
+    required this.numberController,
+    required this.complementController,
+    required this.neighborhoodController,
     required this.cityController,
     required this.stateController,
     required this.postalCodeController,
@@ -443,6 +470,9 @@ class _AddressStep extends StatelessWidget {
   });
 
   final TextEditingController addressController;
+  final TextEditingController numberController;
+  final TextEditingController complementController;
+  final TextEditingController neighborhoodController;
   final TextEditingController cityController;
   final TextEditingController stateController;
   final TextEditingController postalCodeController;
@@ -497,9 +527,44 @@ class _AddressStep extends StatelessWidget {
         const SizedBox(height: 18),
         CDRTextField(
           controller: addressController,
-          label: 'Endereço completo',
-          hint: 'Rua, número e complemento',
+          label: 'Rua ou avenida',
+          hint: 'Ex.: Avenida Pedro Lucas',
           leading: Icons.location_on_outlined,
+          textInputAction: TextInputAction.next,
+          onChanged: onAddressEdited,
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: CDRTextField(
+                controller: numberController,
+                label: 'Número',
+                hint: 'Ex.: 120',
+                leading: Icons.pin_outlined,
+                textInputAction: TextInputAction.next,
+                keyboardType: TextInputType.number,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 2,
+              child: CDRTextField(
+                controller: complementController,
+                label: 'Complemento',
+                hint: 'Opcional',
+                leading: Icons.notes_outlined,
+                textInputAction: TextInputAction.next,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        CDRTextField(
+          controller: neighborhoodController,
+          label: 'Bairro',
+          hint: 'Ex.: Fabrício',
+          leading: Icons.map_outlined,
           textInputAction: TextInputAction.next,
           onChanged: onAddressEdited,
         ),
