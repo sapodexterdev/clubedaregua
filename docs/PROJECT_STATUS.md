@@ -1,6 +1,6 @@
 # Situação atual do projeto
 
-Atualizado em 17/09/2026.
+Atualizado em 18/09/2026.
 
 ## Estado do branch
 
@@ -52,6 +52,15 @@ Implementação local pendente de publicação:
 - O endereço continua editável para número, complemento e correções manuais.
 - CEP inexistente, indisponibilidade, timeout, troca rápida de CEP, edição manual e saída da tela possuem tratamento próprio.
 - Um CEP que retorna apenas cidade e UF limpa o logradouro preenchido anteriormente para evitar endereço misturado.
+
+## Configuração da barbearia
+
+- O formulário de configuração reaproveita o endereço do onboarding e exibe
+  rua, número, complemento, bairro e CEP em campos separados.
+- Ao salvar, os componentes continuam sendo compostos no formato compatível
+  com o campo de endereço já existente.
+- Os botões de upload da logo e da foto de capa ficam alinhados aos respectivos
+  campos de URL, preservando a leitura do formulário em telas estreitas.
 
 Arquivos locais dessa alteração:
 
