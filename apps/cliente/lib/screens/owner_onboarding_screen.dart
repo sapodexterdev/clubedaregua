@@ -1,4 +1,5 @@
 import 'package:clubedaregua_shared/clubedaregua_shared.dart';
+import 'package:clubedaregua_gestao/management.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -343,9 +344,14 @@ class _OwnerOnboardingScreenState extends State<OwnerOnboardingScreen> {
     );
     final selected = await modes.selectMode(AppMode.owner);
     if (!selected || !mounted) return;
-    Navigator.pushNamedAndRemoveUntil(
+    Navigator.pushAndRemoveUntil(
       context,
-      ProfessionalModeScreen.ownerRoute,
+      MaterialPageRoute(
+        builder: (_) => const ProfessionalModeScreen(
+          mode: AppMode.owner,
+          initialDestination: ManagementDestinationId.settings,
+        ),
+      ),
       (_) => false,
     );
   }
