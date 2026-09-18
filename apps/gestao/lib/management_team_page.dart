@@ -52,7 +52,7 @@ class _TeamPage extends StatelessWidget {
             if (session.errorMessage != null)
               _InlineNotice(
                 icon: Icons.warning_amber_rounded,
-                title: 'NÃ£o foi possÃ­vel carregar a equipe',
+                title: 'Não foi possível carregar a equipe',
                 subtitle: session.errorMessage!,
                 actionLabel: 'TENTAR NOVAMENTE',
                 onAction: session.fetchTeamBarbers,
@@ -157,7 +157,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _SheetHeader(
-              eyebrow: _isEditing ? 'EDITAR PROFISSIONAL' : 'NOVA CONTRATAÃ‡ÃƒO',
+              eyebrow: _isEditing ? 'EDITAR PROFISSIONAL' : 'NOVA CONTRATAÇÃO',
               title: _isEditing ? 'Dados do barbeiro' : 'Convide um barbeiro',
               onClose: _isBusy ? null : () => Navigator.pop(context),
             ),
@@ -186,12 +186,12 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
                 decoration: const InputDecoration(
                   labelText: 'E-mail de acesso',
                   prefixIcon: Icon(Icons.mail_outline_rounded),
-                  helperText: 'O convite serÃ¡ vÃ¡lido somente para este e-mail.',
+                  helperText: 'O convite será válido somente para este e-mail.',
                 ),
                 validator: (value) {
                   final email = value?.trim() ?? '';
                   if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
-                    return 'Informe um e-mail vÃ¡lido.';
+                    return 'Informe um e-mail válido.';
                   }
                   return null;
                 },
@@ -269,7 +269,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(
-                    labelText: 'PreÃ§o inicial',
+                    labelText: 'Preço inicial',
                     prefixIcon: Icon(Icons.attach_money),
                   ),
                   validator: _validateMoney,
@@ -279,7 +279,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(
-                    labelText: 'ComissÃ£o %',
+                    labelText: 'Comissão %',
                     prefixIcon: Icon(Icons.percent),
                   ),
                   validator: _validateCommission,
@@ -316,7 +316,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
 
   String? _validateMoney(String? value) {
     final parsed = _parseNumber(value);
-    if (parsed == null || parsed < 0) return 'Valor invÃ¡lido.';
+    if (parsed == null || parsed < 0) return 'Valor inválido.';
     return null;
   }
 
@@ -420,7 +420,7 @@ class _TeamBarberFormState extends State<_TeamBarberForm> {
           children: [
             Text(
               'Envie este link para ${invitation.email}. '
-              'O profissional deverÃ¡ entrar ou criar a conta usando esse mesmo e-mail.',
+              'O profissional deverá entrar ou criar a conta usando esse mesmo e-mail.',
             ),
             const SizedBox(height: 14),
             SelectableText(
