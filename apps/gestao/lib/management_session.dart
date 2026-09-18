@@ -705,11 +705,10 @@ class ManagementSession extends ChangeNotifier {
 
       final requestQuery = <String, String>{
         'select':
-            'id,customer_name,requested_date,requested_time,status,notes,barbers(name),services(name)',
+            'id,appointment_id,customer_name,requested_date,requested_time,status,notes,barbers(name),services(name)',
         'barber_shop_id': 'eq.$shopId',
         'requested_date': 'eq.$date',
         'status': 'eq.converted',
-        'appointment_id': 'is.null',
         'order': 'requested_time.asc',
       };
       if (barberId != null && barberId.isNotEmpty) {
@@ -738,9 +737,17 @@ class ManagementSession extends ChangeNotifier {
         query: appointmentQuery,
       );
 
+      final linkedAppointmentIds = requests
+          .map((row) => row['appointment_id']?.toString() ?? '')
+          .where((id) => id.isNotEmpty)
+          .toSet();
+      final unlinkedAppointments = appointments
+          .where((row) => !linkedAppointmentIds.contains(row['id']?.toString()))
+          .toList();
+
       scheduleEntries = [
         ...requests.map(ScheduleEntry.fromBookingRequest),
-        ...appointments.map(ScheduleEntry.fromAppointment),
+        ...unlinkedAppointments.map(ScheduleEntry.fromAppointment),
       ]..sort((a, b) => a.time.compareTo(b.time));
       _scheduleLoaded = true;
       scheduleError = null;
