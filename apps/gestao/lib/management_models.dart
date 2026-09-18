@@ -244,10 +244,11 @@ class ScheduleEntry {
 
   factory ScheduleEntry.fromAppointment(Map<String, dynamic> map) {
     final startsAt = map['starts_at']?.toString() ?? '';
+    final localStartsAt = DateTime.tryParse(startsAt)?.toLocal();
     return ScheduleEntry(
       id: 'appointment-${map['id']}',
       appointmentId: map['id']?.toString(),
-      time: startsAt.length >= 16 ? startsAt.substring(11, 16) : '',
+      time: localStartsAt == null ? '' : _formatTime(localStartsAt),
       client: 'Cliente agendado',
       service: map['services']?['name']?.toString() ?? 'Serviço',
       barber: map['barbers']?['name']?.toString() ?? 'Barbeiro',
@@ -264,6 +265,12 @@ class ScheduleEntry {
   static String _timeOnly(String value) {
     if (value.length >= 5) return value.substring(0, 5);
     return value;
+  }
+
+  static String _formatTime(DateTime value) {
+    final hour = value.hour.toString().padLeft(2, '0');
+    final minute = value.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
   }
 
   static String _statusLabel(String status) {
