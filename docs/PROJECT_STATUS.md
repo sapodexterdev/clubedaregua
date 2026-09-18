@@ -46,7 +46,8 @@ O commit `c02fb23` consolidou o isolamento da carteira de clientes:
 Implementação local pendente de publicação:
 
 - `apps/cliente/lib/services/postal_code_service.dart` consulta o ViaCEP por HTTPS, sem enviar credenciais da sessão Supabase.
-- `OwnerOnboardingScreen` oferece CEP opcional, busca automática ao completar oito dígitos, botão de nova busca e preenchimento de endereço, cidade e UF.
+- `OwnerOnboardingScreen` oferece CEP opcional, busca automática ao completar oito dígitos, botão de nova busca e preenchimento de rua, bairro, cidade e UF.
+- A etapa de localização separa rua, número, complemento e bairro, mantendo a composição do endereço compatível com o RPC atual de onboarding.
 - O endereço continua editável para número, complemento e correções manuais.
 - CEP inexistente, indisponibilidade, timeout, troca rápida de CEP, edição manual e saída da tela possuem tratamento próprio.
 - Um CEP que retorna apenas cidade e UF limpa o logradouro preenchido anteriormente para evitar endereço misturado.
@@ -73,4 +74,4 @@ O comando padrão `flutter test` apresentou bloqueios intermitentes do ambiente 
 
 ## Próxima ação de release
 
-Revisar o diff, criar o commit da funcionalidade CEP e enviar para `origin/codex/unificar-apps`. Depois, validar o onboarding instalado no Safari do iPhone, incluindo CEP válido, CEP inexistente, CEP genérico e preenchimento manual.
+Revisar o diff, validar a nova divisão dos campos de endereço na Vercel e enviar a documentação e a melhoria para `main`. Depois, validar o onboarding instalado no Safari do iPhone, incluindo CEP válido, CEP inexistente, CEP genérico e preenchimento manual.
