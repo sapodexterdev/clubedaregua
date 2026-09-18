@@ -85,12 +85,10 @@ class BarbershopProfileScreen extends StatelessWidget {
                           const _SectionTitle('Sobre'),
                           const SizedBox(height: 10),
                           _AboutShop(shop: shop),
-                          if (_hasContact(shop)) ...[
-                            const SizedBox(height: 28),
-                            const _SectionTitle('Contato e localização'),
-                            const SizedBox(height: 12),
-                            _ContactActions(shop: shop),
-                          ],
+                          const SizedBox(height: 28),
+                          const _SectionTitle('Contato e localização'),
+                          const SizedBox(height: 12),
+                          _ContactActions(shop: shop),
                           if (shop.services.isNotEmpty) ...[
                             const SizedBox(height: 28),
                             _SectionHeader(
@@ -156,13 +154,6 @@ class BarbershopProfileScreen extends StatelessWidget {
     );
   }
 
-  bool _hasContact(PublicBarbershop shop) {
-    final identity = shop.identity;
-    return identity.phone.isNotEmpty ||
-        identity.whatsapp.isNotEmpty ||
-        identity.instagram.isNotEmpty ||
-        identity.address.isNotEmpty;
-  }
 }
 
 class _CoverAppBar extends StatelessWidget {
@@ -553,35 +544,46 @@ class _ContactActions extends StatelessWidget {
   Widget build(BuildContext context) {
     final identity = shop.identity;
     final actions = <_ContactItem>[
-      if (identity.phone.isNotEmpty)
-        _ContactItem(Icons.call_outlined, 'Telefone', identity.phone),
-      if (identity.whatsapp.isNotEmpty)
-        _ContactItem(Icons.chat_outlined, 'WhatsApp', identity.whatsapp),
-      if (identity.instagram.isNotEmpty)
-        _ContactItem(
-          Icons.alternate_email_rounded,
-          'Instagram',
-          identity.instagram,
-        ),
-      if (identity.address.isNotEmpty)
-        _ContactItem(
-          Icons.directions_outlined,
-          'Endereço',
-          identity.address,
-        ),
+      _ContactItem(Icons.call_outlined, 'Telefone', identity.phone),
+      _ContactItem(Icons.chat_outlined, 'WhatsApp', identity.whatsapp),
+      _ContactItem(
+        Icons.alternate_email_rounded,
+        'Instagram',
+        identity.instagram,
+      ),
+      _ContactItem(Icons.directions_outlined, 'Endereço', identity.address),
     ];
 
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: actions
-          .map(
-            (action) => _ContactButton(
-              item: action,
-              onTap: () => _copy(context, action.value, action.label),
+    final hasUnavailable = actions.any((action) => !action.isAvailable);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: actions
+              .map(
+                (action) => _ContactButton(
+                  item: action,
+                  onTap: action.isAvailable
+                      ? () => _copy(context, action.value, action.label)
+                      : null,
+                ),
+              )
+              .toList(),
+        ),
+        if (hasUnavailable) ...[
+          const SizedBox(height: 10),
+          const Text(
+            'A barbearia ainda não cadastrou ou informou todos os dados de contato.',
+            style: TextStyle(
+              color: AppColors.muted,
+              fontSize: 12,
+              height: 1.35,
             ),
-          )
-          .toList(),
+          ),
+        ],
+      ],
     );
   }
 
@@ -602,13 +604,15 @@ class _ContactItem {
   final IconData icon;
   final String label;
   final String value;
+
+  bool get isAvailable => value.trim().isNotEmpty;
 }
 
 class _ContactButton extends StatelessWidget {
   const _ContactButton({required this.item, required this.onTap});
 
   final _ContactItem item;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -620,7 +624,8 @@ class _ContactButton extends StatelessWidget {
         icon: Icon(item.icon, size: 18),
         label: Text(item.label),
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.text,
+          foregroundColor:
+              item.isAvailable ? AppColors.text : AppColors.muted,
           side: const BorderSide(color: AppColors.stroke),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         ),
