@@ -62,6 +62,13 @@ Implementação local pendente de publicação:
 - Os botões de upload da logo e da foto de capa ficam alinhados aos respectivos
   campos de URL, preservando a leitura do formulário em telas estreitas.
 
+## Perfil público da barbearia
+
+- Os botões de telefone, WhatsApp, Instagram e endereço permanecem visíveis no
+  perfil público, mas ficam desabilitados quando o dado correspondente não foi
+  cadastrado.
+- O perfil informa ao cliente quando ainda existem dados de contato pendentes.
+
 Arquivos locais dessa alteração:
 
 - `apps/cliente/lib/screens/owner_onboarding_screen.dart`
