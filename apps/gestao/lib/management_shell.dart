@@ -18,6 +18,7 @@ enum ManagementDestinationId {
 class ManagementHomeScreen extends StatefulWidget {
   const ManagementHomeScreen({
     this.initialRole,
+    this.initialDestination,
     this.onOpenClientMode = _ignoreClientModeNavigation,
     this.onOpenProfile,
     this.onRoleChanged,
@@ -26,6 +27,7 @@ class ManagementHomeScreen extends StatefulWidget {
   });
 
   final ManagementRole? initialRole;
+  final ManagementDestinationId? initialDestination;
   final VoidCallback onOpenClientMode;
   final VoidCallback? onOpenProfile;
   final Future<void> Function(ManagementRole role)? onRoleChanged;
@@ -49,6 +51,10 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
   void initState() {
     super.initState();
     selectedRole = widget.initialRole ?? ManagementRole.barber;
+    if (widget.initialDestination != null &&
+        selectedRole == ManagementRole.admin) {
+      _selectedDestinations[ManagementRole.admin] = widget.initialDestination!;
+    }
   }
 
   @override
