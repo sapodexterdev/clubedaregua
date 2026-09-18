@@ -22,7 +22,7 @@ http.Response address(String street,
     http.Response.bytes(
         utf8.encode(jsonEncode({
           'logradouro': street,
-          'bairro': '',
+          'bairro': 'Centro',
           'localidade': city,
           'uf': uf,
         })),
@@ -53,10 +53,11 @@ void main() {
             : address('')));
     await tester.enterText(field('CEP (opcional)'), '01001000');
     await tester.pumpAndSettle();
-    expect(value(tester, 'Endereço completo'), 'Rua Antiga');
+    expect(value(tester, 'Rua ou avenida'), 'Rua Antiga');
+    expect(value(tester, 'Bairro'), 'Centro');
     await tester.enterText(field('CEP (opcional)'), '38000000');
     await tester.pumpAndSettle();
-    expect(value(tester, 'Endereço completo'), isEmpty);
+    expect(value(tester, 'Rua ou avenida'), isEmpty);
     expect(value(tester, 'Cidade'), 'Uberaba');
   });
 
@@ -73,7 +74,7 @@ void main() {
     await tester.ensureVisible(find.text('CONTINUAR'));
     await tester.tap(find.text('CONTINUAR'));
     await tester.pumpAndSettle();
-    expect(value(tester, 'Endereço completo'), isEmpty);
+    expect(value(tester, 'Rua ou avenida'), isEmpty);
     expect(find.text('Buscando endereço…'), findsNothing);
   });
 
@@ -87,10 +88,11 @@ void main() {
     await tester.enterText(field('CEP (opcional)'), '38000-000');
     await tester.pumpAndSettle();
     expect(requests, 1);
-    expect(value(tester, 'Endereço completo'), 'Rua das Flores');
+    expect(value(tester, 'Rua ou avenida'), 'Rua das Flores');
     expect(value(tester, 'Cidade'), 'Uberaba');
     expect(value(tester, 'UF'), 'MG');
-    await tester.enterText(field('Endereço completo'), 'Rua das Flores, 123');
+    await tester.enterText(field('Número'), '123');
+    await tester.enterText(field('Complemento'), 'Sala 2');
     await tester.ensureVisible(find.text('CONTINUAR'));
     await tester.tap(find.text('CONTINUAR'));
     await tester.pumpAndSettle();
@@ -112,7 +114,7 @@ void main() {
     await tester.pumpAndSettle();
     first.complete(address('Rua Antiga'));
     await tester.pumpAndSettle();
-    expect(value(tester, 'Endereço completo'), 'Rua Nova');
+    expect(value(tester, 'Rua ou avenida'), 'Rua Nova');
   });
 
   testWidgets('manual edits invalidate a pending lookup', (tester) async {
@@ -120,10 +122,10 @@ void main() {
     await openAddress(tester, MockClient((_) => pending.future));
     await tester.enterText(field('CEP (opcional)'), '38000000');
     await tester.pump();
-    await tester.enterText(field('Endereço completo'), 'Rua Manual, 10');
+    await tester.enterText(field('Rua ou avenida'), 'Rua Manual');
     pending.complete(address('Rua Remota'));
     await tester.pumpAndSettle();
-    expect(value(tester, 'Endereço completo'), 'Rua Manual, 10');
+    expect(value(tester, 'Rua ou avenida'), 'Rua Manual');
   });
 
   testWidgets('failed lookup allows manual completion without CEP',
@@ -133,7 +135,8 @@ void main() {
     await tester.enterText(field('CEP (opcional)'), '38000000');
     await tester.pumpAndSettle();
     expect(find.textContaining('Não foi possível buscar'), findsOneWidget);
-    await tester.enterText(field('Endereço completo'), 'Rua Manual, 10');
+    await tester.enterText(field('Rua ou avenida'), 'Rua Manual');
+    await tester.enterText(field('Número'), '10');
     await tester.enterText(field('Cidade'), 'Uberaba');
     await tester.enterText(field('UF'), 'MG');
     await tester.ensureVisible(find.text('CONTINUAR'));
