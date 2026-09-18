@@ -8,10 +8,16 @@
 - [x] ISSUE-004 — Agenda Real do Barbeiro
 - [x] ISSUE-005 — Gestão Completa de Serviços
 - [x] ISSUE-006 — Gestão Inteligente de Clientes
-- [ ] ISSUE-007 — Configuração da Barbearia
-- [ ] ISSUE-008 — Dashboard Operacional
-- [ ] ISSUE-009 — Disponibilidade e Bloqueios
-- [ ] ISSUE-010 — Sprint de Qualidade
+- [x] ISSUE-007 — Configuração da Barbearia
+- [x] ISSUE-008 — Dashboard Operacional
+- [x] ISSUE-009 — Disponibilidade e Bloqueios
+- [x] ISSUE-010 — Sprint de Qualidade
+
+## Estado atual
+
+O MVP original está implementado. O produto avançou para entregas
+posteriores, que devem ser acompanhadas pelos commits, migrations e documentos
+específicos de cada frente.
 
 ## Regra de Uso
 

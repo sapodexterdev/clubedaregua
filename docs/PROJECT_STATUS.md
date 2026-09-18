@@ -5,9 +5,20 @@ Atualizado em 17/09/2026.
 ## Estado do branch
 
 - Branch: `codex/unificar-apps`.
-- Remoto confirmado em `c02fb23` (`fix(security): isolar carteira de clientes por perfil`).
+- Remoto confirmado em `26f2de1` (`chore: normalizar fim de arquivo da equipe`).
 - Os commits anteriores de navegação unificada, identidade visual, agenda responsiva e segurança de clientes estão publicados.
 - Existe uma alteração preexistente em `apps/gestao/lib/management_team_page.dart`; ela não faz parte desta onda e deve permanecer fora de commits.
+
+## MVP original
+
+As dez issues originais do MVP estão implementadas no histórico publicado,
+incluindo configuração da barbearia, dashboard operacional, disponibilidade e
+sprint de qualidade. O tracker antigo estava desatualizado e não refletia o
+estado do branch.
+
+O produto também possui entregas posteriores para disponibilidade avançada,
+convites de equipe, confirmação automática, vendas, segurança de clientes,
+responsividade e onboarding por CEP.
 
 ## Arquitetura funcional entregue
 
