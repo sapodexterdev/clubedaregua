@@ -41,13 +41,19 @@ class Appointment {
   }
 
   static String _dateFromTimestamp(String? value) {
-    if (value == null || value.length < 10) return '';
-    return value.substring(0, 10);
+    final local = DateTime.tryParse(value ?? '')?.toLocal();
+    if (local == null) return '';
+    final month = local.month.toString().padLeft(2, '0');
+    final day = local.day.toString().padLeft(2, '0');
+    return '${local.year}-$month-$day';
   }
 
   static String _timeFromTimestamp(String? value) {
-    if (value == null || value.length < 16) return '';
-    return value.substring(11, 16);
+    final local = DateTime.tryParse(value ?? '')?.toLocal();
+    if (local == null) return '';
+    final hour = local.hour.toString().padLeft(2, '0');
+    final minute = local.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
   }
 
   static String? _timeFromValue(String? value) {
