@@ -66,7 +66,10 @@ class _SettingsFormState extends State<_SettingsForm> {
   late final TextEditingController _whatsappController;
   late final TextEditingController _emailController;
   late final TextEditingController _instagramController;
-  late final TextEditingController _addressController;
+  late final TextEditingController _streetController;
+  late final TextEditingController _numberController;
+  late final TextEditingController _complementController;
+  late final TextEditingController _neighborhoodController;
   late final TextEditingController _zipController;
   late final TextEditingController _cityController;
   late final TextEditingController _stateController;
@@ -97,7 +100,13 @@ class _SettingsFormState extends State<_SettingsForm> {
     _whatsappController = TextEditingController(text: config.whatsapp);
     _emailController = TextEditingController(text: config.email);
     _instagramController = TextEditingController(text: config.instagram);
-    _addressController = TextEditingController(text: config.address);
+    final addressParts = _splitStoredAddress(config.address);
+    _streetController = TextEditingController(text: addressParts.street);
+    _numberController = TextEditingController(text: addressParts.number);
+    _complementController =
+        TextEditingController(text: addressParts.complement);
+    _neighborhoodController =
+        TextEditingController(text: addressParts.neighborhood);
     _zipController = TextEditingController(text: config.zipCode);
     _cityController = TextEditingController(text: config.city);
     _stateController = TextEditingController(text: config.state);
@@ -128,7 +137,10 @@ class _SettingsFormState extends State<_SettingsForm> {
     _whatsappController.dispose();
     _emailController.dispose();
     _instagramController.dispose();
-    _addressController.dispose();
+    _streetController.dispose();
+    _numberController.dispose();
+    _complementController.dispose();
+    _neighborhoodController.dispose();
     _zipController.dispose();
     _cityController.dispose();
     _stateController.dispose();
@@ -166,6 +178,7 @@ class _SettingsFormState extends State<_SettingsForm> {
               ),
               const SizedBox(height: 12),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: TextFormField(
@@ -179,16 +192,19 @@ class _SettingsFormState extends State<_SettingsForm> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  IconButton.filled(
-                    onPressed: _isUploadingLogo ? null : _pickAndUploadLogo,
-                    style: IconButton.styleFrom(
-                      backgroundColor: SharedAppColors.orange,
-                      foregroundColor: SharedAppColors.onGold,
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: IconButton.filled(
+                      onPressed: _isUploadingLogo ? null : _pickAndUploadLogo,
+                      style: IconButton.styleFrom(
+                        backgroundColor: SharedAppColors.orange,
+                        foregroundColor: SharedAppColors.onGold,
+                      ),
+                      icon: _isUploadingLogo
+                          ? const CDRLoading.compact(size: 22)
+                          : const Icon(Icons.upload_rounded),
+                      tooltip: 'Enviar logo',
                     ),
-                    icon: _isUploadingLogo
-                        ? const CDRLoading.compact(size: 22)
-                        : const Icon(Icons.upload_rounded),
-                    tooltip: 'Enviar logo',
                   ),
                 ],
               ),
@@ -206,6 +222,7 @@ class _SettingsFormState extends State<_SettingsForm> {
               ],
               const SizedBox(height: 12),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: TextFormField(
@@ -218,16 +235,19 @@ class _SettingsFormState extends State<_SettingsForm> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  IconButton.filled(
-                    onPressed: _isUploadingCover ? null : _pickAndUploadCover,
-                    style: IconButton.styleFrom(
-                      backgroundColor: SharedAppColors.orange,
-                      foregroundColor: SharedAppColors.onGold,
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: IconButton.filled(
+                      onPressed: _isUploadingCover ? null : _pickAndUploadCover,
+                      style: IconButton.styleFrom(
+                        backgroundColor: SharedAppColors.orange,
+                        foregroundColor: SharedAppColors.onGold,
+                      ),
+                      icon: _isUploadingCover
+                          ? const CDRLoading.compact(size: 22)
+                          : const Icon(Icons.upload_rounded),
+                      tooltip: 'Enviar foto de capa',
                     ),
-                    icon: _isUploadingCover
-                        ? const CDRLoading.compact(size: 22)
-                        : const Icon(Icons.upload_rounded),
-                    tooltip: 'Enviar foto de capa',
                   ),
                 ],
               ),
@@ -289,12 +309,34 @@ class _SettingsFormState extends State<_SettingsForm> {
                 ),
               ),
               const SizedBox(height: 12),
-              TextFormField(
-                controller: _addressController,
-                decoration: const InputDecoration(
-                  labelText: 'Endereço completo',
-                  prefixIcon: Icon(Icons.location_on_outlined),
-                ),
+              _ResponsiveFieldRow(
+                children: [
+                  TextFormField(
+                    controller: _streetController,
+                    decoration: const InputDecoration(
+                      labelText: 'Rua ou avenida',
+                      prefixIcon: Icon(Icons.location_on_outlined),
+                    ),
+                  ),
+                  TextFormField(
+                    controller: _numberController,
+                    decoration: const InputDecoration(labelText: 'Número'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _ResponsiveFieldRow(
+                children: [
+                  TextFormField(
+                    controller: _complementController,
+                    decoration:
+                        const InputDecoration(labelText: 'Complemento'),
+                  ),
+                  TextFormField(
+                    controller: _neighborhoodController,
+                    decoration: const InputDecoration(labelText: 'Bairro'),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               _ResponsiveFieldRow(
@@ -564,7 +606,7 @@ class _SettingsFormState extends State<_SettingsForm> {
         whatsapp: _whatsappController.text,
         email: _emailController.text,
         instagram: _instagramController.text,
-        address: _addressController.text,
+        address: _formattedAddressForStorage(),
         zipCode: _zipController.text,
         city: _cityController.text,
         state: _stateController.text,
@@ -603,4 +645,46 @@ class _SettingsFormState extends State<_SettingsForm> {
       if (mounted) setState(() => _isSaving = false);
     }
   }
+
+  String _formattedAddressForStorage() {
+    final street = _streetController.text.trim();
+    final number = _numberController.text.trim();
+    final neighborhood = _neighborhoodController.text.trim();
+    final complement = _complementController.text.trim();
+    final base = [street, number].where((part) => part.isNotEmpty).join(', ');
+    final details = [neighborhood, complement]
+        .where((part) => part.isNotEmpty)
+        .join(' - ');
+    return [base, details].where((part) => part.isNotEmpty).join(' - ');
+  }
+
+  _StoredAddressParts _splitStoredAddress(String value) {
+    final sections = value
+        .split(' - ')
+        .map((part) => part.trim())
+        .where((part) => part.isNotEmpty)
+        .toList();
+    final base = sections.isEmpty ? '' : sections.first;
+    final match = RegExp(r'^(.*?)(?:,\s*)([^,]+)$').firstMatch(base);
+    return _StoredAddressParts(
+      street: match?.group(1)?.trim() ?? base,
+      number: match?.group(2)?.trim() ?? '',
+      neighborhood: sections.length > 1 ? sections[1] : '',
+      complement: sections.length > 2 ? sections.sublist(2).join(' - ') : '',
+    );
+  }
+}
+
+class _StoredAddressParts {
+  const _StoredAddressParts({
+    required this.street,
+    required this.number,
+    required this.neighborhood,
+    required this.complement,
+  });
+
+  final String street;
+  final String number;
+  final String neighborhood;
+  final String complement;
 }
