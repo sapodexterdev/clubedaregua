@@ -69,6 +69,11 @@ Implementação local pendente de publicação:
   cadastrado.
 - O perfil informa ao cliente quando ainda existem dados de contato pendentes.
 
+## Horários de agendamento
+
+- Horários convertidos para `starts_at` são exibidos no fuso local do usuário,
+  evitando deslocamento de horário causado pela leitura direta do UTC.
+
 Arquivos locais dessa alteração:
 
 - `apps/cliente/lib/screens/owner_onboarding_screen.dart`
