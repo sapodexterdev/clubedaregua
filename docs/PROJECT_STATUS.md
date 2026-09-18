@@ -48,6 +48,7 @@ Implementação local pendente de publicação:
 - `apps/cliente/lib/services/postal_code_service.dart` consulta o ViaCEP por HTTPS, sem enviar credenciais da sessão Supabase.
 - `OwnerOnboardingScreen` oferece CEP opcional, busca automática ao completar oito dígitos, botão de nova busca e preenchimento de rua, bairro, cidade e UF.
 - A etapa de localização separa rua, número, complemento e bairro, mantendo a composição do endereço compatível com o RPC atual de onboarding.
+- Após concluir o cadastro, o Dono entra diretamente na Configuração da Barbearia para completar os dados operacionais antes de acessar o painel.
 - O endereço continua editável para número, complemento e correções manuais.
 - CEP inexistente, indisponibilidade, timeout, troca rápida de CEP, edição manual e saída da tela possuem tratamento próprio.
 - Um CEP que retorna apenas cidade e UF limpa o logradouro preenchido anteriormente para evitar endereço misturado.
