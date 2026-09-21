@@ -44,17 +44,23 @@ class TeamInvitationRepository {
 
   Future<AcceptedTeamInvitation?> acceptPendingInvitation() async {
     final token = await pendingToken();
-    if (token == null || !_rest.isConfigured) return null;
+    if (!_rest.isConfigured) return null;
 
     final auth = AuthService();
     final session = await auth.getValidSession();
     if (session == null) return null;
 
-    final result = await _rest.postRpc(
-      'accept_shop_invitation',
-      data: {'p_token': token},
-      accessToken: session.accessToken,
-    );
+    final result = token == null
+        ? await _rest.postRpc(
+            'accept_pending_shop_invitation',
+            data: const {},
+            accessToken: session.accessToken,
+          )
+        : await _rest.postRpc(
+            'accept_shop_invitation',
+            data: {'p_token': token},
+            accessToken: session.accessToken,
+          );
     if (result is! Map) return null;
 
     final accepted = AcceptedTeamInvitation(
