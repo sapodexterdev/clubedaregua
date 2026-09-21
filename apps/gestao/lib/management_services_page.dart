@@ -23,6 +23,14 @@ class _ServicesPage extends StatelessWidget {
               icon: Icons.add_circle_rounded,
               onPressed: () => _openServiceForm(context),
             ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => _openCategoryManager(context),
+                icon: const Icon(Icons.category_outlined),
+                label: const Text('GERENCIAR CATEGORIAS'),
+              ),
+            ),
             const SizedBox(height: 22),
             const _SectionTitle(
               'Encontre e organize',
@@ -83,6 +91,130 @@ class _ServicesPage extends StatelessWidget {
         child: _ServiceForm(service: service),
       ),
     );
+  }
+
+  Future<void> _openCategoryManager(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: SharedAppColors.card,
+      builder: (_) => ChangeNotifierProvider.value(
+        value: context.read<ManagementSession>(),
+        child: const _CategoryManagerSheet(),
+      ),
+    );
+  }
+}
+
+class _CategoryManagerSheet extends StatelessWidget {
+  const _CategoryManagerSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    final session = context.watch<ManagementSession>();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _SheetHeader(
+            eyebrow: 'CATÁLOGO',
+            title: 'Categorias',
+            onClose: () => Navigator.pop(context),
+          ),
+          const SizedBox(height: 16),
+          CDRButton.primary(
+            label: 'NOVA CATEGORIA',
+            leading: const Icon(Icons.add_rounded),
+            onPressed: () => _create(context),
+          ),
+          const SizedBox(height: 12),
+          if (session.serviceCategories.isEmpty)
+            const Text('Nenhuma categoria cadastrada.'),
+          for (final category in session.serviceCategories)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(
+                Icons.category_outlined,
+                color: category.isActive
+                    ? SharedAppColors.orange
+                    : SharedAppColors.muted,
+              ),
+              title: Text(category.name),
+              subtitle: Text(category.isActive ? 'Ativa' : 'Inativa'),
+              trailing: PopupMenuButton<String>(
+                onSelected: (value) async {
+                  if (value == 'toggle') {
+                    await session.updateServiceCategory(
+                      category,
+                      name: category.name,
+                      isActive: !category.isActive,
+                    );
+                  } else if (value == 'delete') {
+                    try {
+                      await session.deleteServiceCategory(category);
+                    } catch (error) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(error.toString())),
+                        );
+                      }
+                    }
+                  }
+                },
+                itemBuilder: (_) => [
+                  PopupMenuItem(
+                    value: 'toggle',
+                    child: Text(category.isActive ? 'Desativar' : 'Ativar'),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Text('Excluir'),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _create(BuildContext context) async {
+    final controller = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Nova categoria'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Nome da categoria'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCELAR'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('SALVAR'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (!context.mounted || name == null || name.trim().isEmpty) return;
+    try {
+      await context.read<ManagementSession>().createServiceCategory(name);
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.toString())),
+        );
+      }
+    }
   }
 }
 
@@ -325,13 +457,12 @@ class _ServiceFormState extends State<_ServiceForm> {
                     value: category.id,
                     child: Text(category.name),
                   ),
+                const DropdownMenuItem<String>(
+                  value: _newCategoryDropdownValue,
+                  child: Text('+ Criar nova categoria'),
+                ),
               ],
-              onChanged: _isSaving
-                  ? null
-                  : (value) => setState(() {
-                        _categoryId =
-                            value == _noCategoryDropdownValue ? null : value;
-                      }),
+              onChanged: _isSaving ? null : _onCategoryChanged,
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -414,6 +545,51 @@ class _ServiceFormState extends State<_ServiceForm> {
         ),
       ),
     );
+  }
+
+  Future<void> _onCategoryChanged(String? value) async {
+    if (value == _newCategoryDropdownValue) {
+      final controller = TextEditingController();
+      final name = await showDialog<String>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Nova categoria'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(labelText: 'Nome da categoria'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('CANCELAR'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, controller.text),
+              child: const Text('SALVAR'),
+            ),
+          ],
+        ),
+      );
+      controller.dispose();
+      if (!mounted || name == null || name.trim().isEmpty) return;
+      try {
+        final category = await context
+            .read<ManagementSession>()
+            .createServiceCategory(name);
+        if (mounted) setState(() => _categoryId = category.id);
+      } catch (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(error.toString())),
+          );
+        }
+      }
+      return;
+    }
+    setState(() {
+      _categoryId = value == _noCategoryDropdownValue ? null : value;
+    });
   }
 
   String? _validatePrice(String? value) {
