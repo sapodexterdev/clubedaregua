@@ -1272,10 +1272,12 @@ class _TeamBarberTile extends StatelessWidget {
   const _TeamBarberTile({
     required this.barber,
     required this.onTap,
+    this.onResend,
   });
 
   final TeamBarber barber;
   final VoidCallback onTap;
+  final VoidCallback? onResend;
 
   @override
   Widget build(BuildContext context) {
@@ -1292,10 +1294,21 @@ class _TeamBarberTile extends StatelessWidget {
       ),
       title: barber.name,
       subtitle: '${barber.role} - ${barber.detail}',
-      trailing: IconButton(
-        tooltip: 'Editar barbeiro',
-        onPressed: onTap,
-        icon: const Icon(Icons.chevron_right_rounded),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (onResend != null)
+            IconButton(
+              tooltip: 'Gerar novo convite',
+              onPressed: onResend,
+              icon: const Icon(Icons.refresh_rounded),
+            ),
+          IconButton(
+            tooltip: 'Editar barbeiro',
+            onPressed: onTap,
+            icon: const Icon(Icons.chevron_right_rounded),
+          ),
+        ],
       ),
     );
   }
