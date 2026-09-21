@@ -76,6 +76,16 @@ Implementação local pendente de publicação:
 - A agenda usa o `requested_time` da solicitação convertida como fonte do
   horário escolhido e não duplica o `appointment` já vinculado à solicitação.
 
+## Convites de profissionais
+
+- O convite mantém o link com token para aceite explícito e agora também possui
+  fallback seguro por e-mail: após o login, um convite pendente para o e-mail
+  autenticado pode ser aceito automaticamente.
+- Convites pendentes exibem no painel do dono uma ação para gerar e copiar um
+  novo link, revogando o link anterior.
+- A função SQL `accept_pending_shop_invitation` deve ser aplicada no Supabase
+  junto com a migration `supabase/issue_026_pending_invitation_fallback.sql`.
+
 Arquivos locais dessa alteração:
 
 - `apps/cliente/lib/screens/owner_onboarding_screen.dart`
