@@ -86,6 +86,15 @@ Implementação local pendente de publicação:
 - A função SQL `accept_pending_shop_invitation` deve ser aplicada no Supabase
   junto com a migration `supabase/issue_026_pending_invitation_fallback.sql`.
 
+## Categorias de serviços
+
+- A tela de Serviços possui acesso direto a `Gerenciar categorias`.
+- O cadastro de serviço permite criar uma nova categoria sem sair do formulário;
+  após salvar, ela é selecionada automaticamente.
+- Categorias podem ser ativadas ou desativadas pelo dono ou gerente.
+- A exclusão é bloqueada quando existem serviços vinculados, preservando o
+  catálogo e o histórico operacional.
+
 Arquivos locais dessa alteração:
 
 - `apps/cliente/lib/screens/owner_onboarding_screen.dart`
