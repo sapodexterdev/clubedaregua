@@ -2047,6 +2047,36 @@ class ManagementSession extends ChangeNotifier {
     }
   }
 
+  Future<TeamInvitationLink> resendTeamBarberInvitation(
+    TeamBarber barber,
+  ) async {
+    final token = _accessToken;
+    if (token == null) throw StateError('Sua sessão expirou. Entre novamente.');
+    final rows = await _getRestRows(
+      token,
+      'shop_invitations',
+      query: {
+        'select': 'email',
+        'barber_id': 'eq.${barber.id}',
+        'status': 'eq.pending',
+        'order': 'created_at.desc',
+        'limit': '1',
+      },
+    );
+    final email = rows.isEmpty ? '' : rows.first['email']?.toString() ?? '';
+    if (email.isEmpty) {
+      throw StateError('Não encontramos um convite pendente para este barbeiro.');
+    }
+    return createTeamBarber(
+      email: email,
+      name: barber.name,
+      bio: barber.bio,
+      photoUrl: barber.photoUrl,
+      startingPrice: barber.startingPrice,
+      commissionPercent: barber.commissionPercent,
+    );
+  }
+
   Future<void> deactivateTeamBarber(TeamBarber barber) async {
     await updateTeamBarber(
       barber,
