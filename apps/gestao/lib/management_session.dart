@@ -50,6 +50,9 @@ class ManagementSession extends ChangeNotifier {
   List<ManagedProduct> products = [];
   List<ProductSale> productSales = [];
   ShopConfiguration? shopConfiguration;
+  DashboardMetrics? dashboardMetrics;
+  bool isDashboardLoading = false;
+  String? dashboardError;
   bool isScheduleLoading = false;
   bool isAvailabilityLoading = false;
   bool isAvailabilitySaving = false;
@@ -391,6 +394,8 @@ class ManagementSession extends ChangeNotifier {
           await fetchBookingRequests(adminView: true);
         }
       case ManagementDestinationId.dashboard:
+        if (force || dashboardMetrics == null) await fetchDashboardMetrics();
+        return;
       case ManagementDestinationId.commission:
       case ManagementDestinationId.availability:
         return;
@@ -408,6 +413,33 @@ class ManagementSession extends ChangeNotifier {
         if (force || !_commerceLoaded) await fetchCommerce();
       case ManagementDestinationId.settings:
         if (force || !_settingsLoaded) await fetchShopConfiguration();
+    }
+  }
+
+  Future<void> fetchDashboardMetrics({DateTime? from, DateTime? to}) async {
+    final token = _accessToken;
+    final shopId = _barberShopId;
+    if (token == null || shopId == null || shopId.isEmpty) return;
+    isDashboardLoading = true;
+    dashboardError = null;
+    notifyListeners();
+    try {
+      final rows =
+          await _postRpcRows(token, 'get_owner_dashboard_metrics', data: {
+        'p_barber_shop_id': shopId,
+        'p_from': (from ?? DateTime.now()).toIso8601String().substring(0, 10),
+        'p_to': (to ?? DateTime.now())
+            .add(const Duration(days: 1))
+            .toIso8601String()
+            .substring(0, 10),
+      });
+      if (rows.isNotEmpty)
+        dashboardMetrics = DashboardMetrics.fromMap(rows.first);
+    } catch (error) {
+      dashboardError = _cleanErrorMessage(error);
+    } finally {
+      isDashboardLoading = false;
+      notifyListeners();
     }
   }
 
@@ -1784,7 +1816,8 @@ class ManagementSession extends ChangeNotifier {
     if (token == null) throw StateError('Sua sessão expirou. Entre novamente.');
     final shopId = await _ensureBarberShopId(token);
     final duplicate = serviceCategories.any(
-      (category) => category.name.trim().toLowerCase() == name.trim().toLowerCase(),
+      (category) =>
+          category.name.trim().toLowerCase() == name.trim().toLowerCase(),
     );
     if (duplicate) throw StateError('Já existe uma categoria com esse nome.');
     final rows = await _postRestRows(
@@ -2128,7 +2161,8 @@ class ManagementSession extends ChangeNotifier {
     );
     final email = rows.isEmpty ? '' : rows.first['email']?.toString() ?? '';
     if (email.isEmpty) {
-      throw StateError('Não encontramos um convite pendente para este barbeiro.');
+      throw StateError(
+          'Não encontramos um convite pendente para este barbeiro.');
     }
     return createTeamBarber(
       email: email,
