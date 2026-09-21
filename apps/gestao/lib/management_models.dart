@@ -1,5 +1,33 @@
 part of 'management.dart';
 
+class DashboardMetrics {
+  const DashboardMetrics({
+    required this.appointments,
+    required this.confirmedAppointments,
+    required this.projectedRevenue,
+    required this.realizedRevenue,
+    required this.averageTicket,
+  });
+
+  final int appointments;
+  final int confirmedAppointments;
+  final double projectedRevenue;
+  final double realizedRevenue;
+  final double averageTicket;
+
+  factory DashboardMetrics.fromMap(Map<String, dynamic> map) {
+    double number(String key) => (map[key] as num?)?.toDouble() ?? 0;
+    int integer(String key) => (map[key] as num?)?.toInt() ?? 0;
+    return DashboardMetrics(
+      appointments: integer('appointments'),
+      confirmedAppointments: integer('confirmed_appointments'),
+      projectedRevenue: number('projected_revenue'),
+      realizedRevenue: number('realized_revenue'),
+      averageTicket: number('average_ticket'),
+    );
+  }
+}
+
 enum ProductStatusFilter { all, active, lowStock, inactive }
 
 class PasswordRecoveryLink {
