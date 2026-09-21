@@ -477,6 +477,7 @@ enum CustomerStatusFilter { all, active, inactive, recent }
 const _allBarbersDropdownValue = '__all_barbers__';
 const _allCategoriesDropdownValue = '__all_categories__';
 const _noCategoryDropdownValue = '__no_category__';
+const _newCategoryDropdownValue = '__new_category__';
 
 class ManagedCustomer {
   const ManagedCustomer({
