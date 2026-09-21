@@ -68,11 +68,35 @@ class _TeamPage extends StatelessWidget {
                 _TeamBarberTile(
                   barber: barber,
                   onTap: () => _openTeamBarberForm(context, barber: barber),
+                  onResend: barber.userId.isEmpty
+                      ? () => _resendInvitation(context, barber)
+                      : null,
                 ),
           ],
         );
       },
     );
+  }
+
+  Future<void> _resendInvitation(
+    BuildContext context,
+    TeamBarber barber,
+  ) async {
+    try {
+      final invitation = await context
+          .read<ManagementSession>()
+          .resendTeamBarberInvitation(barber);
+      if (!context.mounted) return;
+      await Clipboard.setData(ClipboardData(text: invitation.url));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Novo link gerado e copiado.')),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    }
   }
 
   Future<void> _openTeamBarberForm(
