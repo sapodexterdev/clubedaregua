@@ -23,7 +23,7 @@ class _AdminDashboardPage extends StatelessWidget {
             .where((item) => item.status == 'completed')
             .fold<double>(0, (sum, item) => sum + item.total) +
         session.productSalesTodayTotal;
-    final average = confirmed == 0 ? 0 : projected / confirmed;
+    final double average = confirmed == 0 ? 0 : projected / confirmed;
     final metrics = session.dashboardMetrics;
     final appointmentCount = metrics?.appointments ?? requests.length;
     final confirmedCount = metrics?.confirmedAppointments ?? confirmed;
