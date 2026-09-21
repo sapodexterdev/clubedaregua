@@ -35,9 +35,7 @@ class _AdminDashboardPage extends StatelessWidget {
       key: const ValueKey('owner-dashboard-v4'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _OwnerDashboardHeader(
-            shopName: session.barberShopName ?? 'Sua barbearia'),
-        const SizedBox(height: CDRSpacingTokens.lg),
+        const SizedBox(height: CDRSpacingTokens.sm),
         Text('RESUMO DE HOJE',
             style: CDRTypographyTokens.overline
                 .copyWith(color: CDRColorTokens.brandYellow)),
@@ -92,26 +90,6 @@ class _AdminDashboardPage extends StatelessWidget {
 
   static String _money(double value) =>
       'R\$ ${value.toStringAsFixed(2).replaceAll('.', ',')}';
-}
-
-class _OwnerDashboardHeader extends StatelessWidget {
-  const _OwnerDashboardHeader({required this.shopName});
-  final String shopName;
-
-  @override
-  Widget build(BuildContext context) => CDRCard(
-          child: Row(children: [
-        const _IconBadge(Icons.storefront_outlined),
-        const SizedBox(width: CDRSpacingTokens.md),
-        Expanded(
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('MODO DONO',
-              style: CDRTypographyTokens.overline
-                  .copyWith(color: CDRColorTokens.brandYellow)),
-          Text(shopName, style: Theme.of(context).textTheme.titleLarge),
-        ])),
-      ]));
 }
 
 class _DashboardMetric {
