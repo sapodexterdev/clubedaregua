@@ -1779,6 +1779,69 @@ class ManagementSession extends ChangeNotifier {
     }
   }
 
+  Future<ServiceCategory> createServiceCategory(String name) async {
+    final token = _accessToken;
+    if (token == null) throw StateError('Sua sessão expirou. Entre novamente.');
+    final shopId = await _ensureBarberShopId(token);
+    final duplicate = serviceCategories.any(
+      (category) => category.name.trim().toLowerCase() == name.trim().toLowerCase(),
+    );
+    if (duplicate) throw StateError('Já existe uma categoria com esse nome.');
+    final rows = await _postRestRows(
+      token,
+      'service_categories',
+      data: {
+        'barber_shop_id': shopId,
+        'name': name.trim(),
+        'sort_order': serviceCategories.length,
+        'is_active': true,
+      },
+    );
+    await fetchServiceCatalog();
+    return ServiceCategory.fromMap(rows.first);
+  }
+
+  Future<void> updateServiceCategory(
+    ServiceCategory category, {
+    required String name,
+    required bool isActive,
+  }) async {
+    final token = _accessToken;
+    if (token == null) return;
+    await _patchRestRows(
+      token,
+      'service_categories',
+      query: {'id': 'eq.${category.id}'},
+      data: {'name': name.trim(), 'is_active': isActive},
+    );
+    await fetchServiceCatalog();
+  }
+
+  Future<void> deleteServiceCategory(ServiceCategory category) async {
+    final token = _accessToken;
+    if (token == null) return;
+    final services = await _getRestRows(
+      token,
+      'services',
+      query: {
+        'select': 'id',
+        'category_id': 'eq.${category.id}',
+        'limit': '1',
+      },
+    );
+    if (services.isNotEmpty) {
+      throw StateError(
+        'Esta categoria possui serviços vinculados. Desative-a ou mova os serviços antes de excluir.',
+      );
+    }
+    await _deleteRestRows(
+      token,
+      'service_categories',
+      query: {'id': 'eq.${category.id}'},
+    );
+    await fetchServiceCatalog();
+  }
+
   Future<void> updateService(
     ManagedService service, {
     required String name,
