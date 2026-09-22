@@ -139,9 +139,11 @@ class AppState extends ChangeNotifier {
       }
       if (discoveryOpenNowOnly && !shop.isOpen) return false;
       if (discoveryHighlyRatedOnly && shop.rating < 4.5) return false;
-      if (discoveryCategoryId != null &&
+      final selectedCategoryKey = _categoryKeyForId(discoveryCategoryId);
+      if (selectedCategoryKey != null &&
           !shop.services.any(
-            (service) => service.categoryId == discoveryCategoryId,
+            (service) =>
+                _categoryKeyForId(service.categoryId) == selectedCategoryKey,
           )) {
         return false;
       }
@@ -170,7 +172,12 @@ class AppState extends ChangeNotifier {
 
   List<ServiceCategory> get discoveryCategories {
     const order = ['corte', 'barba', 'combo', 'infantil', 'premium'];
-    final items = List<ServiceCategory>.of(categories);
+    final uniqueItems = <String, ServiceCategory>{};
+    for (final category in categories) {
+      final key = _normalizedSearch(category.name);
+      if (key.isNotEmpty) uniqueItems.putIfAbsent(key, () => category);
+    }
+    final items = uniqueItems.values.toList();
     items.sort((a, b) {
       final aIndex = order.indexOf(_normalizedSearch(a.name));
       final bIndex = order.indexOf(_normalizedSearch(b.name));
@@ -448,6 +455,14 @@ class AppState extends ChangeNotifier {
   void toggleDiscoveryCategory(String categoryId) {
     discoveryCategoryId = discoveryCategoryId == categoryId ? null : categoryId;
     notifyListeners();
+  }
+
+  String? _categoryKeyForId(String? categoryId) {
+    if (categoryId == null) return null;
+    for (final category in categories) {
+      if (category.id == categoryId) return _normalizedSearch(category.name);
+    }
+    return null;
   }
 
   String _normalizedSearch(String value) {
