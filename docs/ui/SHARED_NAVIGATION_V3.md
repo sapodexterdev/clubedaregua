@@ -95,6 +95,15 @@ pode exigir aceite manual para criar cada agendamento.
 - O seletor Barbeiro/Dono não aparece no conteúdo das páginas, no cabeçalho nem
   como destino raiz.
 
+### Identidade do cabeçalho
+
+- No modo Dono e no modo Barbeiro, a barra superior usa a logo cadastrada da
+  barbearia ativa junto ao título do destino atual.
+- Se a unidade não tiver logo ou ela não carregar, usar a logo oficial V3 do
+  Clube da Régua como fallback.
+- Não repetir no conteúdo da página um cartão com logo, nome da unidade e modo;
+  o cabeçalho global já identifica o contexto e preserva espaço para os dados.
+
 ### Conteúdo do Perfil
 
 A seção `Modo de uso` apresenta somente modos permitidos ao usuário:

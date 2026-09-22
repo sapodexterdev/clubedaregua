@@ -109,6 +109,9 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
             backgroundColor: SharedAppColors.background,
             appBar: _ManagementTopBar(
               title: page.title,
+              isAdmin: isAdmin,
+              shopLogoUrl: session.shopConfiguration?.logoUrl.trim() ?? '',
+              shopName: session.barberShopName ?? 'Barbearia',
               titleFocusNode: _pageTitleFocusNode,
               onOpenProfile: widget.onOpenProfile,
               onRefresh: () => _refreshCurrentDestination(
@@ -148,27 +151,7 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
                 Expanded(
                   child: _ManagementPageContent(
                     horizontalPadding: horizontalPadding,
-                    children: [
-                      if (useSideNavigation) ...[
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: _AvailabilityStatus(
-                            label: isAdmin ? 'MODO DONO' : 'MODO BARBEIRO',
-                            color: SharedAppColors.orange,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                      _Header(
-                        isAdmin: isAdmin,
-                        title: isAdmin
-                            ? session.barberShopName ?? 'Barbearia'
-                            : session.barberHeaderName,
-                        dense: !useSideNavigation,
-                      ),
-                      SizedBox(height: useSideNavigation ? 24 : 20),
-                      page.child,
-                    ],
+                    children: [page.child],
                   ),
                 ),
               ],
@@ -252,6 +235,9 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
 class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
   const _ManagementTopBar({
     required this.title,
+    required this.isAdmin,
+    required this.shopLogoUrl,
+    required this.shopName,
     required this.titleFocusNode,
     required this.onRefresh,
     this.onOpenProfile,
@@ -259,6 +245,9 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   final String title;
+  final bool isAdmin;
+  final String shopLogoUrl;
+  final String shopName;
   final FocusNode titleFocusNode;
   final VoidCallback onRefresh;
   final VoidCallback? onOpenProfile;
@@ -285,11 +274,23 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: SharedAppColors.stroke),
             ),
-            child: SvgPicture.asset(
-              'assets/images/brand_v3_segunda_logo.svg',
-              fit: BoxFit.contain,
-              semanticsLabel: 'Clube da Régua',
-            ),
+            clipBehavior: Clip.antiAlias,
+            child: shopLogoUrl.isEmpty
+                ? SvgPicture.asset(
+                    'assets/images/brand_v3_segunda_logo.svg',
+                    fit: BoxFit.contain,
+                    semanticsLabel: 'Logo do Clube da Régua',
+                  )
+                : Image.network(
+                    shopLogoUrl,
+                    fit: BoxFit.cover,
+                    semanticLabel: 'Logo de $shopName',
+                    errorBuilder: (_, __, ___) => SvgPicture.asset(
+                      'assets/images/brand_v3_segunda_logo.svg',
+                      fit: BoxFit.contain,
+                      semanticsLabel: 'Logo do Clube da Régua',
+                    ),
+                  ),
           ),
           const SizedBox(width: 11),
           Expanded(
@@ -310,8 +311,8 @@ class _ManagementTopBar extends StatelessWidget implements PreferredSizeWidget {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'CLUBE DA RÉGUA • GESTÃO',
+                      Text(
+                        isAdmin ? 'MODO DONO' : 'MODO BARBEIRO',
                         style: TextStyle(
                           color: SharedAppColors.orange,
                           fontSize: 9,
@@ -834,108 +835,3 @@ List<_ManagementTab> _tabsById(
   Set<ManagementDestinationId> ids,
 ) =>
     tabs.where((tab) => ids.contains(tab.id)).toList(growable: false);
-
-class _Header extends StatelessWidget {
-  const _Header({
-    required this.isAdmin,
-    required this.title,
-    this.dense = false,
-  });
-
-  final bool isAdmin;
-  final String title;
-  final bool dense;
-
-  @override
-  Widget build(BuildContext context) {
-    final logoUrl =
-        context.watch<ManagementSession>().shopConfiguration?.logoUrl.trim() ??
-            '';
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = dense || constraints.maxWidth < 520;
-        return Container(
-          padding: EdgeInsets.all(dense ? 12 : 22),
-          decoration: BoxDecoration(
-            color: SharedAppColors.card,
-            borderRadius: BorderRadius.circular(dense ? 14 : 22),
-            border: Border.all(color: SharedAppColors.stroke),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                width: dense ? 44 : 58,
-                height: dense ? 44 : 58,
-                decoration: BoxDecoration(
-                  color: SharedAppColors.elevated,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: SharedAppColors.stroke),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: logoUrl.isEmpty
-                    ? const Icon(
-                        Icons.storefront_rounded,
-                        color: SharedAppColors.orange,
-                      )
-                    : Image.network(
-                        logoUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(
-                          Icons.storefront_rounded,
-                          color: SharedAppColors.orange,
-                        ),
-                      ),
-              ),
-              SizedBox(width: compact ? 14 : 18),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      dense
-                          ? isAdmin
-                              ? 'MODO DONO'
-                              : 'MODO BARBEIRO'
-                          : isAdmin
-                              ? 'VISÃO DA BARBEARIA'
-                              : 'MINHA OPERAÇÃO',
-                      style: const TextStyle(
-                        color: SharedAppColors.orange,
-                        fontSize: 9,
-                        letterSpacing: 1.2,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    SizedBox(height: dense ? 3 : 5),
-                    Text(
-                      title,
-                      maxLines: dense ? 1 : 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: dense
-                          ? Theme.of(context).textTheme.titleMedium
-                          : compact
-                              ? Theme.of(context).textTheme.headlineSmall
-                              : Theme.of(context).textTheme.headlineMedium,
-                    ),
-                    if (!dense) ...[
-                      const SizedBox(height: 5),
-                      Text(
-                        isAdmin
-                            ? 'Equipe, serviços, caixa e desempenho em um só lugar.'
-                            : 'Pedidos, agenda, horários e comissão do seu dia.',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}

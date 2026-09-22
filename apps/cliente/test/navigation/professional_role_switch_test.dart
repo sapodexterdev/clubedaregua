@@ -13,6 +13,15 @@ void main() {
     await tester.pumpWidget(_app(session, ManagementRole.admin));
     await tester.pump();
     expect(tester.takeException(), isNull);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image && widget.semanticLabel == 'Logo de Sapao Barber',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Sapao Barber'), findsNothing);
+    expect(find.text('MODO DONO'), findsNothing);
 
     for (final label in ['Painel', 'Agenda', 'Clientes', 'Caixa', 'Mais']) {
       expect(find.text(label), findsOneWidget);
@@ -56,6 +65,15 @@ void main() {
     await tester.pumpWidget(_app(session, ManagementRole.barber));
     await tester.pump();
 
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image && widget.semanticLabel == 'Logo de Sapao Barber',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Barbeiro atual'), findsNothing);
+    expect(find.text('MODO BARBEIRO'), findsNothing);
     for (final label in [
       'Agenda',
       'Horários',
@@ -252,6 +270,14 @@ class _ProfessionalSession extends ManagementSession {
     this.ownerAccess = true,
   }) {
     barberShopName = 'Sapao Barber';
+    shopConfiguration = ShopConfiguration.fromRows(
+      shop: {
+        'id': 'shop-id',
+        'name': 'Sapao Barber',
+        'logo_url': 'https://example.com/shop-logo.png',
+      },
+      settings: null,
+    );
     isRestoringSession = false;
   }
 

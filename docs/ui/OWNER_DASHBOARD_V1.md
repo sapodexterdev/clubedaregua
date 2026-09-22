@@ -7,7 +7,8 @@ barbearia selecionada e sem estimativas apresentadas como receita recebida.
 
 ## Hierarquia da tela
 
-1. Manter o cabeçalho global da barbearia no shell; a página não repete o nome.
+1. Manter no cabeçalho global a logo cadastrada da barbearia e o título do
+   destino atual; não repetir o cartão de identificação dentro da página.
 2. Exibir título “Seus números, com clareza” e filtros “Hoje”, “7 dias” e
    “30 dias” usando `ChoiceChip` e os estados do tema.
 3. Mostrar cards operacionais de Agendamentos, Atendidos, Cancelados e Clientes
