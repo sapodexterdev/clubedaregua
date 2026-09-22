@@ -623,7 +623,7 @@ class ManagementSession extends ChangeNotifier {
       final shopId = await _ensureBarberShopId(token);
       final query = <String, String>{
         'select':
-            'id,barber_id,customer_name,customer_phone,requested_date,requested_time,status,total_price,notes,updated_at,barbers(name),services(name)',
+            'id,barber_id,customer_name,customer_phone,requested_date,requested_time,status,total_price,notes,updated_at,barbers(name),services(name),appointment:appointments!booking_requests_appointment_id_fkey(status)',
         'barber_shop_id': 'eq.$shopId',
         'order': 'created_at.desc',
         'limit': loadAdminView ? '200' : '50',
@@ -839,7 +839,7 @@ class ManagementSession extends ChangeNotifier {
 
       final requestQuery = <String, String>{
         'select':
-            'id,appointment_id,customer_name,requested_date,requested_time,status,notes,barbers(name),services(name)',
+            'id,appointment_id,customer_name,requested_date,requested_time,status,notes,barbers(name),services(name),appointment:appointments!booking_requests_appointment_id_fkey(status)',
         'barber_shop_id': 'eq.$shopId',
         'requested_date': 'eq.$date',
         'status': 'eq.converted',
@@ -2362,7 +2362,10 @@ class ManagementSession extends ChangeNotifier {
         'complete_appointment',
         data: {'p_appointment_id': appointmentId},
       );
-      await fetchScheduleEntries();
+      await Future.wait([
+        fetchScheduleEntries(),
+        fetchBookingRequests(adminView: scheduleAdminView),
+      ]);
     } catch (error) {
       scheduleError = _cleanErrorMessage(error);
       rethrow;

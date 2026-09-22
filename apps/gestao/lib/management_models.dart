@@ -259,6 +259,9 @@ class BookingRequest {
   }
 
   factory BookingRequest.fromMap(Map<String, dynamic> map) {
+    final appointmentStatus =
+        map['appointment']?['status']?.toString().toLowerCase();
+    final requestStatus = map['status']?.toString() ?? 'new';
     return BookingRequest(
       id: map['id']?.toString() ?? '',
       barberId: map['barber_id']?.toString() ?? '',
@@ -269,7 +272,7 @@ class BookingRequest {
       barber: map['barbers']?['name']?.toString() ?? 'Barbeiro',
       date: map['requested_date']?.toString() ?? '',
       time: _timeOnly(map['requested_time']?.toString() ?? ''),
-      status: map['status']?.toString() ?? 'new',
+      status: appointmentStatus == 'completed' ? 'completed' : requestStatus,
       total: (map['total_price'] as num?)?.toDouble() ?? 0,
       notes: map['notes']?.toString() ?? '',
       updatedAt: map['updated_at']?.toString() ?? '',
@@ -367,6 +370,8 @@ class ScheduleEntry {
   final String notes;
 
   factory ScheduleEntry.fromBookingRequest(Map<String, dynamic> map) {
+    final appointmentStatus =
+        map['appointment']?['status']?.toString().toLowerCase();
     return ScheduleEntry(
       id: 'request-${map['id']}',
       appointmentId: map['appointment_id']?.toString(),
@@ -374,7 +379,7 @@ class ScheduleEntry {
       client: map['customer_name']?.toString() ?? 'Cliente',
       service: map['services']?['name']?.toString() ?? 'Serviço',
       barber: map['barbers']?['name']?.toString() ?? 'Barbeiro',
-      status: 'Aceito',
+      status: appointmentStatus == 'completed' ? 'Atendido' : 'Aceito',
       notes: _cleanNotes(map['notes']?.toString() ?? ''),
     );
   }
@@ -398,6 +403,7 @@ class ScheduleEntry {
 
   bool get canComplete =>
       appointmentId != null &&
+      status != 'Atendido' &&
       (status == 'Aceito' || status == 'Pendente' || status == 'Confirmado');
 
   static String _timeOnly(String value) {

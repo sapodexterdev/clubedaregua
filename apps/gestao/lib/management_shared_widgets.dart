@@ -712,18 +712,21 @@ class _BookingRequestTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final status = request.status;
-    final isClosed = status == 'converted' || status == 'cancelled';
+    final isClosed =
+        status == 'converted' || status == 'completed' || status == 'cancelled';
     final wasDeclined =
         status == 'cancelled' && request.notes.contains('Motivo:');
     final statusLabel = switch (status) {
       'contacted' => 'Contatado',
       'converted' => 'Aceito',
+      'completed' => 'Atendido',
       'cancelled' => wasDeclined ? 'Recusado' : 'Cancelado',
       _ => 'Novo',
     };
     final statusColor = switch (status) {
       'contacted' => CDRColorTokens.info,
       'converted' => CDRColorTokens.success,
+      'completed' => CDRColorTokens.success,
       'cancelled' => CDRColorTokens.error,
       _ => SharedAppColors.orange,
     };
