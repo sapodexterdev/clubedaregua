@@ -11,8 +11,12 @@ void main() {
   test('barber startup loads only the professional agenda landing data',
       () async {
     final requests = <Uri>[];
+    final commissionBodies = <String>[];
     final client = MockClient((request) async {
       requests.add(request.url);
+      if (request.url.path.endsWith('/rpc/get_barber_commission_metrics')) {
+        commissionBodies.add(request.body);
+      }
       return http.Response(jsonEncode(_responseFor(request.url)), 200);
     });
     final session = ManagementSession(
@@ -46,6 +50,18 @@ void main() {
       (uri) => _tableName(uri) == 'appointments',
     );
     expect(barberAppointments.queryParameters['barber_id'], 'eq.barber-1');
+
+    requests.clear();
+    await session.ensureDataForDestination(
+      ManagementRole.barber,
+      ManagementDestinationId.commission,
+    );
+    final commissionCall = requests.single;
+    expect(commissionCall.path, endsWith('/rpc/get_barber_commission_metrics'));
+    expect(jsonDecode(commissionBodies.single), {
+      'p_barber_shop_id': 'shop-1',
+      'p_days': 7,
+    });
   });
 
   test('owner data is loaded lazily by the selected destination', () async {

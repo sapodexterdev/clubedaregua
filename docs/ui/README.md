@@ -75,6 +75,7 @@ Implementacao
 - `UI-014-Notificacoes`
 - `UI-015-Conversao-Agendamento`
 - `UI-016-Gestao-Responsiva`
+- `BARBER_COMMISSION_V3` — especificação V3 da comissão individual do barbeiro.
 
 ## Regra de Implementacao
 

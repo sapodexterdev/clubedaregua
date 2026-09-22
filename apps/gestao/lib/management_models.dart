@@ -58,6 +58,31 @@ class DashboardMetrics {
   }
 }
 
+class CommissionMetrics {
+  const CommissionMetrics({
+    required this.completedAppointments,
+    required this.production,
+    required this.commissionPercent,
+    required this.commission,
+  });
+
+  final int completedAppointments;
+  final double production;
+  final double commissionPercent;
+  final double commission;
+
+  factory CommissionMetrics.fromMap(Map<String, dynamic> map) {
+    double number(String key) => (map[key] as num?)?.toDouble() ?? 0;
+    return CommissionMetrics(
+      completedAppointments:
+          (map['completed_appointments'] as num?)?.toInt() ?? 0,
+      production: number('production'),
+      commissionPercent: number('commission_percent'),
+      commission: number('commission'),
+    );
+  }
+}
+
 class DashboardDetailEntry {
   const DashboardDetailEntry({
     required this.id,

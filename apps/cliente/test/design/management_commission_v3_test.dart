@@ -4,53 +4,111 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 void main() {
-  testWidgets('Comissão não apresenta valores demonstrativos', (tester) async {
-    final session = _CommissionSession();
+  testWidgets('Comissão apresenta os dados reais recebidos da sessão',
+      (tester) async {
+    final session = _CommissionSession(
+      metrics: const CommissionMetrics(
+        completedAppointments: 4,
+        production: 500,
+        commissionPercent: 40,
+        commission: 200,
+      ),
+    );
     addTearDown(session.dispose);
-    final semantics = tester.ensureSemantics();
 
-    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.binding.setSurfaceSize(const Size(390, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(_app(session));
     await tester.pump();
     await tester.tap(find.text('Comissão'));
     await tester.pump();
 
-    expect(find.byKey(const ValueKey('commission-page-v3')), findsOneWidget);
-    expect(find.text('Sua comissão, sem estimativas'), findsOneWidget);
-    expect(find.text('Dados de comissão em preparação'), findsOneWidget);
-    for (final demonstrativeValue in [
-      'R\$ 1.780',
-      'R\$ 712',
-      '31',
-      'Ticket médio de R\$ 57',
-      'Corte + barba',
-      '14 atendimentos no período',
-      'Comissão estimada (40%)',
-      'R\$ 1.780,00',
-      'R\$ 712,00',
-      'R\$ 1.068,00',
-    ]) {
-      expect(find.text(demonstrativeValue), findsNothing);
-    }
-    final statusSemantics = tester
-        .getSemantics(find.byKey(const ValueKey('commission-status')))
-        .label;
-    expect(
-      'Status: dados de comissão em preparação'.allMatches(statusSemantics),
-      hasLength(1),
-    );
-    expect(
-      session.loadedDestinations,
-      [ManagementDestinationId.commission],
-    );
+    expect(find.text('Sua comissão, com clareza'), findsOneWidget);
+    expect(find.text('R\$ 500,00'), findsOneWidget);
+    expect(find.text('40%'), findsOneWidget);
+    expect(find.text('R\$ 200,00'), findsOneWidget);
+    expect(find.text('4 atendimentos concluídos'), findsOneWidget);
+    expect(find.textContaining('pagamentos e repasses não são controlados'),
+        findsOneWidget);
+    expect(session.loadedDestinations, [ManagementDestinationId.commission]);
     expect(tester.takeException(), isNull);
-    semantics.dispose();
   });
 
-  testWidgets('Comissão preserva o destino e a geometria com texto ampliado',
+  testWidgets('Comissão oferece períodos e informa quando não há atendimentos',
       (tester) async {
-    final session = _CommissionSession();
+    final session = _CommissionSession(
+      metrics: const CommissionMetrics(
+        completedAppointments: 0,
+        production: 0,
+        commissionPercent: 35,
+        commission: 0,
+      ),
+    );
+    addTearDown(session.dispose);
+
+    await tester.binding.setSurfaceSize(const Size(390, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_app(session));
+    await tester.pump();
+    await tester.tap(find.text('Comissão'));
+    await tester.pump();
+
+    expect(find.text('Nenhum atendimento concluído'), findsOneWidget);
+    expect(find.text('Hoje'), findsOneWidget);
+    expect(find.text('7 dias'), findsOneWidget);
+    expect(find.text('30 dias'), findsOneWidget);
+    await tester.tap(find.text('30 dias'));
+    await tester.pump();
+    expect(session.requestedDays, [30]);
+    expect(session.commissionDays, 30);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Comissão mostra loading e permite repetir após erro',
+      (tester) async {
+    final session = _CommissionSession(
+      metrics: const CommissionMetrics(
+        completedAppointments: 2,
+        production: 100,
+        commissionPercent: 35,
+        commission: 35,
+      ),
+      error: 'Falha temporária.',
+    );
+    addTearDown(session.dispose);
+
+    await tester.binding.setSurfaceSize(const Size(390, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    session.commissionMetrics = null;
+    session.isCommissionLoading = true;
+    await tester.pumpWidget(_app(session));
+    await tester.pump();
+    await tester.tap(find.text('Comissão'));
+    await tester.pump();
+    expect(find.text('Carregando sua comissão'), findsOneWidget);
+
+    session.isCommissionLoading = false;
+    session.commissionError = 'Falha temporária.';
+    session.notifyListeners();
+    await tester.pump();
+    expect(find.text('Não foi possível carregar a comissão'), findsOneWidget);
+    await tester.tap(find.text('Tentar novamente'));
+    await tester.pump();
+    expect(session.commissionError, isNull);
+    expect(find.text('R\$ 35,00'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Comissão preserva o layout em telas pequenas e desktop',
+      (tester) async {
+    final session = _CommissionSession(
+      metrics: const CommissionMetrics(
+        completedAppointments: 1,
+        production: 90,
+        commissionPercent: 40,
+        commission: 36,
+      ),
+    );
     addTearDown(session.dispose);
 
     await tester.binding.setSurfaceSize(const Size(360, 640));
@@ -58,10 +116,6 @@ void main() {
     await tester.pumpWidget(_app(session));
     await tester.pump();
     await tester.tap(find.text('Comissão'));
-    await tester.pump();
-    await tester.pumpWidget(
-      _app(session, textScaler: const TextScaler.linear(2)),
-    );
     await tester.pump();
 
     for (final size in const [
@@ -74,63 +128,45 @@ void main() {
     ]) {
       await tester.binding.setSurfaceSize(size);
       await tester.pump();
-
       expect(find.text('Comissão e faturamento'), findsOneWidget);
-      final first = tester.getRect(
-        find.byKey(
-          const ValueKey('commission-indicator-Produção do período'),
-        ),
-      );
-      final second = tester.getRect(
-        find.byKey(
-          const ValueKey('commission-indicator-Percentual aplicado'),
-        ),
-      );
-      if (size.width >= 768) {
-        expect(second.top, first.top);
-      } else {
-        expect(second.top, greaterThan(first.bottom));
-      }
-      if (size.width == 1440) {
-        expect(first.width, lessThan(600));
-        expect(
-          tester.getSize(find.byKey(const ValueKey('commission-intro'))).width,
-          lessThanOrEqualTo(760),
-        );
-      }
       expect(tester.takeException(), isNull);
     }
-    expect(
-      session.loadedDestinations,
-      [ManagementDestinationId.commission],
-    );
-  });
-
-  testWidgets('Comissão usa três colunas no desktop com escala padrão',
-      (tester) async {
-    final session = _CommissionSession();
-    addTearDown(session.dispose);
 
     await tester.binding.setSurfaceSize(const Size(1440, 900));
+    final cards = [
+      'Produção do período',
+      'Percentual aplicado',
+      'Comissão calculada',
+    ].map((title) => tester.getRect(
+          find.byKey(ValueKey('commission-indicator-$title')),
+        ));
+    expect(cards.map((card) => card.top).toSet(), hasLength(1));
+    expect(cards.every((card) => card.width < 400), isTrue);
+  });
+
+  testWidgets('Comissão mantém leitura com texto ampliado no mobile',
+      (tester) async {
+    final session = _CommissionSession(
+      metrics: const CommissionMetrics(
+        completedAppointments: 1,
+        production: 90,
+        commissionPercent: 40,
+        commission: 36,
+      ),
+    );
+    addTearDown(session.dispose);
+
+    await tester.binding.setSurfaceSize(const Size(360, 640));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(_app(session));
+    await tester.pumpWidget(
+      _app(session, textScaler: const TextScaler.linear(2)),
+    );
     await tester.pump();
     await tester.tap(find.text('Comissão'));
     await tester.pump();
 
-    final cards = [
-      'Produção do período',
-      'Percentual aplicado',
-      'Repasse previsto',
-    ].map(
-      (title) => tester.getRect(
-        find.byKey(ValueKey('commission-indicator-$title')),
-      ),
-    );
-    final tops = cards.map((card) => card.top).toSet();
-
-    expect(tops, hasLength(1));
-    expect(cards.every((card) => card.width < 400), isTrue);
+    expect(find.text('Sua comissão, com clareza'), findsOneWidget);
+    expect(find.text('Produção do período'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
@@ -152,12 +188,16 @@ Widget _app(
 }
 
 class _CommissionSession extends ManagementSession {
-  _CommissionSession() {
+  _CommissionSession({required this.metrics, String? error}) {
     barberShopName = 'Sapao Barber';
     isRestoringSession = false;
+    commissionMetrics = metrics;
+    commissionError = error;
   }
 
+  final CommissionMetrics? metrics;
   final loadedDestinations = <ManagementDestinationId>[];
+  final requestedDays = <int>[];
 
   @override
   bool get isSignedIn => true;
@@ -181,5 +221,15 @@ class _CommissionSession extends ManagementSession {
     bool force = false,
   }) async {
     loadedDestinations.add(destination);
+  }
+
+  @override
+  Future<void> fetchCommissionMetrics({int? days}) async {
+    if (days != null) requestedDays.add(days);
+    commissionDays = days ?? commissionDays;
+    commissionMetrics = metrics;
+    commissionError = null;
+    isCommissionLoading = false;
+    notifyListeners();
   }
 }

@@ -55,6 +55,11 @@ class ManagementSession extends ChangeNotifier {
   String? dashboardError;
   int dashboardDays = 7;
   var _dashboardRequestGeneration = 0;
+  CommissionMetrics? commissionMetrics;
+  bool isCommissionLoading = false;
+  String? commissionError;
+  int commissionDays = 7;
+  var _commissionRequestGeneration = 0;
   bool isScheduleLoading = false;
   bool isAvailabilityLoading = false;
   bool isAvailabilitySaving = false;
@@ -373,6 +378,10 @@ class ManagementSession extends ChangeNotifier {
           }
         case ManagementDestinationId.schedule:
           if (force || !_scheduleLoaded) await fetchScheduleEntries();
+        case ManagementDestinationId.commission:
+          if (force || commissionMetrics == null) {
+            await fetchCommissionMetrics();
+          }
         case ManagementDestinationId.availability:
           if (force || !_availabilityLoaded) {
             await fetchWeeklyAvailability();
@@ -381,7 +390,6 @@ class ManagementSession extends ChangeNotifier {
           if (force || _customersLoadedRole != _activeRole) {
             await fetchCustomers(role: _activeRole);
           }
-        case ManagementDestinationId.commission:
         case ManagementDestinationId.dashboard:
         case ManagementDestinationId.services:
         case ManagementDestinationId.team:
@@ -453,6 +461,49 @@ class ManagementSession extends ChangeNotifier {
     } finally {
       if (generation == _dashboardRequestGeneration) {
         isDashboardLoading = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<void> fetchCommissionMetrics({int? days}) async {
+    final token = _accessToken;
+    final shopId = _barberShopId;
+    if (token == null || shopId == null || shopId.isEmpty) {
+      commissionError = 'Não foi possível identificar sua barbearia.';
+      notifyListeners();
+      return;
+    }
+    final selectedDays = days ?? commissionDays;
+    if (selectedDays != 1 && selectedDays != 7 && selectedDays != 30) return;
+
+    final generation = ++_commissionRequestGeneration;
+    commissionDays = selectedDays;
+    isCommissionLoading = true;
+    commissionError = null;
+    if (days != null) commissionMetrics = null;
+    notifyListeners();
+    try {
+      final rows = await _postRpcRows(
+        token,
+        'get_barber_commission_metrics',
+        data: {
+          'p_barber_shop_id': shopId,
+          'p_days': selectedDays,
+        },
+      );
+      if (generation != _commissionRequestGeneration) return;
+      if (rows.isEmpty) {
+        commissionError = 'O Supabase não retornou os dados. Tente novamente.';
+      } else {
+        commissionMetrics = CommissionMetrics.fromMap(rows.first);
+      }
+    } catch (error) {
+      if (generation != _commissionRequestGeneration) return;
+      commissionError = _cleanErrorMessage(error);
+    } finally {
+      if (generation == _commissionRequestGeneration) {
+        isCommissionLoading = false;
         notifyListeners();
       }
     }
@@ -2403,6 +2454,11 @@ class ManagementSession extends ChangeNotifier {
     isDashboardLoading = false;
     dashboardDays = 7;
     _dashboardRequestGeneration++;
+    commissionMetrics = null;
+    isCommissionLoading = false;
+    commissionError = null;
+    commissionDays = 7;
+    _commissionRequestGeneration++;
     settingsError = null;
     isSettingsLoading = false;
     teamBarbers = [];
@@ -2784,6 +2840,13 @@ class ManagementSession extends ChangeNotifier {
         message.contains('get_owner_dashboard_details') ||
         message.contains('issue_029_owner_dashboard_details.sql')) {
       return 'Execute o script supabase/issue_029_owner_dashboard_details.sql no Supabase e atualize a tela.';
+    }
+
+    if (message.contains('get_barber_commission_metrics') ||
+        (message.contains('PGRST202') &&
+            message.contains('barber_commission')) ||
+        message.contains('issue_030_barber_commission_metrics.sql')) {
+      return 'Execute o script supabase/issue_030_barber_commission_metrics.sql no Supabase e atualize a tela.';
     }
 
     if (message.contains('PGRST202') &&
