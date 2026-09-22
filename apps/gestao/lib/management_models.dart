@@ -369,7 +369,7 @@ class ScheduleEntry {
   factory ScheduleEntry.fromBookingRequest(Map<String, dynamic> map) {
     return ScheduleEntry(
       id: 'request-${map['id']}',
-      appointmentId: null,
+      appointmentId: map['appointment_id']?.toString(),
       time: _timeOnly(map['requested_time']?.toString() ?? ''),
       client: map['customer_name']?.toString() ?? 'Cliente',
       service: map['services']?['name']?.toString() ?? 'Serviço',
@@ -397,7 +397,8 @@ class ScheduleEntry {
   }
 
   bool get canComplete =>
-      appointmentId != null && (status == 'Pendente' || status == 'Confirmado');
+      appointmentId != null &&
+      (status == 'Aceito' || status == 'Pendente' || status == 'Confirmado');
 
   static String _timeOnly(String value) {
     if (value.length >= 5) return value.substring(0, 5);
