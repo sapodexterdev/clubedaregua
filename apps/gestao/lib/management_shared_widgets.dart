@@ -555,7 +555,8 @@ class _AppointmentTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final normalizedStatus = entry.status.toLowerCase();
-    final statusColor = normalizedStatus.contains('conclu')
+    final statusColor = normalizedStatus.contains('conclu') ||
+            normalizedStatus.contains('atendid')
         ? CDRColorTokens.success
         : normalizedStatus.contains('cancel')
             ? CDRColorTokens.error
