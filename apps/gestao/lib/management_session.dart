@@ -53,6 +53,8 @@ class ManagementSession extends ChangeNotifier {
   DashboardMetrics? dashboardMetrics;
   bool isDashboardLoading = false;
   String? dashboardError;
+  int dashboardDays = 7;
+  var _dashboardRequestGeneration = 0;
   bool isScheduleLoading = false;
   bool isAvailabilityLoading = false;
   bool isAvailabilitySaving = false;
@@ -394,7 +396,9 @@ class ManagementSession extends ChangeNotifier {
           await fetchBookingRequests(adminView: true);
         }
       case ManagementDestinationId.dashboard:
-        if (force || dashboardMetrics == null) await fetchDashboardMetrics();
+        if (force || dashboardMetrics == null) {
+          await fetchDashboardMetrics(days: dashboardDays);
+        }
         return;
       case ManagementDestinationId.commission:
       case ManagementDestinationId.availability:
@@ -416,10 +420,15 @@ class ManagementSession extends ChangeNotifier {
     }
   }
 
-  Future<void> fetchDashboardMetrics({DateTime? from, DateTime? to}) async {
+  Future<void> fetchDashboardMetrics({int? days}) async {
     final token = _accessToken;
     final shopId = _barberShopId;
     if (token == null || shopId == null || shopId.isEmpty) return;
+    final selectedDays = days ?? dashboardDays;
+    if (selectedDays != 1 && selectedDays != 7 && selectedDays != 30) return;
+    dashboardMetrics = null;
+    final generation = ++_dashboardRequestGeneration;
+    dashboardDays = selectedDays;
     isDashboardLoading = true;
     dashboardError = null;
     notifyListeners();
@@ -427,19 +436,23 @@ class ManagementSession extends ChangeNotifier {
       final rows =
           await _postRpcRows(token, 'get_owner_dashboard_metrics', data: {
         'p_barber_shop_id': shopId,
-        'p_from': (from ?? DateTime.now()).toIso8601String().substring(0, 10),
-        'p_to': (to ?? DateTime.now())
-            .add(const Duration(days: 1))
-            .toIso8601String()
-            .substring(0, 10),
+        'p_days': selectedDays,
       });
-      if (rows.isNotEmpty)
+      if (generation != _dashboardRequestGeneration) return;
+      if (rows.isEmpty) {
+        dashboardError =
+            'O Supabase não retornou indicadores. Tente novamente.';
+      } else {
         dashboardMetrics = DashboardMetrics.fromMap(rows.first);
+      }
     } catch (error) {
+      if (generation != _dashboardRequestGeneration) return;
       dashboardError = _cleanErrorMessage(error);
     } finally {
-      isDashboardLoading = false;
-      notifyListeners();
+      if (generation == _dashboardRequestGeneration) {
+        isDashboardLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -2347,6 +2360,11 @@ class ManagementSession extends ChangeNotifier {
     productStatusFilter = ProductStatusFilter.all;
     productSearchQuery = '';
     shopConfiguration = null;
+    dashboardMetrics = null;
+    dashboardError = null;
+    isDashboardLoading = false;
+    dashboardDays = 7;
+    _dashboardRequestGeneration++;
     settingsError = null;
     isSettingsLoading = false;
     teamBarbers = [];

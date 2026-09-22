@@ -102,6 +102,16 @@ Arquivos locais dessa alteração:
 - `apps/cliente/test/services/postal_code_service_test.dart`
 - `apps/cliente/test/design/owner_onboarding_postal_code_test.dart`
 
+## Painel do dono — filtros e evolução
+
+- O painel oferece filtros de período Hoje, 7 dias e 30 dias.
+- Totais e série diária são consolidados pela RPC no Supabase usando a timezone da barbearia.
+- Os cards mostram agendamentos, confirmados, previsto, recebido e ticket médio de serviços.
+- Recebido considera pagamentos `paid` e vendas concluídas; previsto considera agendamentos `pending` ou `confirmed`.
+- O gráfico inclui todos os dias do período; no intervalo de 30 dias, pode ser rolado horizontalmente em telas estreitas.
+- Atualizações com falha não mantêm números anteriores como se fossem atuais; exibem carregamento, erro e nova tentativa.
+- A migration `supabase/issue_028_owner_dashboard_period_trend.sql` deve ser aplicada depois da ISSUE-027 e antes de validar os indicadores na Vercel.
+- Especificação de UX/UI: `docs/ui/OWNER_DASHBOARD_V1.md`.
 ## Validação
 
 Validações executadas para a alteração de CEP:

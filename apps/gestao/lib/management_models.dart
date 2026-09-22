@@ -7,6 +7,7 @@ class DashboardMetrics {
     required this.projectedRevenue,
     required this.realizedRevenue,
     required this.averageTicket,
+    required this.dailyTrend,
   });
 
   final int appointments;
@@ -14,6 +15,7 @@ class DashboardMetrics {
   final double projectedRevenue;
   final double realizedRevenue;
   final double averageTicket;
+  final List<DashboardDayMetric> dailyTrend;
 
   factory DashboardMetrics.fromMap(Map<String, dynamic> map) {
     double number(String key) => (map[key] as num?)?.toDouble() ?? 0;
@@ -24,8 +26,34 @@ class DashboardMetrics {
       projectedRevenue: number('projected_revenue'),
       realizedRevenue: number('realized_revenue'),
       averageTicket: number('average_ticket'),
+      dailyTrend: (map['daily_trend'] as List? ?? const [])
+          .whereType<Map>()
+          .map((row) => DashboardDayMetric.fromMap(
+                Map<String, dynamic>.from(row),
+              ))
+          .toList(growable: false),
     );
   }
+}
+
+class DashboardDayMetric {
+  const DashboardDayMetric({
+    required this.date,
+    required this.appointments,
+    required this.realizedRevenue,
+  });
+
+  final DateTime date;
+  final int appointments;
+  final double realizedRevenue;
+
+  factory DashboardDayMetric.fromMap(Map<String, dynamic> map) =>
+      DashboardDayMetric(
+        date:
+            DateTime.tryParse(map['date']?.toString() ?? '') ?? DateTime(2000),
+        appointments: (map['appointments'] as num?)?.toInt() ?? 0,
+        realizedRevenue: (map['realized_revenue'] as num?)?.toDouble() ?? 0,
+      );
 }
 
 enum ProductStatusFilter { all, active, lowStock, inactive }
