@@ -71,6 +71,20 @@ Cards brancos são proibidos no shell e nos módulos operacionais.
 - ações secundárias escuras com borda;
 - status em badges semânticos.
 
+### Conclusão do atendimento e recebimento
+
+- ao concluir um atendimento, abrir uma folha inferior com valor do serviço,
+  valor já recebido e saldo pendente;
+- oferecer registro do valor efetivamente recebido em PIX, dinheiro ou cartão;
+- permitir recebimentos parciais, sem aceitar valor acima do saldo;
+- oferecer explicitamente `Concluir sem receber agora`;
+- atendimento já concluído com saldo pendente oferece `Registrar pagamento`, sem
+  repetir a conclusão;
+- confirmação grava atendimento, pagamento e entrada vinculada numa única
+  operação; tentativa repetida não duplica o pagamento nem a entrada;
+- estados financeiros exibem recebido e saldo restante, sem depender apenas da
+  cor para comunicar a situação.
+
 ### Seletor Barbeiro/Dono no Perfil
 
 - controle segmentado compacto;

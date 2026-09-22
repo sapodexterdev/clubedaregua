@@ -92,6 +92,8 @@ class DashboardDetailEntry {
     this.barberName,
     this.status,
     this.cancellationReason,
+    this.totalPrice = 0,
+    this.paidAmount = 0,
   });
 
   final String id;
@@ -101,6 +103,9 @@ class DashboardDetailEntry {
   final String? barberName;
   final String? status;
   final String? cancellationReason;
+  final double totalPrice;
+  final double paidAmount;
+  double get balanceDue => math.max(0, totalPrice - paidAmount).toDouble();
 
   factory DashboardDetailEntry.fromMap(Map<String, dynamic> map) =>
       DashboardDetailEntry(
@@ -114,7 +119,12 @@ class DashboardDetailEntry {
         barberName: map['barber_name']?.toString(),
         status: map['status']?.toString(),
         cancellationReason: map['cancellation_reason']?.toString(),
+        totalPrice: _asDouble(map['total_price']),
+        paidAmount: _asDouble(map['paid_amount']),
       );
+
+  static double _asDouble(dynamic value) =>
+      value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
 }
 
 class DashboardDayMetric {
@@ -358,6 +368,8 @@ class ScheduleEntry {
     required this.barber,
     required this.status,
     required this.notes,
+    this.totalPrice = 0,
+    this.paidAmount = 0,
   });
 
   final String id;
@@ -368,10 +380,14 @@ class ScheduleEntry {
   final String barber;
   final String status;
   final String notes;
+  final double totalPrice;
+  final double paidAmount;
+  double get balanceDue => math.max(0, totalPrice - paidAmount).toDouble();
 
   factory ScheduleEntry.fromBookingRequest(Map<String, dynamic> map) {
-    final appointmentStatus =
-        map['appointment']?['status']?.toString().toLowerCase();
+    final appointment = _asMap(map['appointment']);
+    final appointmentStatus = appointment?['status']?.toString().toLowerCase();
+    final payments = _asMapList(appointment?['payments']);
     return ScheduleEntry(
       id: 'request-${map['id']}',
       appointmentId: map['appointment_id']?.toString(),
@@ -379,14 +395,23 @@ class ScheduleEntry {
       client: map['customer_name']?.toString() ?? 'Cliente',
       service: map['services']?['name']?.toString() ?? 'Serviço',
       barber: map['barbers']?['name']?.toString() ?? 'Barbeiro',
-      status: appointmentStatus == 'completed' ? 'Atendido' : 'Aceito',
+      status: switch (appointmentStatus) {
+        'completed' => 'Atendido',
+        'cancelled' => 'Cancelado',
+        'no_show' => 'Não compareceu',
+        'pending' => 'Pendente',
+        _ => 'Aceito',
+      },
       notes: _cleanNotes(map['notes']?.toString() ?? ''),
+      totalPrice: _asDouble(appointment?['total_price']),
+      paidAmount: _paidTotal(payments),
     );
   }
 
   factory ScheduleEntry.fromAppointment(Map<String, dynamic> map) {
     final startsAt = map['starts_at']?.toString() ?? '';
     final localStartsAt = DateTime.tryParse(startsAt)?.toLocal();
+    final payments = _asMapList(map['payments']);
     return ScheduleEntry(
       id: 'appointment-${map['id']}',
       appointmentId: map['id']?.toString(),
@@ -398,6 +423,8 @@ class ScheduleEntry {
       notes: map['notes']?.toString().trim().isEmpty == false
           ? map['notes'].toString()
           : 'Sem observações.',
+      totalPrice: _asDouble(map['total_price']),
+      paidAmount: _paidTotal(payments),
     );
   }
 
@@ -405,6 +432,35 @@ class ScheduleEntry {
       appointmentId != null &&
       status != 'Atendido' &&
       (status == 'Aceito' || status == 'Pendente' || status == 'Confirmado');
+
+  bool get canReceivePayment =>
+      appointmentId != null &&
+      balanceDue > 0 &&
+      (status.toLowerCase() == 'atendido' ||
+          status.toLowerCase() == 'concluido');
+
+  static List<Map<String, dynamic>> _asMapList(dynamic value) => value is List
+      ? value
+          .whereType<Map>()
+          .map((row) => Map<String, dynamic>.from(row))
+          .toList(growable: false)
+      : const [];
+
+  static Map<String, dynamic>? _asMap(dynamic value) {
+    if (value is Map) return Map<String, dynamic>.from(value);
+    if (value is List && value.isNotEmpty && value.first is Map) {
+      return Map<String, dynamic>.from(value.first as Map);
+    }
+    return null;
+  }
+
+  static double _asDouble(dynamic value) =>
+      value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
+
+  static double _paidTotal(List<Map<String, dynamic>> payments) => payments
+      .where((payment) => payment['status']?.toString() == 'paid')
+      .fold<double>(
+          0, (total, payment) => total + _asDouble(payment['amount']));
 
   static String _timeOnly(String value) {
     if (value.length >= 5) return value.substring(0, 5);
@@ -962,6 +1018,53 @@ class ProductSale {
                   ))
               .toList()
           : const [],
+    );
+  }
+}
+
+class ServicePayment {
+  const ServicePayment({
+    required this.id,
+    required this.appointmentId,
+    required this.amount,
+    required this.method,
+    required this.paidAt,
+    required this.serviceName,
+    required this.barberName,
+  });
+
+  final String id;
+  final String appointmentId;
+  final double amount;
+  final String method;
+  final DateTime? paidAt;
+  final String serviceName;
+  final String barberName;
+
+  factory ServicePayment.fromMap(Map<String, dynamic> map) {
+    final appointment = map['appointment'] is Map
+        ? Map<String, dynamic>.from(map['appointment'] as Map)
+        : <String, dynamic>{};
+    String relationName(String key) {
+      final relation = appointment[key];
+      if (relation is Map) return relation['name']?.toString() ?? '';
+      if (relation is List && relation.isNotEmpty && relation.first is Map) {
+        return (relation.first as Map)['name']?.toString() ?? '';
+      }
+      return '';
+    }
+
+    final rawAmount = map['amount'];
+    return ServicePayment(
+      id: map['id']?.toString() ?? '',
+      appointmentId: map['appointment_id']?.toString() ?? '',
+      amount: rawAmount is num
+          ? rawAmount.toDouble()
+          : double.tryParse('$rawAmount') ?? 0,
+      method: map['method']?.toString() ?? 'pix',
+      paidAt: DateTime.tryParse(map['paid_at']?.toString() ?? ''),
+      serviceName: relationName('service'),
+      barberName: relationName('barber'),
     );
   }
 }

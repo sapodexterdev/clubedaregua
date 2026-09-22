@@ -136,41 +136,70 @@ class _BarberAgendaPage extends StatelessWidget {
                   label: 'Status',
                   value: entry.status,
                 ),
+                if (entry.totalPrice > 0) ...[
+                  _RequestInfoRow(
+                    icon: Icons.sell_outlined,
+                    label: 'Valor do serviço',
+                    value: _commerceMoney(entry.totalPrice),
+                  ),
+                  _RequestInfoRow(
+                    icon: Icons.payments_outlined,
+                    label: 'Recebido',
+                    value: _commerceMoney(entry.paidAmount),
+                  ),
+                  if (entry.balanceDue > 0)
+                    _RequestInfoRow(
+                      icon: Icons.account_balance_wallet_outlined,
+                      label: 'Saldo em aberto',
+                      value: _commerceMoney(entry.balanceDue),
+                    ),
+                ],
                 _RequestInfoRow(
                   icon: Icons.notes_rounded,
                   label: 'Obs.',
                   value: entry.notes,
                 ),
-                if (entry.canComplete) ...[
+                if (entry.canComplete || entry.canReceivePayment) ...[
                   const SizedBox(height: 18),
                   CDRButton.primary(
-                    label: 'CONCLUIR ATENDIMENTO',
+                    label: entry.canComplete
+                        ? 'CONCLUIR ATENDIMENTO'
+                        : 'REGISTRAR RECEBIMENTO',
                     onPressed: () async {
-                      final navigator = Navigator.of(context);
-                      final messenger = ScaffoldMessenger.of(context);
-                      try {
-                        await context
-                            .read<ManagementSession>()
-                            .completeAppointment(entry.appointmentId!);
-                        if (!context.mounted) return;
-                        navigator.pop();
-                        messenger.showSnackBar(
-                          const SnackBar(
-                            content: Text('Atendimento concluído.'),
-                          ),
-                        );
-                      } catch (_) {
-                        if (!context.mounted) return;
-                        messenger.showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Não foi possível concluir o atendimento.',
-                            ),
-                          ),
-                        );
-                      }
+                      final session = context.read<ManagementSession>();
+                      final saved = await showAppointmentPaymentSheet(
+                        context,
+                        session: session,
+                        appointmentId: entry.appointmentId!,
+                        serviceTotal: entry.totalPrice,
+                        paidAmount: entry.paidAmount,
+                        balanceDue: entry.balanceDue,
+                        allowCompletionWithoutPayment: entry.canComplete,
+                        onSubmit: ({
+                          required method,
+                          required amount,
+                          required idempotencyKey,
+                        }) =>
+                            session.completeAppointment(
+                          entry.appointmentId!,
+                          paymentMethod: method,
+                          paymentAmount: amount,
+                          idempotencyKey: idempotencyKey,
+                        ),
+                      );
+                      if (!context.mounted || saved != true) return;
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(entry.canComplete
+                              ? 'Atendimento atualizado.'
+                              : 'Recebimento registrado.'),
+                        ),
+                      );
                     },
-                    leading: const Icon(Icons.task_alt_rounded),
+                    leading: Icon(entry.canComplete
+                        ? Icons.task_alt_rounded
+                        : Icons.payments_outlined),
                   ),
                 ],
               ],

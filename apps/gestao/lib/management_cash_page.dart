@@ -6,6 +6,7 @@ String _commerceMoney(double value) =>
 String _commercePaymentLabel(String value) => switch (value) {
       'pix' => 'PIX',
       'cash' => 'Dinheiro',
+      'card' => 'Cartão',
       'credit_card' => 'Cartão de crédito',
       'debit_card' => 'Cartão de débito',
       _ => 'Outro',
@@ -39,8 +40,8 @@ class _CashPageState extends State<_CashPage> {
         _MetricsGrid(
           cards: [
             _MetricData(
-              'Vendas hoje',
-              _commerceMoney(session.productSalesTodayTotal),
+              'Recebido hoje',
+              _commerceMoney(session.receivedTodayTotal),
               Icons.point_of_sale_rounded,
             ),
             _MetricData(
@@ -385,6 +386,7 @@ class _ProductSales extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sales = session.productSales;
+    final payments = session.servicePayments;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -400,6 +402,22 @@ class _ProductSales extends StatelessWidget {
           ),
           const SizedBox(height: 18),
         ],
+        _SectionTitle(
+          'Recebimentos de serviços',
+          eyebrow: 'ATENDIMENTOS',
+          trailing: '${payments.length} registros',
+        ),
+        const SizedBox(height: 12),
+        if (payments.isEmpty)
+          const _InlineNotice(
+            icon: Icons.payments_outlined,
+            title: 'Ainda não há recebimentos de serviços',
+            subtitle:
+                'Os pagamentos registrados ao concluir atendimentos aparecerão aqui.',
+          )
+        else
+          for (final payment in payments) _ServicePaymentTile(payment: payment),
+        const SizedBox(height: 18),
         _SectionTitle(
           'Histórico de vendas',
           eyebrow: 'COMERCIAL',
@@ -420,6 +438,107 @@ class _ProductSales extends StatelessWidget {
               onCancel: sale.isCancelled ? null : () => onCancel(context, sale),
             ),
       ],
+    );
+  }
+}
+
+class _ServicePaymentTile extends StatelessWidget {
+  const _ServicePaymentTile({required this.payment});
+
+  final ServicePayment payment;
+
+  @override
+  Widget build(BuildContext context) {
+    final when = payment.paidAt?.toLocal();
+    final date = when == null
+        ? 'Data indisponível'
+        : '${when.day.toString().padLeft(2, '0')}/${when.month.toString().padLeft(2, '0')} às ${when.hour.toString().padLeft(2, '0')}:${when.minute.toString().padLeft(2, '0')}';
+    final service =
+        payment.serviceName.isEmpty ? 'Atendimento' : payment.serviceName;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: SharedAppColors.card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: SharedAppColors.stroke),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 360;
+          final details = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(service, style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 3),
+              Text(
+                '$date • ${_commercePaymentLabel(payment.method)}',
+                style: const TextStyle(color: SharedAppColors.muted),
+              ),
+              if (payment.barberName.isNotEmpty)
+                Text(
+                  payment.barberName,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: SharedAppColors.muted,
+                      ),
+                ),
+            ],
+          );
+          final amount = Text(
+            _commerceMoney(payment.amount),
+            style: const TextStyle(
+              color: CDRColorTokens.success,
+              fontWeight: FontWeight.w900,
+            ),
+          );
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const _IconBadge(Icons.content_cut_rounded),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(service)),
+                    const SizedBox(width: 8),
+                    amount,
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.only(left: 52),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$date • ${_commercePaymentLabel(payment.method)}',
+                        style: const TextStyle(color: SharedAppColors.muted),
+                      ),
+                      if (payment.barberName.isNotEmpty)
+                        Text(
+                          payment.barberName,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: SharedAppColors.muted),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          }
+          return Row(
+            children: [
+              const _IconBadge(Icons.content_cut_rounded),
+              const SizedBox(width: 12),
+              Expanded(child: details),
+              const SizedBox(width: 8),
+              amount,
+            ],
+          );
+        },
+      ),
     );
   }
 }

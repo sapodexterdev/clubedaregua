@@ -276,11 +276,35 @@ class _DashboardDetailsPageState extends State<_DashboardDetailsPage> {
     if (!_completingAppointments.add(entry.id)) return;
     setState(() {});
     try {
-      await widget.session.completeAppointment(entry.id);
+      final saved = await showAppointmentPaymentSheet(
+        context,
+        session: widget.session,
+        appointmentId: entry.id,
+        serviceTotal: entry.totalPrice,
+        paidAmount: entry.paidAmount,
+        balanceDue: entry.balanceDue,
+        allowCompletionWithoutPayment: entry.status != 'completed',
+        onSubmit: ({
+          required method,
+          required amount,
+          required idempotencyKey,
+        }) =>
+            widget.session.completeAppointment(
+          entry.id,
+          paymentMethod: method,
+          paymentAmount: amount,
+          idempotencyKey: idempotencyKey,
+        ),
+      );
+      if (saved != true) return;
       if (!mounted) return;
       setState(_load);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Atendimento marcado como atendido.')),
+        SnackBar(
+          content: Text(entry.status == 'completed'
+              ? 'Recebimento registrado.'
+              : 'Atendimento atualizado.'),
+        ),
       );
     } catch (_) {
       if (!mounted) return;
@@ -389,8 +413,10 @@ class _DashboardDetailsPageState extends State<_DashboardDetailsPage> {
                       kind: widget.kind,
                       isCompleting: _completingAppointments.contains(entry.id),
                       onMarkAttended: widget.kind == 'appointments' &&
-                              (entry.status == 'pending' ||
-                                  entry.status == 'confirmed')
+                              ((entry.status == 'pending' ||
+                                      entry.status == 'confirmed') ||
+                                  (entry.status == 'completed' &&
+                                      entry.balanceDue > 0))
                           ? () => _markAttended(entry)
                           : null,
                     ),
@@ -484,6 +510,14 @@ class _DashboardDetailCard extends StatelessWidget {
                                     color: CDRColorTokens.textSecondary,
                                   ),
                         ),
+                      if (entry.totalPrice > 0)
+                        Text(
+                          'Recebido ${_AdminDashboardPage._money(entry.paidAmount)} · Saldo ${_AdminDashboardPage._money(entry.balanceDue)}',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: CDRColorTokens.textSecondary,
+                                  ),
+                        ),
                     ],
                   ],
                 ),
@@ -531,7 +565,9 @@ class _DashboardDetailCard extends StatelessWidget {
           if (onMarkAttended != null) ...[
             const SizedBox(height: CDRSpacingTokens.md),
             CDRButton.primary(
-              label: 'MARCAR ATENDIDO',
+              label: entry.status == 'completed'
+                  ? 'REGISTRAR RECEBIMENTO'
+                  : 'CONCLUIR ATENDIMENTO',
               onPressed: isCompleting ? null : onMarkAttended,
               isLoading: isCompleting,
               leading: const Icon(Icons.task_alt_rounded),

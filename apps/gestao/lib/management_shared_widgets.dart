@@ -1318,6 +1318,312 @@ class _TeamBarberTile extends StatelessWidget {
   }
 }
 
+Future<bool?> showAppointmentPaymentSheet(
+  BuildContext context, {
+  required ManagementSession session,
+  required String appointmentId,
+  required double serviceTotal,
+  required double paidAmount,
+  required double balanceDue,
+  required bool allowCompletionWithoutPayment,
+  required Future<void> Function({
+    required String? method,
+    required double? amount,
+    required String? idempotencyKey,
+  }) onSubmit,
+}) {
+  return showModalBottomSheet<bool>(
+    context: context,
+    showDragHandle: true,
+    useSafeArea: true,
+    isScrollControlled: true,
+    backgroundColor: CDRColorTokens.graphite,
+    builder: (_) => _AppointmentPaymentSheet(
+      session: session,
+      appointmentId: appointmentId,
+      serviceTotal: serviceTotal,
+      paidAmount: paidAmount,
+      balanceDue: balanceDue,
+      allowCompletionWithoutPayment: allowCompletionWithoutPayment,
+      onSubmit: onSubmit,
+    ),
+  );
+}
+
+class _AppointmentPaymentSheet extends StatefulWidget {
+  const _AppointmentPaymentSheet({
+    required this.session,
+    required this.appointmentId,
+    required this.serviceTotal,
+    required this.paidAmount,
+    required this.balanceDue,
+    required this.allowCompletionWithoutPayment,
+    required this.onSubmit,
+  });
+
+  final ManagementSession session;
+  final String appointmentId;
+  final double serviceTotal;
+  final double paidAmount;
+  final double balanceDue;
+  final bool allowCompletionWithoutPayment;
+  final Future<void> Function({
+    required String? method,
+    required double? amount,
+    required String? idempotencyKey,
+  }) onSubmit;
+
+  @override
+  State<_AppointmentPaymentSheet> createState() =>
+      _AppointmentPaymentSheetState();
+}
+
+class _AppointmentPaymentSheetState extends State<_AppointmentPaymentSheet> {
+  late final TextEditingController _amountController;
+  late String _method;
+  String? _error;
+  var _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _method = 'pix';
+    _amountController = TextEditingController(
+      text: widget.balanceDue.toStringAsFixed(2).replaceAll('.', ','),
+    );
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    super.dispose();
+  }
+
+  double? get _parsedAmount {
+    var value = _amountController.text.trim();
+    if (value.contains(',')) {
+      value = value.replaceAll('.', '').replaceAll(',', '.');
+    }
+    return double.tryParse(value);
+  }
+
+  void _changePayment({required String method}) {
+    setState(() {
+      _method = method;
+      _error = null;
+    });
+  }
+
+  void _amountChanged() {
+    setState(() {
+      _error = null;
+    });
+  }
+
+  Future<void> _submit({required bool withoutPayment}) async {
+    if (_isSubmitting) return;
+    final amount = withoutPayment ? null : _parsedAmount;
+    if (!withoutPayment &&
+        (amount == null ||
+            !amount.isFinite ||
+            amount <= 0 ||
+            amount > widget.balanceDue)) {
+      setState(() {
+        _error = 'Informe um valor maior que zero e até o saldo em aberto.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+      _error = null;
+    });
+    try {
+      final idempotencyKey = withoutPayment
+          ? null
+          : await widget.session.paymentIdempotencyKey(
+              appointmentId: widget.appointmentId,
+              method: _method,
+              amount: amount!,
+              balanceBefore: widget.balanceDue,
+            );
+      if (!mounted) return;
+      await widget.onSubmit(
+        method: withoutPayment ? null : _method,
+        amount: amount,
+        idempotencyKey: idempotencyKey,
+      );
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = error
+            .toString()
+            .replaceFirst(RegExp(r'^Bad state:\s*'), '')
+            .replaceFirst(RegExp(r'^Exception:\s*'), '');
+      });
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canReceive = widget.balanceDue > 0;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        CDRSpacingTokens.lg,
+        CDRSpacingTokens.sm,
+        CDRSpacingTokens.lg,
+        MediaQuery.viewInsetsOf(context).bottom + CDRSpacingTokens.lg,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              widget.allowCompletionWithoutPayment
+                  ? 'Concluir atendimento'
+                  : 'Registrar recebimento',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: CDRSpacingTokens.xs),
+            Text(
+              'Confira o resumo financeiro antes de registrar o recebimento.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: CDRColorTokens.textSecondary,
+                  ),
+            ),
+            const SizedBox(height: CDRSpacingTokens.md),
+            _PaymentSummaryLine(
+              label: 'Valor do serviço',
+              value: _commerceMoney(widget.serviceTotal),
+            ),
+            _PaymentSummaryLine(
+              label: 'Já recebido',
+              value: _commerceMoney(widget.paidAmount),
+            ),
+            _PaymentSummaryLine(
+              label: 'Saldo pendente',
+              value: _commerceMoney(widget.balanceDue),
+              emphasize: true,
+            ),
+            if (canReceive) ...[
+              const SizedBox(height: CDRSpacingTokens.lg),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'pix', label: Text('Pix')),
+                  ButtonSegment(value: 'cash', label: Text('Dinheiro')),
+                  ButtonSegment(value: 'card', label: Text('Cartão')),
+                ],
+                selected: {_method},
+                showSelectedIcon: false,
+                onSelectionChanged: _isSubmitting
+                    ? null
+                    : (values) => _changePayment(method: values.first),
+              ),
+              const SizedBox(height: CDRSpacingTokens.md),
+              TextField(
+                controller: _amountController,
+                enabled: !_isSubmitting,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                onChanged: (_) => _amountChanged(),
+                decoration: InputDecoration(
+                  labelText: 'Valor recebido',
+                  prefixText: 'R\$ ',
+                  helperText: 'Pode registrar um pagamento parcial.',
+                ),
+              ),
+              const SizedBox(height: CDRSpacingTokens.lg),
+            ] else ...[
+              const SizedBox(height: CDRSpacingTokens.md),
+              const _InlineNotice(
+                icon: Icons.check_circle_outline_rounded,
+                title: 'Atendimento integralmente recebido',
+                subtitle: 'Não há saldo pendente neste atendimento.',
+              ),
+              const SizedBox(height: CDRSpacingTokens.md),
+            ],
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: CDRSpacingTokens.md),
+                child: Text(
+                  _error!,
+                  style: const TextStyle(color: CDRColorTokens.error),
+                ),
+              ),
+            CDRButton.primary(
+              label: widget.allowCompletionWithoutPayment
+                  ? (canReceive ? 'RECEBER E CONCLUIR' : 'CONCLUIR ATENDIMENTO')
+                  : 'REGISTRAR RECEBIMENTO',
+              onPressed: canReceive
+                  ? () => _submit(withoutPayment: false)
+                  : widget.allowCompletionWithoutPayment
+                      ? () => _submit(withoutPayment: true)
+                      : null,
+              isLoading: _isSubmitting,
+              leading: const Icon(Icons.payments_outlined),
+            ),
+            if (widget.allowCompletionWithoutPayment && canReceive) ...[
+              const SizedBox(height: CDRSpacingTokens.sm),
+              CDRButton.outlined(
+                label: 'CONCLUIR SEM REGISTRAR PAGAMENTO',
+                onPressed:
+                    _isSubmitting ? null : () => _submit(withoutPayment: true),
+                leading: const Icon(Icons.task_alt_rounded),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PaymentSummaryLine extends StatelessWidget {
+  const _PaymentSummaryLine({
+    required this.label,
+    required this.value,
+    this.emphasize = false,
+  });
+
+  final String label;
+  final String value;
+  final bool emphasize;
+
+  @override
+  Widget build(BuildContext context) {
+    final color =
+        emphasize ? CDRColorTokens.textPrimary : CDRColorTokens.textSecondary;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: color,
+                    fontWeight: emphasize ? FontWeight.w700 : null,
+                  ),
+            ),
+          ),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: color,
+                  fontWeight: emphasize ? FontWeight.w800 : FontWeight.w600,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _CashMovementTile extends StatelessWidget {
   const _CashMovementTile({required this.title, required this.value});
 

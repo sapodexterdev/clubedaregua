@@ -49,6 +49,11 @@ class ManagementSession extends ChangeNotifier {
   List<CustomerAppointment> customerAppointments = [];
   List<ManagedProduct> products = [];
   List<ProductSale> productSales = [];
+  List<ServicePayment> servicePayments = [];
+  double receivedTodayTotal = 0;
+  final Map<String, String> _paymentIdempotencyKeys = {};
+  static const _paymentIdempotencyStorageKey =
+      'clubedaregua.gestao.payment_idempotency_v1';
   ShopConfiguration? shopConfiguration;
   DashboardMetrics? dashboardMetrics;
   bool isDashboardLoading = false;
@@ -282,17 +287,6 @@ class ManagementSession extends ChangeNotifier {
         if (critical != 0) return critical;
         return a.name.toLowerCase().compareTo(b.name.toLowerCase());
       });
-  }
-
-  double get productSalesTodayTotal {
-    final now = DateTime.now();
-    return productSales
-        .where((sale) =>
-            !sale.isCancelled &&
-            sale.soldAt?.year == now.year &&
-            sale.soldAt?.month == now.month &&
-            sale.soldAt?.day == now.day)
-        .fold(0, (total, sale) => total + sale.total);
   }
 
   int get lowStockProductCount =>
@@ -532,7 +526,7 @@ class ManagementSession extends ChangeNotifier {
     try {
       final rows = await _postRpcRows(
         token,
-        'get_owner_dashboard_details',
+        'get_owner_dashboard_details_v2',
         data: {
           'p_barber_shop_id': shopId,
           'p_days': days,
@@ -839,7 +833,7 @@ class ManagementSession extends ChangeNotifier {
 
       final requestQuery = <String, String>{
         'select':
-            'id,appointment_id,customer_name,requested_date,requested_time,status,notes,barbers(name),services(name),appointment:appointments!booking_requests_appointment_id_fkey(status)',
+            'id,appointment_id,customer_name,requested_date,requested_time,status,notes,barbers(name),services(name),appointment:appointments!booking_requests_appointment_id_fkey(id,status,total_price,payments!payments_appointment_id_fkey(amount,status))',
         'barber_shop_id': 'eq.$shopId',
         'requested_date': 'eq.$date',
         'status': 'eq.converted',
@@ -850,7 +844,8 @@ class ManagementSession extends ChangeNotifier {
       }
 
       final appointmentQuery = <String, String>{
-        'select': 'id,starts_at,status,notes,barbers(name),services(name)',
+        'select':
+            'id,starts_at,status,notes,total_price,payments!payments_appointment_id_fkey(amount,status),barbers(name),services(name)',
         'barber_shop_id': 'eq.$shopId',
         'starts_at': 'gte.${start.toIso8601String()}',
         'ends_at': 'lt.${end.toIso8601String()}',
@@ -1614,6 +1609,31 @@ class ManagementSession extends ChangeNotifier {
           'limit': '100',
         },
       );
+      final paymentRows = await _getRestRows(
+        token,
+        'payments',
+        query: {
+          'select':
+              'id,appointment_id,amount,method,paid_at,appointment:appointments!payments_appointment_id_fkey(service:services(name),barber:barbers(name))',
+          'barber_shop_id': 'eq.$shopId',
+          'status': 'eq.paid',
+          'order': 'paid_at.desc',
+          'limit': '200',
+        },
+      );
+      final dailyMetricsRows = await _postRpcRows(
+        token,
+        'get_owner_dashboard_metrics_v2',
+        data: {
+          'p_barber_shop_id': shopId,
+          'p_days': 1,
+        },
+      );
+      if (dailyMetricsRows.isEmpty) {
+        throw StateError('O Supabase não retornou o recebido de hoje.');
+      }
+      final todayReceived =
+          DashboardMetrics.fromMap(dailyMetricsRows.first).realizedRevenue;
       if (_disposed) return;
       products = productRows
           .map(ManagedProduct.fromMap)
@@ -1623,6 +1643,11 @@ class ManagementSession extends ChangeNotifier {
           .map(ProductSale.fromMap)
           .where((sale) => sale.id.isNotEmpty)
           .toList();
+      servicePayments = paymentRows
+          .map(ServicePayment.fromMap)
+          .where((payment) => payment.id.isNotEmpty)
+          .toList();
+      receivedTodayTotal = todayReceived;
       _commerceLoaded = true;
     } catch (error) {
       commerceError = _cleanErrorMessage(error);
@@ -2350,22 +2375,58 @@ class ManagementSession extends ChangeNotifier {
     }
   }
 
-  Future<void> completeAppointment(String appointmentId) async {
+  Future<void> completeAppointment(
+    String appointmentId, {
+    String? paymentMethod,
+    double? paymentAmount,
+    String? idempotencyKey,
+  }) async {
     final token = _accessToken;
     if (token == null || appointmentId.isEmpty) return;
     isScheduleLoading = true;
     scheduleError = null;
     notifyListeners();
     try {
+      final validMethods = const {'pix', 'cash', 'card'};
+      if ((paymentMethod == null) != (paymentAmount == null) ||
+          (paymentMethod == null && idempotencyKey != null) ||
+          (paymentMethod != null &&
+              (!validMethods.contains(paymentMethod) ||
+                  idempotencyKey == null))) {
+        throw ArgumentError(
+          'Forma, valor e chave do recebimento devem ser informados juntos.',
+        );
+      }
       await _postRpc(
         token,
-        'complete_appointment',
-        data: {'p_appointment_id': appointmentId},
+        'complete_appointment_with_payment',
+        data: {
+          'p_appointment_id': appointmentId,
+          'p_payment_method': paymentMethod,
+          'p_payment_amount': paymentAmount,
+          'p_idempotency_key': idempotencyKey,
+        },
       );
-      await Future.wait([
+      final refreshes = <Future<void>>[
         fetchScheduleEntries(),
         fetchBookingRequests(adminView: scheduleAdminView),
-      ]);
+      ];
+      if (canManageShop) {
+        refreshes.add(fetchDashboardMetrics(days: dashboardDays));
+      }
+      if (canManageCommerce) refreshes.add(fetchCommerce());
+      await Future.wait(refreshes);
+      final refreshError = scheduleError ??
+          bookingRequestsError ??
+          (canManageShop ? dashboardError : null) ??
+          (canManageCommerce ? commerceError : null);
+      if (refreshError != null) {
+        throw StateError(
+          'Atendimento e recebimento foram gravados, mas não foi possível '
+          'atualizar todos os dados. Tente novamente para sincronizar. '
+          '$refreshError',
+        );
+      }
     } catch (error) {
       scheduleError = _cleanErrorMessage(error);
       rethrow;
@@ -2373,6 +2434,68 @@ class ManagementSession extends ChangeNotifier {
       isScheduleLoading = false;
       notifyListeners();
     }
+  }
+
+  String createPaymentIdempotencyKey() {
+    final random = math.Random.secure();
+    final bytes = List<int>.generate(
+      16,
+      (_) => random.nextInt(256),
+    );
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    final hex =
+        bytes.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
+    return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-'
+        '${hex.substring(12, 16)}-${hex.substring(16, 20)}-'
+        '${hex.substring(20)}';
+  }
+
+  Future<String> paymentIdempotencyKey({
+    required String appointmentId,
+    required String method,
+    required double amount,
+    required double balanceBefore,
+  }) async {
+    final operation = [
+      _userId ?? '',
+      _barberShopId ?? '',
+      appointmentId,
+      method,
+      amount.toStringAsFixed(2),
+      balanceBefore.toStringAsFixed(2),
+    ].join('|');
+    final inMemoryKey = _paymentIdempotencyKeys[operation];
+    if (inMemoryKey != null) return inMemoryKey;
+
+    final preferences = await SharedPreferences.getInstance();
+    final stored = preferences.getString(_paymentIdempotencyStorageKey);
+    final persistedKeys = stored == null
+        ? <String, dynamic>{}
+        : jsonDecode(stored) as Map<String, dynamic>;
+    final storedKey = persistedKeys[operation]?.toString();
+    if (storedKey != null && storedKey.isNotEmpty) {
+      _paymentIdempotencyKeys[operation] = storedKey;
+      return storedKey;
+    }
+
+    final idempotencyKey = createPaymentIdempotencyKey();
+    persistedKeys[operation] = idempotencyKey;
+    while (persistedKeys.length > 200) {
+      persistedKeys.remove(persistedKeys.keys.first);
+    }
+    final saved = await preferences.setString(
+      _paymentIdempotencyStorageKey,
+      jsonEncode(persistedKeys),
+    );
+    if (!saved) {
+      throw StateError(
+        'Não foi possível preparar uma tentativa segura de recebimento. '
+        'Tente novamente.',
+      );
+    }
+    _paymentIdempotencyKeys[operation] = idempotencyKey;
+    return idempotencyKey;
   }
 
   Future<void> signOut() async {
@@ -2447,6 +2570,9 @@ class ManagementSession extends ChangeNotifier {
     customerSearchQuery = '';
     products = [];
     productSales = [];
+    servicePayments = [];
+    receivedTodayTotal = 0;
+    _paymentIdempotencyKeys.clear();
     commerceError = null;
     isCommerceLoading = false;
     productStatusFilter = ProductStatusFilter.all;
