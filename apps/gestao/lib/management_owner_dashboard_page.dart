@@ -242,6 +242,7 @@ class _DashboardDetailsPage extends StatefulWidget {
 
 class _DashboardDetailsPageState extends State<_DashboardDetailsPage> {
   late Future<List<DashboardDetailEntry>> _entries;
+  final Set<String> _completingAppointments = <String>{};
 
   String get _title => switch (widget.kind) {
         'appointments' => 'Agendamentos',
@@ -270,6 +271,29 @@ class _DashboardDetailsPageState extends State<_DashboardDetailsPage> {
   }
 
   void _retry() => setState(_load);
+
+  Future<void> _markAttended(DashboardDetailEntry entry) async {
+    if (!_completingAppointments.add(entry.id)) return;
+    setState(() {});
+    try {
+      await widget.session.completeAppointment(entry.id);
+      if (!mounted) return;
+      setState(_load);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Atendimento marcado como atendido.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Não foi possível concluir o atendimento.')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _completingAppointments.remove(entry.id));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -360,7 +384,16 @@ class _DashboardDetailsPageState extends State<_DashboardDetailsPage> {
                   ],
                   const SizedBox(height: CDRSpacingTokens.md),
                   for (final entry in entries) ...[
-                    _DashboardDetailCard(entry: entry, kind: widget.kind),
+                    _DashboardDetailCard(
+                      entry: entry,
+                      kind: widget.kind,
+                      isCompleting: _completingAppointments.contains(entry.id),
+                      onMarkAttended: widget.kind == 'appointments' &&
+                              (entry.status == 'pending' ||
+                                  entry.status == 'confirmed')
+                          ? () => _markAttended(entry)
+                          : null,
+                    ),
                     const SizedBox(height: CDRSpacingTokens.sm),
                   ],
                 ],
@@ -374,10 +407,17 @@ class _DashboardDetailsPageState extends State<_DashboardDetailsPage> {
 }
 
 class _DashboardDetailCard extends StatelessWidget {
-  const _DashboardDetailCard({required this.entry, required this.kind});
+  const _DashboardDetailCard({
+    required this.entry,
+    required this.kind,
+    required this.isCompleting,
+    required this.onMarkAttended,
+  });
 
   final DashboardDetailEntry entry;
   final String kind;
+  final bool isCompleting;
+  final VoidCallback? onMarkAttended;
 
   @override
   Widget build(BuildContext context) {
@@ -389,10 +429,17 @@ class _DashboardDetailCard extends StatelessWidget {
     final isCustomer = kind == 'new_customers';
     final status = switch (entry.status) {
       'pending' => 'Pendente',
-      'confirmed' => 'Confirmado',
+      'confirmed' => 'Aceito',
       'completed' => 'Atendido',
       'cancelled' => 'Cancelado',
       _ => null,
+    };
+    final statusColor = switch (entry.status) {
+      'confirmed' => CDRColorTokens.info,
+      'completed' => CDRColorTokens.success,
+      'cancelled' => CDRColorTokens.error,
+      'pending' => SharedAppColors.orange,
+      _ => CDRColorTokens.textSecondary,
     };
 
     return CDRCard(
@@ -458,17 +505,13 @@ class _DashboardDetailCard extends StatelessWidget {
                       vertical: CDRSpacingTokens.xs,
                     ),
                     decoration: BoxDecoration(
-                      color: kind == 'cancelled'
-                          ? CDRColorTokens.error.withOpacity(.12)
-                          : CDRColorTokens.success.withOpacity(.12),
+                      color: statusColor.withOpacity(.12),
                       borderRadius: BorderRadius.circular(CDRRadiusTokens.pill),
                     ),
                     child: Text(
                       status.toUpperCase(),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: kind == 'cancelled'
-                                ? CDRColorTokens.error
-                                : CDRColorTokens.success,
+                            color: statusColor,
                             fontWeight: FontWeight.w700,
                           ),
                     ),
@@ -483,6 +526,15 @@ class _DashboardDetailCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
               ],
+            ),
+          ],
+          if (onMarkAttended != null) ...[
+            const SizedBox(height: CDRSpacingTokens.md),
+            CDRButton.primary(
+              label: 'MARCAR ATENDIDO',
+              onPressed: isCompleting ? null : onMarkAttended,
+              isLoading: isCompleting,
+              leading: const Icon(Icons.task_alt_rounded),
             ),
           ],
         ],
