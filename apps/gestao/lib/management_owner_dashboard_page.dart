@@ -703,8 +703,6 @@ class _DashboardMetric {
     required this.value,
     required this.icon,
     this.count,
-    this.detailKind,
-    this.days,
     this.onTap,
     this.helper,
   });
