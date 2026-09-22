@@ -86,14 +86,61 @@ class _AdminDashboardPage extends StatelessWidget {
           )
         else if (metrics != null) ...[
           _DashboardMetricGrid(metrics: [
-            _DashboardMetric('Agendamentos', '${metrics.appointments}',
-                Icons.calendar_month_outlined),
-            _DashboardMetric('Confirmados', '${metrics.confirmedAppointments}',
-                Icons.check_circle_outline),
-            _DashboardMetric('Previsto', _money(metrics.projectedRevenue),
-                Icons.trending_up_rounded),
-            _DashboardMetric('Recebido', _money(metrics.realizedRevenue),
-                Icons.payments_outlined),
+            _DashboardMetric(
+              title: 'Agendamentos',
+              value: '${metrics.appointments}',
+              icon: Icons.calendar_month_outlined,
+              count: metrics.appointments,
+              onTap: () => _openDetails(
+                context,
+                'appointments',
+                session.dashboardDays,
+              ),
+            ),
+            _DashboardMetric(
+              title: 'Cancelados',
+              value: '${metrics.cancelledAppointments}',
+              icon: Icons.event_busy_outlined,
+              count: metrics.cancelledAppointments,
+              onTap: () => _openDetails(
+                context,
+                'cancelled',
+                session.dashboardDays,
+              ),
+              helper: 'Pela data marcada',
+            ),
+            _DashboardMetric(
+              title: 'Atendidos',
+              value: '${metrics.completedAppointments}',
+              icon: Icons.task_alt_outlined,
+              count: metrics.completedAppointments,
+              onTap: () => _openDetails(
+                context,
+                'completed',
+                session.dashboardDays,
+              ),
+            ),
+            _DashboardMetric(
+              title: 'Clientes novos',
+              value: '${metrics.newCustomers}',
+              icon: Icons.person_add_alt_1_outlined,
+              count: metrics.newCustomers,
+              onTap: () => _openDetails(
+                context,
+                'new_customers',
+                session.dashboardDays,
+              ),
+            ),
+            _DashboardMetric(
+              title: 'Previsto',
+              value: _money(metrics.projectedRevenue),
+              icon: Icons.trending_up_rounded,
+            ),
+            _DashboardMetric(
+              title: 'Recebido',
+              value: _money(metrics.realizedRevenue),
+              icon: Icons.payments_outlined,
+            ),
           ]),
           const SizedBox(height: CDRSpacingTokens.md),
           CDRCard(
@@ -141,6 +188,18 @@ class _AdminDashboardPage extends StatelessWidget {
 
   static String _money(double value) =>
       'R\$ ${value.toStringAsFixed(2).replaceAll('.', ',')}';
+
+  void _openDetails(BuildContext context, String kind, int days) {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => _DashboardDetailsPage(
+          session: context.read<ManagementSession>(),
+          kind: kind,
+          days: days,
+        ),
+      ),
+    );
+  }
 }
 
 class _DashboardPeriodChip extends StatelessWidget {
@@ -164,6 +223,272 @@ class _DashboardPeriodChip extends StatelessWidget {
                   days: days,
                 ),
       );
+}
+
+class _DashboardDetailsPage extends StatefulWidget {
+  const _DashboardDetailsPage({
+    required this.session,
+    required this.kind,
+    required this.days,
+  });
+
+  final ManagementSession session;
+  final String kind;
+  final int days;
+
+  @override
+  State<_DashboardDetailsPage> createState() => _DashboardDetailsPageState();
+}
+
+class _DashboardDetailsPageState extends State<_DashboardDetailsPage> {
+  late Future<List<DashboardDetailEntry>> _entries;
+
+  String get _title => switch (widget.kind) {
+        'appointments' => 'Agendamentos',
+        'cancelled' => 'Agendamentos cancelados',
+        'completed' => 'Atendimentos realizados',
+        _ => 'Clientes novos',
+      };
+
+  String get _period => switch (widget.days) {
+        1 => 'Hoje',
+        30 => 'Últimos 30 dias',
+        _ => 'Últimos 7 dias',
+      };
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  void _load() {
+    _entries = widget.session.fetchDashboardDetails(
+      kind: widget.kind,
+      days: widget.days,
+    );
+  }
+
+  void _retry() => setState(_load);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: CDRColorTokens.night,
+      appBar: AppBar(
+        title: Text(_title),
+        backgroundColor: CDRColorTokens.night,
+      ),
+      body: FutureBuilder<List<DashboardDetailEntry>>(
+        future: _entries,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(
+              child: CircularProgressIndicator(
+                color: CDRColorTokens.brandYellow,
+              ),
+            );
+          }
+          if (snapshot.hasError) {
+            return Padding(
+              padding: const EdgeInsets.all(CDRSpacingTokens.lg),
+              child: _DashboardEmptyState(
+                icon: Icons.cloud_off_outlined,
+                title: 'Não foi possível carregar os detalhes',
+                message: snapshot.error
+                    .toString()
+                    .replaceFirst(RegExp(r'^Bad state:\s*'), '')
+                    .replaceFirst(RegExp(r'^Exception:\s*'), ''),
+                action: TextButton.icon(
+                  onPressed: _retry,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Tentar novamente'),
+                ),
+              ),
+            );
+          }
+
+          final entries = snapshot.data ?? const <DashboardDetailEntry>[];
+          if (entries.isEmpty) {
+            return Padding(
+              padding: const EdgeInsets.all(CDRSpacingTokens.lg),
+              child: _DashboardEmptyState(
+                icon: Icons.event_busy_outlined,
+                title: 'Nenhum registro neste período',
+                message: 'Não encontramos $_title em ${_period.toLowerCase()}.',
+              ),
+            );
+          }
+
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: CDRSizeTokens.managementContentMaxWidth,
+              ),
+              child: ListView(
+                padding: const EdgeInsets.all(CDRSpacingTokens.lg),
+                children: [
+                  Text(
+                    _period.toUpperCase(),
+                    style: CDRTypographyTokens.overline
+                        .copyWith(color: CDRColorTokens.brandYellow),
+                  ),
+                  const SizedBox(height: CDRSpacingTokens.sm),
+                  Text(
+                    '${entries.length} ${entries.length == 1 ? 'registro' : 'registros'}',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: CDRColorTokens.textSecondary,
+                        ),
+                  ),
+                  if (entries.length == 500) ...[
+                    const SizedBox(height: CDRSpacingTokens.xs),
+                    Text(
+                      'Exibindo os 500 registros mais recentes. O card mantém o total do período.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: CDRColorTokens.textSecondary,
+                          ),
+                    ),
+                  ],
+                  if (widget.kind == 'cancelled') ...[
+                    const SizedBox(height: CDRSpacingTokens.xs),
+                    Text(
+                      'Considera a data marcada do agendamento.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: CDRColorTokens.textSecondary,
+                          ),
+                    ),
+                  ],
+                  const SizedBox(height: CDRSpacingTokens.md),
+                  for (final entry in entries) ...[
+                    _DashboardDetailCard(entry: entry, kind: widget.kind),
+                    const SizedBox(height: CDRSpacingTokens.sm),
+                  ],
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _DashboardDetailCard extends StatelessWidget {
+  const _DashboardDetailCard({required this.entry, required this.kind});
+
+  final DashboardDetailEntry entry;
+  final String kind;
+
+  @override
+  Widget build(BuildContext context) {
+    final date = entry.occurredAt.toLocal();
+    final dateLabel = '${date.day.toString().padLeft(2, '0')}/'
+        '${date.month.toString().padLeft(2, '0')}/${date.year}';
+    final timeLabel = '${date.hour.toString().padLeft(2, '0')}:'
+        '${date.minute.toString().padLeft(2, '0')}';
+    final isCustomer = kind == 'new_customers';
+    final status = switch (entry.status) {
+      'pending' => 'Pendente',
+      'confirmed' => 'Confirmado',
+      'completed' => 'Atendido',
+      'cancelled' => 'Cancelado',
+      _ => null,
+    };
+
+    return CDRCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _IconBadge(
+                isCustomer
+                    ? Icons.person_outline
+                    : Icons.calendar_month_outlined,
+              ),
+              const SizedBox(width: CDRSpacingTokens.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      entry.customerName,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    if (isCustomer)
+                      Text(
+                        'Cliente desde $dateLabel',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: CDRColorTokens.textSecondary,
+                            ),
+                      )
+                    else ...[
+                      Text(
+                        '${entry.serviceName ?? 'Serviço'} · $dateLabel às $timeLabel',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: CDRColorTokens.textSecondary,
+                            ),
+                      ),
+                      if ((entry.barberName ?? '').isNotEmpty)
+                        Text(
+                          entry.barberName!,
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: CDRColorTokens.textSecondary,
+                                  ),
+                        ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (status != null ||
+              (entry.cancellationReason?.trim().isNotEmpty ?? false)) ...[
+            const SizedBox(height: CDRSpacingTokens.md),
+            Wrap(
+              spacing: CDRSpacingTokens.sm,
+              runSpacing: CDRSpacingTokens.sm,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                if (status != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: CDRSpacingTokens.sm,
+                      vertical: CDRSpacingTokens.xs,
+                    ),
+                    decoration: BoxDecoration(
+                      color: kind == 'cancelled'
+                          ? CDRColorTokens.error.withOpacity(.12)
+                          : CDRColorTokens.success.withOpacity(.12),
+                      borderRadius: BorderRadius.circular(CDRRadiusTokens.pill),
+                    ),
+                    child: Text(
+                      status.toUpperCase(),
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: kind == 'cancelled'
+                                ? CDRColorTokens.error
+                                : CDRColorTokens.success,
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                  ),
+                if (entry.cancellationReason?.trim().isNotEmpty ?? false)
+                  Text(
+                    'Motivo: ${entry.cancellationReason}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: CDRColorTokens.textSecondary,
+                        ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 class _DashboardTrendCard extends StatelessWidget {
@@ -199,7 +524,7 @@ class _DashboardTrendCard extends StatelessWidget {
               _DashboardLegend(
                   color: CDRColorTokens.brandYellow, label: 'Recebido'),
               _DashboardLegend(
-                  color: CDRColorTokens.textSecondary, label: 'Atendimentos'),
+                  color: CDRColorTokens.textSecondary, label: 'Agendamentos'),
             ],
           ),
           const SizedBox(height: CDRSpacingTokens.lg),
@@ -214,7 +539,7 @@ class _DashboardTrendCard extends StatelessWidget {
             Semantics(
               label: 'Gráfico dos últimos $periodDays dias. '
                   'Recebido: ${_AdminDashboardPage._money(metricsTotalRevenue)}. '
-                  'Atendimentos: $metricsTotalAppointments.',
+                  'Agendamentos: $metricsTotalAppointments.',
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final chartWidth = periodDays > 7
@@ -244,7 +569,7 @@ class _DashboardTrendCard extends StatelessWidget {
             ),
           const SizedBox(height: CDRSpacingTokens.md),
           Text(
-            'Recebido considera pagamentos confirmados e vendas concluídas; atendimentos são contados pela data marcada. Cada série usa escala visual própria.',
+            'Recebido considera pagamentos confirmados e vendas concluídas; agendamentos não cancelados são contados pela data marcada. Cada série usa escala visual própria.',
             style: Theme.of(context)
                 .textTheme
                 .bodySmall
@@ -373,10 +698,23 @@ class _DashboardTrendPainter extends CustomPainter {
 }
 
 class _DashboardMetric {
-  const _DashboardMetric(this.title, this.value, this.icon);
+  const _DashboardMetric({
+    required this.title,
+    required this.value,
+    required this.icon,
+    this.count,
+    this.detailKind,
+    this.days,
+    this.onTap,
+    this.helper,
+  });
+
   final String title;
   final String value;
   final IconData icon;
+  final int? count;
+  final VoidCallback? onTap;
+  final String? helper;
 }
 
 class _DashboardMetricGrid extends StatelessWidget {
@@ -398,25 +736,55 @@ class _DashboardMetricGrid extends StatelessWidget {
                 SizedBox(
                     width: width,
                     child: CDRCard(
+                        key: ValueKey('owner-dashboard-card-${metric.title}'),
+                        onTap: metric.count != null && metric.count! > 0
+                            ? metric.onTap
+                            : null,
+                        semanticLabel: metric.count == null
+                            ? '${metric.title}: ${metric.value}. Indicador informativo.'
+                            : metric.count! > 0
+                                ? '${metric.title}: ${metric.value}. Abrir detalhes.'
+                                : '${metric.title}: ${metric.value}. Sem registros para abrir.',
                         child: Row(children: [
-                      _IconBadge(metric.icon),
-                      const SizedBox(width: CDRSpacingTokens.md),
-                      Expanded(
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                            Text(metric.title,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                        color: CDRColorTokens.textSecondary)),
-                            const SizedBox(height: CDRSpacingTokens.xs),
-                            Text(metric.value,
-                                style:
-                                    Theme.of(context).textTheme.headlineSmall),
-                          ])),
-                    ]))),
+                          _IconBadge(metric.icon),
+                          const SizedBox(width: CDRSpacingTokens.md),
+                          Expanded(
+                              child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                Text(metric.title,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                            color:
+                                                CDRColorTokens.textSecondary)),
+                                const SizedBox(height: CDRSpacingTokens.xs),
+                                Text(metric.value,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineSmall),
+                                if (metric.helper != null) ...[
+                                  const SizedBox(height: CDRSpacingTokens.xs),
+                                  Text(
+                                    metric.helper!,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                          color: CDRColorTokens.textSecondary,
+                                        ),
+                                  ),
+                                ],
+                              ])),
+                          if (metric.count != null && metric.count! > 0) ...[
+                            const SizedBox(width: CDRSpacingTokens.sm),
+                            const Icon(
+                              Icons.chevron_right_rounded,
+                              color: CDRColorTokens.textSecondary,
+                            ),
+                          ],
+                        ]))),
             ]);
       });
 }

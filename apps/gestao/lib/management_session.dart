@@ -434,7 +434,7 @@ class ManagementSession extends ChangeNotifier {
     notifyListeners();
     try {
       final rows =
-          await _postRpcRows(token, 'get_owner_dashboard_metrics', data: {
+          await _postRpcRows(token, 'get_owner_dashboard_metrics_v2', data: {
         'p_barber_shop_id': shopId,
         'p_days': selectedDays,
       });
@@ -453,6 +453,42 @@ class ManagementSession extends ChangeNotifier {
         isDashboardLoading = false;
         notifyListeners();
       }
+    }
+  }
+
+  Future<List<DashboardDetailEntry>> fetchDashboardDetails({
+    required String kind,
+    required int days,
+  }) async {
+    final token = _accessToken;
+    final shopId = _barberShopId;
+    const allowedKinds = {
+      'appointments',
+      'cancelled',
+      'completed',
+      'new_customers',
+    };
+    if (token == null || shopId == null || shopId.isEmpty) {
+      throw StateError('Não foi possível identificar a barbearia ativa.');
+    }
+    if ((days != 1 && days != 7 && days != 30) ||
+        !allowedKinds.contains(kind)) {
+      throw ArgumentError('Filtro inválido para os detalhes do painel.');
+    }
+
+    try {
+      final rows = await _postRpcRows(
+        token,
+        'get_owner_dashboard_details',
+        data: {
+          'p_barber_shop_id': shopId,
+          'p_days': days,
+          'p_kind': kind,
+        },
+      );
+      return rows.map(DashboardDetailEntry.fromMap).toList(growable: false);
+    } catch (error) {
+      throw StateError(_cleanErrorMessage(error));
     }
   }
 
@@ -2740,6 +2776,12 @@ class ManagementSession extends ChangeNotifier {
         return 'Execute o script supabase/issue_023_product_sales.sql no Supabase e atualize a tela.';
       }
       return 'Execute o script supabase/issue_006_customer_management.sql no Supabase e atualize a tela. Ele cria as views necessarias para listar clientes.';
+    }
+
+    if (message.contains('get_owner_dashboard_metrics_v2') ||
+        message.contains('get_owner_dashboard_details') ||
+        message.contains('issue_029_owner_dashboard_details.sql')) {
+      return 'Execute o script supabase/issue_029_owner_dashboard_details.sql no Supabase e atualize a tela.';
     }
 
     if (message.contains('PGRST202') &&

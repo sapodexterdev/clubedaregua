@@ -21,7 +21,10 @@ void main() {
     expect(find.text('7 dias'), findsOneWidget);
     expect(find.text('30 dias'), findsOneWidget);
     expect(find.text('Agendamentos'), findsOneWidget);
-    expect(find.text('Confirmados'), findsOneWidget);
+    expect(find.text('Cancelados'), findsOneWidget);
+    expect(find.text('Atendidos'), findsOneWidget);
+    expect(find.text('Clientes novos'), findsOneWidget);
+    expect(find.text('Confirmados'), findsNothing);
     expect(find.text('Previsto'), findsOneWidget);
     expect(find.text('Recebido'), findsWidgets);
     expect(find.text('R\$ 4.820'), findsNothing);
@@ -51,7 +54,10 @@ void main() {
       await tester.pump();
 
       expect(find.text('Agendamentos'), findsOneWidget);
-      expect(find.text('Confirmados'), findsOneWidget);
+      expect(find.text('Cancelados'), findsOneWidget);
+      expect(find.text('Atendidos'), findsOneWidget);
+      expect(find.text('Clientes novos'), findsOneWidget);
+      expect(find.text('Confirmados'), findsNothing);
       expect(find.text('Previsto'), findsOneWidget);
       expect(find.text('Recebido'), findsWidgets);
       expect(tester.takeException(), isNull);
@@ -69,10 +75,66 @@ void main() {
     await tester.pump();
 
     expect(find.text('Agendamentos'), findsOneWidget);
-    expect(find.text('Confirmados'), findsOneWidget);
+    expect(find.text('Cancelados'), findsOneWidget);
+    expect(find.text('Atendidos'), findsOneWidget);
+    expect(find.text('Clientes novos'), findsOneWidget);
+    expect(find.text('Confirmados'), findsNothing);
     expect(find.text('Previsto'), findsOneWidget);
     expect(find.text('Recebido'), findsWidgets);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('card de cancelados abre a lista do período do painel',
+      (tester) async {
+    final session = _DashboardSession();
+    addTearDown(session.dispose);
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_app(session));
+    await tester.pump();
+
+    final cancelledCard =
+        find.byKey(const ValueKey('owner-dashboard-card-Cancelados'));
+    await tester.ensureVisible(cancelledCard);
+    await tester.tap(cancelledCard);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Agendamentos cancelados'), findsOneWidget);
+    expect(find.text('Cliente de teste'), findsOneWidget);
+    expect(find.text('Motivo: conflito de horário'), findsOneWidget);
+    expect(
+        find.text('Considera a data marcada do agendamento.'), findsOneWidget);
+    expect(session.dashboardDetailQueries, ['cancelled:7']);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('card sem registros não oferece navegação para detalhes',
+      (tester) async {
+    final session = _DashboardSession()
+      ..dashboardMetrics = const DashboardMetrics(
+        appointments: 0,
+        cancelledAppointments: 0,
+        completedAppointments: 0,
+        newCustomers: 0,
+        projectedRevenue: 0,
+        realizedRevenue: 0,
+        averageTicket: 0,
+        dailyTrend: [],
+      );
+    addTearDown(session.dispose);
+    final semantics = tester.ensureSemantics();
+    addTearDown(semantics.dispose);
+    await tester.pumpWidget(_app(session));
+    await tester.pump();
+
+    expect(
+      tester
+          .getSemantics(
+            find.byKey(const ValueKey('owner-dashboard-card-Cancelados')),
+          )
+          .hasAction(SemanticsAction.tap),
+      isFalse,
+    );
   });
 }
 
@@ -98,7 +160,9 @@ class _DashboardSession extends ManagementSession {
     isRestoringSession = false;
     dashboardMetrics = const DashboardMetrics(
       appointments: 2,
-      confirmedAppointments: 1,
+      cancelledAppointments: 1,
+      completedAppointments: 1,
+      newCustomers: 1,
       projectedRevenue: 90,
       realizedRevenue: 45,
       averageTicket: 45,
@@ -107,6 +171,7 @@ class _DashboardSession extends ManagementSession {
   }
 
   final loadedDestinations = <ManagementDestinationId>[];
+  final dashboardDetailQueries = <String>[];
 
   @override
   bool get isSignedIn => true;
@@ -119,6 +184,25 @@ class _DashboardSession extends ManagementSession {
 
   @override
   bool get canManageShop => true;
+
+  @override
+  Future<List<DashboardDetailEntry>> fetchDashboardDetails({
+    required String kind,
+    required int days,
+  }) async {
+    dashboardDetailQueries.add('$kind:$days');
+    return const [
+      DashboardDetailEntry(
+        id: 'appointment-1',
+        occurredAt: DateTime(2026, 9, 18, 15),
+        customerName: 'Cliente de teste',
+        serviceName: 'Corte clássico',
+        barberName: 'Rafael Luz',
+        status: 'cancelled',
+        cancellationReason: 'conflito de horário',
+      ),
+    ];
+  }
 
   @override
   Future<void> ensureDataForDestination(

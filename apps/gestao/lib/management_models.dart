@@ -3,7 +3,9 @@ part of 'management.dart';
 class DashboardMetrics {
   const DashboardMetrics({
     required this.appointments,
-    required this.confirmedAppointments,
+    required this.cancelledAppointments,
+    required this.completedAppointments,
+    required this.newCustomers,
     required this.projectedRevenue,
     required this.realizedRevenue,
     required this.averageTicket,
@@ -11,18 +13,38 @@ class DashboardMetrics {
   });
 
   final int appointments;
-  final int confirmedAppointments;
+  final int cancelledAppointments;
+  final int completedAppointments;
+  final int newCustomers;
   final double projectedRevenue;
   final double realizedRevenue;
   final double averageTicket;
   final List<DashboardDayMetric> dailyTrend;
 
   factory DashboardMetrics.fromMap(Map<String, dynamic> map) {
+    const requiredFields = [
+      'appointments',
+      'cancelled_appointments',
+      'completed_appointments',
+      'new_customers',
+      'projected_revenue',
+      'realized_revenue',
+      'average_ticket',
+      'daily_trend',
+    ];
+    if (requiredFields.any((field) => !map.containsKey(field))) {
+      throw const FormatException(
+        'Execute supabase/issue_029_owner_dashboard_details.sql no Supabase e atualize a tela.',
+      );
+    }
+
     double number(String key) => (map[key] as num?)?.toDouble() ?? 0;
     int integer(String key) => (map[key] as num?)?.toInt() ?? 0;
     return DashboardMetrics(
       appointments: integer('appointments'),
-      confirmedAppointments: integer('confirmed_appointments'),
+      cancelledAppointments: integer('cancelled_appointments'),
+      completedAppointments: integer('completed_appointments'),
+      newCustomers: integer('new_customers'),
       projectedRevenue: number('projected_revenue'),
       realizedRevenue: number('realized_revenue'),
       averageTicket: number('average_ticket'),
@@ -34,6 +56,40 @@ class DashboardMetrics {
           .toList(growable: false),
     );
   }
+}
+
+class DashboardDetailEntry {
+  const DashboardDetailEntry({
+    required this.id,
+    required this.occurredAt,
+    required this.customerName,
+    this.serviceName,
+    this.barberName,
+    this.status,
+    this.cancellationReason,
+  });
+
+  final String id;
+  final DateTime occurredAt;
+  final String customerName;
+  final String? serviceName;
+  final String? barberName;
+  final String? status;
+  final String? cancellationReason;
+
+  factory DashboardDetailEntry.fromMap(Map<String, dynamic> map) =>
+      DashboardDetailEntry(
+        id: map['id']?.toString() ?? '',
+        occurredAt: DateTime.tryParse(map['occurred_at']?.toString() ?? '') ??
+            DateTime(2000),
+        customerName: map['customer_name']?.toString().trim().isNotEmpty == true
+            ? map['customer_name'].toString()
+            : 'Cliente',
+        serviceName: map['service_name']?.toString(),
+        barberName: map['barber_name']?.toString(),
+        status: map['status']?.toString(),
+        cancellationReason: map['cancellation_reason']?.toString(),
+      );
 }
 
 class DashboardDayMetric {
