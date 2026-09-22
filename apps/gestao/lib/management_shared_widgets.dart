@@ -726,7 +726,7 @@ class _BookingRequestTile extends StatelessWidget {
     };
     final statusColor = switch (status) {
       'contacted' => CDRColorTokens.info,
-      'converted' => CDRColorTokens.success,
+      'converted' => CDRColorTokens.info,
       'completed' => CDRColorTokens.success,
       'cancelled' => CDRColorTokens.error,
       _ => SharedAppColors.orange,
