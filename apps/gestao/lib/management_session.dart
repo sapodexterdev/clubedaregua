@@ -332,6 +332,8 @@ class ManagementSession extends ChangeNotifier {
 
   Future<void> refreshManagementData() async {
     final generation = ++_refreshGeneration;
+    if (!_settingsLoaded) await fetchShopConfiguration();
+    if (!_isRefreshActive(generation)) return;
     await fetchTeamBarbers();
     if (!_isRefreshActive(generation)) return;
     await fetchBookingRequests(
