@@ -29,6 +29,18 @@ void main() {
     expect(find.text('Recebido'), findsWidgets);
     expect(find.text('R\$ 4.820'), findsNothing);
     expect(find.text('R\$ 1.240'), findsNothing);
+    expect(
+      tester
+          .getTopLeft(find.byKey(
+            const ValueKey('owner-dashboard-card-Atendidos'),
+          ))
+          .dy,
+      lessThan(tester
+          .getTopLeft(find.byKey(
+            const ValueKey('owner-dashboard-card-Cancelados'),
+          ))
+          .dy),
+    );
     expect(tester.takeException(), isNull);
     semantics.dispose();
   });

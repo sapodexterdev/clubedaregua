@@ -98,6 +98,17 @@ class _AdminDashboardPage extends StatelessWidget {
               ),
             ),
             _DashboardMetric(
+              title: 'Atendidos',
+              value: '${metrics.completedAppointments}',
+              icon: Icons.task_alt_outlined,
+              count: metrics.completedAppointments,
+              onTap: () => _openDetails(
+                context,
+                'completed',
+                session.dashboardDays,
+              ),
+            ),
+            _DashboardMetric(
               title: 'Cancelados',
               value: '${metrics.cancelledAppointments}',
               icon: Icons.event_busy_outlined,
@@ -108,17 +119,6 @@ class _AdminDashboardPage extends StatelessWidget {
                 session.dashboardDays,
               ),
               helper: 'Pela data marcada',
-            ),
-            _DashboardMetric(
-              title: 'Atendidos',
-              value: '${metrics.completedAppointments}',
-              icon: Icons.task_alt_outlined,
-              count: metrics.completedAppointments,
-              onTap: () => _openDetails(
-                context,
-                'completed',
-                session.dashboardDays,
-              ),
             ),
             _DashboardMetric(
               title: 'Clientes novos',

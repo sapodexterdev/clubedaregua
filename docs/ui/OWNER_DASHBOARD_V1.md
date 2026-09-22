@@ -10,8 +10,8 @@ barbearia selecionada e sem estimativas apresentadas como receita recebida.
 1. Manter o cabeçalho global da barbearia no shell; a página não repete o nome.
 2. Exibir título “Seus números, com clareza” e filtros “Hoje”, “7 dias” e
    “30 dias” usando `ChoiceChip` e os estados do tema.
-3. Mostrar cards operacionais de Agendamentos, Cancelados, Atendidos e Clientes
-   novos; manter Previsto e Recebido como indicadores financeiros.
+3. Mostrar cards operacionais de Agendamentos, Atendidos, Cancelados e Clientes
+   novos, nessa ordem; manter Previsto e Recebido como indicadores financeiros.
 4. Mostrar Ticket médio de serviço e o gráfico diário de recebimentos e
    agendamentos não cancelados.
 5. Cards operacionais com contagem maior que zero abrem uma tela de detalhe
