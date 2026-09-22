@@ -142,8 +142,7 @@ class AppState extends ChangeNotifier {
       final selectedCategoryKey = _categoryKeyForId(discoveryCategoryId);
       if (selectedCategoryKey != null &&
           !shop.services.any(
-            (service) =>
-                _categoryKeyForId(service.categoryId) == selectedCategoryKey,
+            (service) => _categoryKeyForService(service) == selectedCategoryKey,
           )) {
         return false;
       }
@@ -460,9 +459,26 @@ class AppState extends ChangeNotifier {
   String? _categoryKeyForId(String? categoryId) {
     if (categoryId == null) return null;
     for (final category in categories) {
-      if (category.id == categoryId) return _normalizedSearch(category.name);
+      if (category.id == categoryId) return _categoryKey(category.name);
     }
     return null;
+  }
+
+  String? _categoryKeyForService(ServiceItem service) {
+    final name = service.categoryName;
+    if (name != null && name.trim().isNotEmpty) return _categoryKey(name);
+    return _categoryKeyForId(service.categoryId);
+  }
+
+  String _categoryKey(String value) {
+    final normalized = _normalizedSearch(value);
+    return switch (normalized) {
+      'cabelo' || 'cortes' => 'corte',
+      'barbas' => 'barba',
+      'combos' => 'combo',
+      'sobrancelhas' => 'sobrancelha',
+      _ => normalized,
+    };
   }
 
   String _normalizedSearch(String value) {

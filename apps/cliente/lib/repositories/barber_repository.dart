@@ -239,7 +239,8 @@ class BarberRepository {
     try {
       final shops = await _rest.getRows(
         'barber_shops',
-        select: 'id,name,phone,whatsapp,address,city,state,latitude,longitude,opening_time,closing_time,logo_url,cover_url',
+        select:
+            'id,name,phone,whatsapp,address,city,state,latitude,longitude,opening_time,closing_time,logo_url,cover_url',
         filters: {
           'is_active': 'eq.true',
           if (barberShopId != null && barberShopId.isNotEmpty)
@@ -295,7 +296,8 @@ class BarberRepository {
     try {
       final shops = await _rest.getRows(
         'barber_shops',
-        select: 'id,name,phone,whatsapp,address,city,state,latitude,longitude,opening_time,closing_time,logo_url,cover_url',
+        select:
+            'id,name,phone,whatsapp,address,city,state,latitude,longitude,opening_time,closing_time,logo_url,cover_url',
         filters: const {'is_active': 'eq.true'},
         order: 'name.asc',
       );
@@ -349,7 +351,8 @@ class BarberRepository {
     try {
       final rows = await _rest.getRows(
         'services',
-        select: 'id,barber_shop_id,name,duration_minutes,price,category_id',
+        select:
+            'id,barber_shop_id,name,duration_minutes,price,category_id,service_categories(name)',
         filters: const {'is_active': 'eq.true'},
         order: 'name.asc',
       );
