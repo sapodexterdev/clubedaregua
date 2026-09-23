@@ -2965,6 +2965,12 @@ class ManagementSession extends ChangeNotifier {
       return 'Execute o script supabase/issue_006_customer_management.sql no Supabase e atualize a tela. Ele cria as views necessarias para listar clientes.';
     }
 
+    if (message.contains('get_owner_dashboard_details_v2') ||
+        message.contains('complete_appointment_with_payment') ||
+        message.contains('issue_031_service_payment_capture.sql')) {
+      return 'Execute supabase/issue_031_service_payment_capture.sql no Supabase, depois das issues 029 e 030, e atualize a tela.';
+    }
+
     if (message.contains('get_owner_dashboard_metrics_v2') ||
         message.contains('get_owner_dashboard_details') ||
         message.contains('issue_029_owner_dashboard_details.sql')) {
